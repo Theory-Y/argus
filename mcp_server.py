@@ -85,6 +85,9 @@ def build_company_context(ticker: str) -> str:
       • Google Trends search-velocity signal (12-month)
       • FRED commercial construction macro (TLNRESCONS)
       • SEC 10-K Item 1A risk-factor snippet
+      • SEC 8-K material-event feed (last 12 months, item-labeled)
+      • GlobeNewswire press releases (last 5, public RSS)
+      • Stanford SCAC securities litigation monitor
       • Apify job-market signal (stub until APIFY_API_KEY is set)
 
     The JSON is whitespace-stripped for LLM token efficiency. Individual

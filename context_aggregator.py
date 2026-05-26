@@ -45,6 +45,9 @@ from alt_data_service import (
     AltDataService,
     ApifyJobsResult,
     FredSeries,
+    LitigationSignal,
+    PressReleaseSignal,
+    Sec8KSignal,
     SecRiskSnippet,
     TrendsSignal,
 )
@@ -77,7 +80,7 @@ COMPETITOR_MAP: Dict[str, List[str]] = {
 # FRED macro indicator used as the sector-wide CRE backdrop
 _FRED_SERIES_ID:  str = "TLNRESCONS"
 _FRED_SERIES_LABEL: str = "Commercial Construction Spending (TLNRESCONS, $MM, SA)"
-_SCHEMA_VERSION:  str = "1.0"
+_SCHEMA_VERSION:  str = "1.1"
 _OUTPUT_DIR:      Path = Path(".")
 
 
@@ -191,6 +194,9 @@ class ContextAggregator:
             "macro_fred":       self._fetch_fred(),
             "sec_risk_snippet": self._fetch_sec(ticker),
             "job_market":       self._fetch_jobs(ticker),
+            "sec_8k_events":    self._fetch_8k_events(ticker),
+            "press_releases":   self._fetch_press_releases(ticker),
+            "litigation":       self._fetch_litigation(ticker),
         }
 
     def _fetch_trends(self, ticker: str) -> Dict:
@@ -213,6 +219,32 @@ class ContextAggregator:
             return _to_dict(self._alt.get_sec_risk_snippet(ticker))
         except Exception as exc:
             logger.error("SEC fetch failed for %s: %s", ticker, exc)
+            return _error_node(ticker, exc)
+
+    def _fetch_8k_events(self, ticker: str) -> Dict:
+        try:
+            return _to_dict(self._alt.get_sec_8k_events(ticker))
+        except Exception as exc:
+            logger.error("8-K events fetch failed for %s: %s", ticker, exc)
+            return _error_node(ticker, exc)
+
+    def _fetch_press_releases(self, ticker: str) -> Dict:
+        try:
+            return _to_dict(self._alt.get_press_releases(ticker))
+        except Exception as exc:
+            logger.error("Press release fetch failed for %s: %s", ticker, exc)
+            return _error_node(ticker, exc)
+
+    def _fetch_litigation(self, ticker: str) -> Dict:
+        try:
+            raw_target = self._fin.get_company_financials(ticker)
+            company_name = raw_target.name or ticker
+        except Exception:
+            company_name = ticker
+        try:
+            return _to_dict(self._alt.get_litigation_signal(company_name, ticker=ticker))
+        except Exception as exc:
+            logger.error("Litigation fetch failed for %s: %s", ticker, exc)
             return _error_node(ticker, exc)
 
     def _fetch_jobs(self, ticker: str) -> Dict:

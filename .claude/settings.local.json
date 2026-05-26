@@ -8,7 +8,26 @@
       "Bash(.venv/bin/pip install *)",
       "mcp__middlemarket-research__build_company_context",
       "mcp__middlemarket-research__generate_sector_sheet",
-      "mcp__middlemarket-research__list_supported_tickers"
+      "mcp__middlemarket-research__list_supported_tickers",
+      "Skill(claude-api)",
+      "Bash(/home/lunear/theoryy/middlemarket-research-agent/.venv/bin/python3.14 *)",
+      "Bash(timeout 5 .venv/bin/python3.14 mcp_server.py)",
+      "Bash(.venv/bin/python3.14 -c \"import google.generativeai; print\\('google-generativeai OK'\\)\")",
+      "Bash(.venv/bin/python3.14 -c \"from google import genai; print\\('google-genai OK'\\)\")",
+      "Bash(.venv/bin/pip3.14 install *)",
+      "Bash(.venv/bin/python3.14 -m pip install google-genai -q)",
+      "Bash(.venv/bin/python3.14 *)",
+      "Bash(env)",
+      "WebFetch(domain:data.sec.gov)",
+      "WebFetch(domain:www.sec.gov)",
+      "WebFetch(domain:efts.sec.gov)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:sec.gov)",
+      "Bash(curl -s -A \"Mozilla/5.0 ResearchAgent research@example.com\" \"https://data.sec.gov/submissions/CIK0001838818.json\")",
+      "Bash(python3 -c ' *)",
+      "Bash(curl -s -A \"Mozilla/5.0 ResearchAgent research@example.com\" \"https://data.sec.gov/submissions/CIK0000320193.json\")",
+      "Bash(curl -s -A \"Mozilla/5.0 ResearchAgent research@example.com\" \"https://data.sec.gov/submissions/CIK0000320193-submissions-001.json\")"
     ]
   },
   "enabledMcpjsonServers": [

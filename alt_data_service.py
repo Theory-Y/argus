@@ -18,7 +18,9 @@ import logging
 import os
 import re
 import time
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
+from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional
 
 import requests
@@ -59,6 +61,27 @@ _RISK_SNIPPET_CHARS: int = 800
 # ──────────────────────────────────────────────────────────────────────────────
 # Ticker → primary search keyword map (demand proxy for Google Trends)
 # ──────────────────────────────────────────────────────────────────────────────
+
+# Human-readable labels for SEC 8-K item numbers
+_8K_ITEM_LABELS: Dict[str, str] = {
+    "1.01": "Entry into Material Agreement",
+    "1.02": "Termination of Material Agreement",
+    "1.03": "Bankruptcy/Receivership",
+    "2.01": "Completion of Acquisition/Disposition",
+    "2.02": "Results of Operations",
+    "2.03": "Creation of Direct Financial Obligation",
+    "2.05": "Exit or Disposal Cost Obligations",
+    "2.06": "Material Impairment",
+    "3.01": "Notice of Delisting",
+    "3.02": "Unregistered Sales of Equity Securities",
+    "4.01": "Changes in Certifying Accountant",
+    "5.01": "Changes in Control of Registrant",
+    "5.02": "Directors/Officers Departure/Appointment",
+    "5.03": "Amendments to Articles/Certificate",
+    "7.01": "Regulation FD Disclosure",
+    "8.01": "Other Events",
+    "9.01": "Financial Statements and Exhibits",
+}
 
 TICKER_KEYWORDS: Dict[str, str] = {
     "CSGP": "CoStar commercial real estate",
@@ -119,6 +142,57 @@ class ApifyJobsResult:
     total_open_roles: int
     engineering_roles: List[Dict] = field(default_factory=list)
     is_stub:          bool = True
+
+
+@dataclass
+class Sec8KEvent:
+    """Single 8-K filing — metadata only, no document download."""
+    filing_date:   str
+    items_raw:     Optional[str]        # e.g. "1.01,9.01"
+    items_labeled: Optional[List[str]]  # human-readable labels per item
+    url:           Optional[str]
+
+
+@dataclass
+class Sec8KSignal:
+    """Collection of recent 8-K filings for one ticker."""
+    ticker: str
+    cik:    Optional[str]
+    events: List[Sec8KEvent] = field(default_factory=list)
+
+
+@dataclass
+class PressRelease:
+    """Single press release headline from GlobeNewswire RSS."""
+    title: str
+    date:  Optional[str]
+    url:   Optional[str]
+
+
+@dataclass
+class PressReleaseSignal:
+    """Recent press releases for one ticker."""
+    ticker:   str
+    source:   str
+    releases: List[PressRelease] = field(default_factory=list)
+    error:    Optional[str] = None
+
+
+@dataclass
+class LitigationCase:
+    """Single securities class-action case from Stanford SCAC."""
+    case_name:  str
+    filed_date: Optional[str]
+    status:     Optional[str]
+
+
+@dataclass
+class LitigationSignal:
+    """Active or recent class-action cases for one company."""
+    company_name: str
+    source:       str
+    cases:        List[LitigationCase] = field(default_factory=list)
+    error:        Optional[str] = None
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -479,6 +553,284 @@ class ApifyJobScraper:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# SEC EDGAR 8-K Feed — recent material-event filings (metadata only)
+# ──────────────────────────────────────────────────────────────────────────────
+
+class Sec8KFetcher:
+    """
+    Fetches the most recent 8-K filings for a ticker from the EDGAR submissions API.
+    Returns structured metadata + item labels; no per-document HTTP download.
+    Shares SecCikResolver with the rest of the SEC pipeline to reuse the CIK cache.
+    """
+    _MAX_EVENTS      = 8
+    _LOOKBACK_DAYS   = 365
+
+    def __init__(self, cik_resolver: Optional["SecCikResolver"] = None) -> None:
+        self._cik_resolver = cik_resolver or SecCikResolver()
+        self._session = requests.Session()
+        self._session.headers.update({"User-Agent": SEC_USER_AGENT})
+
+    def fetch(self, ticker: str) -> Sec8KSignal:
+        cik = self._cik_resolver.resolve(ticker)
+        if not cik:
+            return Sec8KSignal(ticker=ticker, cik=None, events=[])
+
+        try:
+            resp = self._session.get(
+                SEC_SUBMISSIONS_URL.format(cik=cik), timeout=_HTTP_TIMEOUT
+            )
+            resp.raise_for_status()
+            recent = resp.json().get("filings", {}).get("recent", {})
+        except requests.RequestException as exc:
+            logger.error("8-K submissions fetch failed for %s: %s", ticker, exc)
+            return Sec8KSignal(ticker=ticker, cik=cik, events=[])
+
+        cutoff    = (datetime.now(timezone.utc) - timedelta(days=self._LOOKBACK_DAYS)).strftime("%Y-%m-%d")
+        forms     = recent.get("form", [])
+        dates     = recent.get("filingDate", [])
+        accessions = recent.get("accessionNumber", [])
+        docs      = recent.get("primaryDocument", [])
+        items_raw = recent.get("items", [None] * len(forms))
+        clean_cik = cik.lstrip("0")
+
+        # 8-K = domestic material events; 6-K = foreign private issuer equivalent
+        _MATERIAL_FORMS = {"8-K", "8-K/A", "6-K", "6-K/A"}
+
+        events: List[Sec8KEvent] = []
+        for form, date, acc, doc, items in zip(forms, dates, accessions, docs, items_raw):
+            if form not in _MATERIAL_FORMS:
+                continue
+            if date < cutoff:
+                break  # submissions are newest-first; stop when past the lookback window
+            acc_nodash = acc.replace("-", "")
+            url = (
+                f"https://www.sec.gov/Archives/edgar/data/"
+                f"{clean_cik}/{acc_nodash}/{doc}"
+            )
+            labeled = self._label_items(items) if items else None
+            events.append(Sec8KEvent(
+                filing_date=date,
+                items_raw=items or None,
+                items_labeled=labeled,
+                url=url,
+            ))
+            if len(events) >= self._MAX_EVENTS:
+                break
+
+        return Sec8KSignal(ticker=ticker, cik=cik, events=events)
+
+    @staticmethod
+    def _label_items(items_str: str) -> List[str]:
+        labels = []
+        for item in items_str.split(","):
+            item = item.strip()
+            label = _8K_ITEM_LABELS.get(item)
+            labels.append(f"{item}: {label}" if label else item)
+        return labels
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# GlobeNewswire Press Release Feed (public RSS, no API key)
+# ──────────────────────────────────────────────────────────────────────────────
+
+class PressReleaseFetcher:
+    """
+    Fetches recent 6-K/8-K filings via the EDGAR submissions API.
+    Uses the company's own submission history (CIK-scoped) to avoid cross-company
+    noise that EFTS phrase queries produce for short tickers like "Z".
+    No API key required.
+    """
+    _MAX_RELEASES  = 5
+    _LOOKBACK_DAYS = 365
+    _PR_FORMS      = {"6-K", "6-K/A", "8-K", "8-K/A"}
+
+    def __init__(self, cik_resolver: Optional["SecCikResolver"] = None) -> None:
+        self._cik_resolver = cik_resolver or SecCikResolver()
+        self._session = requests.Session()
+        self._session.headers.update({"User-Agent": SEC_USER_AGENT})
+
+    def fetch(self, ticker: str) -> PressReleaseSignal:
+        cik = self._cik_resolver.resolve(ticker)
+        if not cik:
+            return PressReleaseSignal(
+                ticker=ticker, source="edgar_submissions", releases=[],
+                error=f"CIK not found for {ticker}",
+            )
+
+        try:
+            resp = self._session.get(
+                SEC_SUBMISSIONS_URL.format(cik=cik), timeout=_HTTP_TIMEOUT
+            )
+            resp.raise_for_status()
+            recent = resp.json().get("filings", {}).get("recent", {})
+        except requests.RequestException as exc:
+            logger.warning("EDGAR submissions press release fetch failed for %s: %s", ticker, exc)
+            return PressReleaseSignal(
+                ticker=ticker, source="edgar_submissions", releases=[], error=str(exc)
+            )
+
+        cutoff     = (datetime.now(timezone.utc) - timedelta(days=self._LOOKBACK_DAYS)).strftime("%Y-%m-%d")
+        forms      = recent.get("form", [])
+        dates      = recent.get("filingDate", [])
+        accessions = recent.get("accessionNumber", [])
+        docs       = recent.get("primaryDocument", [])
+        descs      = recent.get("primaryDocDescription", [""] * len(forms))
+        clean_cik  = cik.lstrip("0")
+
+        releases: List[PressRelease] = []
+        for form, date, acc, doc, desc in zip(forms, dates, accessions, docs, descs):
+            if form not in self._PR_FORMS:
+                continue
+            if date < cutoff:
+                break  # submissions are newest-first; past window means we're done
+            acc_nodash = acc.replace("-", "")
+            url = (
+                f"https://www.sec.gov/Archives/edgar/data/{clean_cik}/{acc_nodash}/{doc}"
+                if acc_nodash and doc else None
+            )
+            releases.append(PressRelease(title=desc or f"{form} filing", date=date, url=url))
+            if len(releases) >= self._MAX_RELEASES:
+                break
+
+        return PressReleaseSignal(ticker=ticker, source="edgar_submissions", releases=releases)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Stanford Securities Class Action Clearinghouse — litigation monitor
+# ──────────────────────────────────────────────────────────────────────────────
+
+class LitigationFetcher:
+    """
+    Securities litigation monitor with two-stage strategy:
+      1. Stanford SCAC full-text search (https://securities.stanford.edu/fullsearch.html)
+         — primary source, detects restructuring/unavailability by banner text.
+      2. EDGAR EFTS keyword fallback — searches the company's own 6-K/8-K filings for
+         "class action" or "securities litigation" mentions when SCAC is unavailable.
+
+    SCAC restructuring notice (as of 2026-05-26): site is down until Winter 2026.
+    """
+    _SCAC_URL      = "https://securities.stanford.edu/fullsearch.html"
+    _EFTS_URL      = "https://efts.sec.gov/LATEST/search-index"
+    _LOOKBACK_DAYS = 730  # 2 years for litigation
+    _MAX_CASES     = 5
+    _RESTRUCTURING_SENTINEL = "under construction"
+
+    def __init__(self, cik_resolver: Optional["SecCikResolver"] = None) -> None:
+        self._cik_resolver = cik_resolver or SecCikResolver()
+        self._session = requests.Session()
+        self._session.headers.update({
+            "User-Agent": SEC_USER_AGENT,
+            "Accept": "text/html,application/xhtml+xml,*/*",
+        })
+
+    def fetch(self, company_name: str, ticker: Optional[str] = None) -> LitigationSignal:
+        # Stage 1: Stanford SCAC
+        scac_result = self._try_scac(company_name)
+        if scac_result is not None:
+            return scac_result
+
+        # Stage 2: EDGAR EFTS keyword search on the company's own filings
+        return self._try_edgar_efts(company_name, ticker=ticker)
+
+    def _try_scac(self, company_name: str) -> Optional[LitigationSignal]:
+        try:
+            resp = self._session.get(
+                self._SCAC_URL, params={"q": company_name}, timeout=_HTTP_TIMEOUT
+            )
+            resp.raise_for_status()
+            if self._RESTRUCTURING_SENTINEL in resp.text.lower():
+                logger.info("Stanford SCAC is under restructuring — using EDGAR fallback")
+                return None
+            cases = self._parse_scac_html(resp.text)
+            return LitigationSignal(company_name=company_name, source="stanford_scac", cases=cases)
+        except requests.RequestException as exc:
+            logger.warning("SCAC network error for '%s': %s", company_name, exc)
+            return None
+        except Exception as exc:
+            logger.warning("SCAC parse error for '%s': %s", company_name, exc)
+            return None
+
+    def _try_edgar_efts(self, company_name: str, ticker: Optional[str] = None) -> LitigationSignal:
+        resolved_ticker = ticker or ""
+        cik = self._cik_resolver.resolve(resolved_ticker) if resolved_ticker else None
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=self._LOOKBACK_DAYS)).strftime("%Y-%m-%d")
+
+        query = f'"class action" {resolved_ticker}' if resolved_ticker else '"class action"'
+        try:
+            resp = self._session.get(
+                self._EFTS_URL,
+                params={
+                    "q": query,
+                    "forms": "6-K,8-K",
+                    "dateRange": "custom",
+                    "startdt": cutoff,
+                    "sort": "file-date",
+                    "order": "desc",
+                },
+                timeout=_HTTP_TIMEOUT,
+            )
+            resp.raise_for_status()
+            cases = self._parse_efts_hits(cik, resp.json())
+            note = "stanford_scac_unavailable_edgar_efts_fallback"
+            return LitigationSignal(
+                company_name=company_name,
+                source=note,
+                cases=cases,
+                error="Stanford SCAC temporarily down (restructuring until Winter 2026). Results from EDGAR EFTS keyword search.",
+            )
+        except Exception as exc:
+            logger.warning("EDGAR EFTS litigation fallback failed for '%s': %s", company_name, exc)
+            return LitigationSignal(
+                company_name=company_name,
+                source="stanford_scac",
+                cases=[],
+                error="Stanford SCAC temporarily unavailable (restructuring until Winter 2026). EDGAR fallback also failed.",
+            )
+
+    def _parse_scac_html(self, html: str) -> List[LitigationCase]:
+        soup = BeautifulSoup(html, "html.parser")
+        cases: List[LitigationCase] = []
+        rows = soup.select("table.table tbody tr") or soup.select("table tbody tr")
+        for row in rows[: self._MAX_CASES]:
+            cells = [td.get_text(strip=True) for td in row.find_all("td")]
+            if not cells or not cells[0]:
+                continue
+            cases.append(LitigationCase(
+                case_name=cells[0],
+                filed_date=cells[1] if len(cells) > 1 else None,
+                status=cells[-1] if len(cells) > 2 else None,
+            ))
+        return cases
+
+    def _parse_efts_hits(self, cik: Optional[str], data: Dict) -> List[LitigationCase]:
+        if cik is None:
+            return []  # can't CIK-filter → skip rather than accept cross-company hits
+        cases: List[LitigationCase] = []
+        for hit in data.get("hits", {}).get("hits", []):
+            src = hit.get("_source", {})
+            if cik and cik not in (src.get("ciks") or []):
+                continue
+            description = src.get("file_description") or src.get("form") or "SEC Filing"
+            date        = src.get("file_date") or ""
+            adsh        = src.get("adsh", "").replace("-", "")
+            clean_cik   = (cik or "").lstrip("0")
+            hit_id      = hit.get("_id", "")
+            filename    = hit_id.split(":")[-1] if ":" in hit_id else ""
+            url = (
+                f"https://www.sec.gov/Archives/edgar/data/{clean_cik}/{adsh}/{filename}"
+                if adsh and filename and clean_cik else None
+            )
+            cases.append(LitigationCase(
+                case_name=f"{description} ({src.get('form','')}) — {url or 'no URL'}",
+                filed_date=date,
+                status="mentions_class_action_or_litigation",
+            ))
+            if len(cases) >= self._MAX_CASES:
+                break
+        return cases
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Service Façade — composes all data sources
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -499,6 +851,9 @@ class AltDataService:
         filing_fetcher:    Optional[SecFilingFetcher]    = None,
         risk_extractor:    Optional[SecRiskFactorExtractor] = None,
         job_scraper:       Optional[ApifyJobScraper]     = None,
+        sec_8k_fetcher:    Optional[Sec8KFetcher]        = None,
+        pr_fetcher:        Optional[PressReleaseFetcher] = None,
+        lit_fetcher:       Optional[LitigationFetcher]   = None,
     ) -> None:
         self._trends_fetcher   = trends_fetcher   or GoogleTrendsFetcher()
         self._trends_processor = trends_processor or GoogleTrendsProcessor()
@@ -508,6 +863,10 @@ class AltDataService:
         self._filing_fetcher   = filing_fetcher   or SecFilingFetcher()
         self._risk_extractor   = risk_extractor   or SecRiskFactorExtractor()
         self._job_scraper      = job_scraper      or ApifyJobScraper()
+        # Share the CIK resolver so the in-memory cache is reused across all SEC calls
+        self._sec_8k_fetcher   = sec_8k_fetcher   or Sec8KFetcher(cik_resolver=self._cik_resolver)
+        self._pr_fetcher       = pr_fetcher       or PressReleaseFetcher(cik_resolver=self._cik_resolver)
+        self._lit_fetcher      = lit_fetcher      or LitigationFetcher(cik_resolver=self._cik_resolver)
 
     # ── public API ────────────────────────────────────────────────────────────
 
@@ -547,3 +906,12 @@ class AltDataService:
 
     def get_job_market_signal(self, company_name: str) -> ApifyJobsResult:
         return self._job_scraper.get_open_engineering_roles(company_name)
+
+    def get_sec_8k_events(self, ticker: str) -> Sec8KSignal:
+        return self._sec_8k_fetcher.fetch(ticker)
+
+    def get_press_releases(self, ticker: str) -> PressReleaseSignal:
+        return self._pr_fetcher.fetch(ticker)
+
+    def get_litigation_signal(self, company_name: str, ticker: Optional[str] = None) -> LitigationSignal:
+        return self._lit_fetcher.fetch(company_name, ticker=ticker)
