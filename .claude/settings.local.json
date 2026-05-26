@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python *)",
+      "Bash(.venv/bin/python *)",
+      "Read(//home/lunear/.claude/**)",
+      "Bash(/home/lunear/middlemarket-research-agent/.venv/bin/python --version)",
+      "Bash(.venv/bin/pip install *)",
+      "mcp__middlemarket-research__build_company_context",
+      "mcp__middlemarket-research__generate_sector_sheet",
+      "mcp__middlemarket-research__list_supported_tickers"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "middlemarket-research"
+  ]
+}

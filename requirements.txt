@@ -1,0 +1,25 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# TheoryY Middle-Market Research Agent — Python Dependencies
+# Install: pip install -r requirements.txt
+# Python:  >= 3.10
+# ──────────────────────────────────────────────────────────────────────────────
+
+# ── MCP server ───────────────────────────────────────────────────────────────
+mcp[cli]>=1.0.0             # Model Context Protocol SDK (FastMCP)
+
+# ── Financial data (free, no API key required) ────────────────────────────────
+yfinance>=0.2.40            # Yahoo Finance wrapper
+pandas>=2.0.0               # DataFrame operations throughout
+numpy>=1.26.0               # Numeric utilities (yfinance dependency)
+
+# ── Alternative data sources ──────────────────────────────────────────────────
+pytrends>=4.9.2             # Unofficial Google Trends API wrapper
+requests>=2.31.0            # HTTP client for FRED + SEC EDGAR + Apify
+
+# ── HTML parsing (SEC 10-K filings) ──────────────────────────────────────────
+beautifulsoup4>=4.12.0      # HTML parser for risk factor extraction
+lxml>=5.0.0                 # Fast HTML/XML backend for BeautifulSoup
+
+# ── Dev / test (optional, not required at runtime) ───────────────────────────
+# pytest>=8.0.0
+# pytest-mock>=3.12.0

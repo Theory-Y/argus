@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "middlemarket-research": {
+      "command": "/home/lunear/middlemarket-research-agent/.venv/bin/python",
+      "args": ["/home/lunear/middlemarket-research-agent/mcp_server.py"],
+      "cwd": "/home/lunear/middlemarket-research-agent"
+    }
+  }
+}
