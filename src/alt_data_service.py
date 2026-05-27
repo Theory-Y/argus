@@ -468,15 +468,27 @@ class SecRiskFactorExtractor:
         soup = BeautifulSoup(html, "lxml-xml")
         return soup.get_text(separator=" ", strip=True)
 
+    # Generic boilerplate that opens most 10-K Item 1A sections — zero signal.
+    _RISK_BOILERPLATE_RE = re.compile(
+        r"Investing in our (common stock|securities|shares) involves (a high degree of )?risk"
+        r".{0,400}?(before (deciding|investing|purchasing)|before you (decide|invest|purchase))",
+        re.IGNORECASE | re.DOTALL,
+    )
+
     def _extract_snippet(self, text: str) -> Optional[str]:
         # Iterate all matches: the first hit is often a TOC entry ("Item 1A...12"),
         # so skip any match whose extracted body is shorter than 100 chars.
         for match in self._ITEM_1A_RE.finditer(text):
-            body = text[match.end(): match.end() + _RISK_SNIPPET_CHARS * 3]
+            body = text[match.end(): match.end() + _RISK_SNIPPET_CHARS * 5]
             next_item = self._ITEM_NEXT_RE.search(body)
             if next_item:
                 body = body[: next_item.start()]
-            snippet = re.sub(r"\s+", " ", body).strip()[:_RISK_SNIPPET_CHARS]
+            body = re.sub(r"\s+", " ", body).strip()
+            # Skip generic preamble so the 800-char window lands on actual risks.
+            bp = self._RISK_BOILERPLATE_RE.search(body)
+            if bp and bp.end() < len(body) - 100:
+                body = body[bp.end():].lstrip(". ")
+            snippet = body[:_RISK_SNIPPET_CHARS]
             if len(snippet) >= 100:
                 return snippet
         logger.debug("Item 1A pattern not found in document")

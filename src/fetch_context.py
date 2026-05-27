@@ -97,17 +97,10 @@ def main() -> int:
         print(f"ERROR: failed to fetch context: {e}", file=sys.stderr)
         return 2
 
-    # Pretty-print if it parses as JSON; otherwise store the raw text as-is.
-    try:
-        parsed = json.loads(payload)
-        text = json.dumps(parsed, indent=2)
-    except (json.JSONDecodeError, TypeError):
-        text = payload
-
     with open(out_path, "w") as f:
-        f.write(text)
+        f.write(payload)
 
-    print(f"OK: context written to {out_path} ({len(text)} chars)", file=sys.stderr)
+    print(f"OK: context written to {out_path} ({len(payload)} chars)", file=sys.stderr)
     # Echo the path on stdout so it's easy to capture programmatically.
     print(out_path)
     return 0

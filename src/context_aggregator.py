@@ -195,7 +195,6 @@ class ContextAggregator:
             "sec_risk_snippet": self._fetch_sec(ticker),
             "job_market":       self._fetch_jobs(ticker),
             "sec_8k_events":    self._fetch_8k_events(ticker),
-            "press_releases":   self._fetch_press_releases(ticker),
             "litigation":       self._fetch_litigation(ticker),
         }
 
@@ -209,10 +208,13 @@ class ContextAggregator:
     def _fetch_fred(self) -> Dict:
         try:
             series = self._alt.get_fred_macro(_FRED_SERIES_ID, _FRED_SERIES_LABEL)
-            return _to_dict(series)
+            d = _to_dict(series)
+            if d.get("latest_value") is None:
+                return {"series_id": _FRED_SERIES_ID, "available": False}
+            return d
         except Exception as exc:
             logger.error("FRED fetch failed: %s", exc)
-            return {"series_id": _FRED_SERIES_ID, "error": str(exc)}
+            return {"series_id": _FRED_SERIES_ID, "available": False}
 
     def _fetch_sec(self, ticker: str) -> Dict:
         try:
@@ -256,7 +258,10 @@ class ContextAggregator:
             company_name = ticker
 
         try:
-            return _to_dict(self._alt.get_job_market_signal(company_name))
+            result = _to_dict(self._alt.get_job_market_signal(company_name))
+            if result.get("is_stub"):
+                return {"company": company_name, "available": False}
+            return result
         except Exception as exc:
             logger.error("Job market signal failed for %s: %s", ticker, exc)
             return _error_node(ticker, exc)

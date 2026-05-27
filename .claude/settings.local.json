@@ -33,7 +33,9 @@
       "Bash(mkdir -p /home/lunear/theoryy/middlemarket-research-agent/output)",
       "Bash(mv /home/lunear/theoryy/middlemarket-research-agent/alt_data_service.py   src/)",
       "Bash(mv /home/lunear/theoryy/middlemarket-research-agent/financial_service.py  src/)",
-      "Bash(mv /home/lunear/theoryy/middlemarket-research-agent/context_aggregator.py src/)"
+      "Bash(mv /home/lunear/theoryy/middlemarket-research-agent/context_aggregator.py src/)",
+      "Bash(.venv/bin/python3 *)",
+      "Bash(python3 *)"
     ]
   },
   "enabledMcpjsonServers": [
