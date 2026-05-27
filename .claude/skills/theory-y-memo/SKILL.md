@@ -1,0 +1,108 @@
+---
+name: theory-y-memo
+description: Generate a Theory Y institutional equity research memo for a given stock ticker. Use this whenever the user asks for an investment memo, equity research write-up, or "Theory Y memo" for a company or ticker (e.g. "write the memo for PCOR", "draft an investment memo on Procore"). The skill fetches deterministic company data from the local MCP server, then writes a five-section institutional memo as a Markdown file. Trigger it even when the user just names a ticker and asks for "the memo" or "the write-up", since that is the core deliverable this skill produces.
+---
+
+# Theory Y Investment Memo
+
+Produce a five-section institutional equity research memo for a stock ticker. The
+workflow has two phases: **(1)** fetch hard company data deterministically via the
+local MCP server, then **(2)** write the memo yourself, section by section, grounded
+strictly in that data.
+
+> **Why there is no LLM API call here.** The original pipeline ran on the Gemini API
+> and had to re-feed a compressed running summary into every section because each API
+> call was stateless. You are *not* stateless — you hold the whole memo and the data
+> payload in context as you write. So skip the summary-compression machinery entirely.
+> Just keep the sections coherent and non-repetitive (see Writing rules). The only
+> code that still needs to run is the data fetch.
+
+## Phase 1 — Fetch the data payload
+
+Run the fetch script, which connects to `mcp_server.py` over stdio and calls the
+`build_company_context` tool. Use the project's virtual environment (it has the `mcp`
+package and can launch the server):
+
+```bash
+.venv/bin/python3 scripts/fetch_context.py <TICKER>
+```
+
+This writes `context_<TICKER>.json` to the working directory and prints its path.
+If the venv lives elsewhere or the server file is not `./mcp_server.py`, pass
+`--server-python` and `--server` (run with `--help` for all options).
+
+Then **read `context_<TICKER>.json`**. This JSON is your single source of truth.
+
+**If the fetch fails** (server missing, tool error), stop and report the exact error
+to the user rather than writing a memo from memory — fabricated financials are worse
+than no memo. Do not substitute your own training knowledge about the company.
+
+## Phase 2 — Write the memo
+
+Write to `TheoryY_Memo_<TICKER>.md`. Start the file with:
+
+```markdown
+# Investment Memo: <TICKER>
+```
+
+Then write these five sections **in order**, each opening with its exact `##` heading:
+
+| # | Section heading | Target length |
+|---|-----------------|---------------|
+| 1 | `## 1. One-Line Thesis & Valuation Snapshot` | ~400 words |
+| 2 | `## 2. Business Overview & Operations` | ~600 words |
+| 3 | `## 3. Alternative Data & Macro Signals` | ~700 words |
+| 4 | `## 4. Key Risks & Structural Barriers` | ~500 words |
+| 5 | `## 5. Investment Recommendation` | ~300 words |
+
+Word targets are guidance, not hard caps — prioritize substance over hitting a count.
+
+## Persona and voice
+
+Write as a **Principal Equity Research Analyst specializing in B2B PropTech and
+Industrials**. The voice is institutional and data-dense: lead with hard metrics
+(growth rates, margins, multiples, retention, unit economics) and reason explicitly
+about **operating leverage** — how revenue scaling flows to the cost structure and
+margins. Every claim should be anchored to a number or relationship from the payload.
+
+## Writing rules
+
+- **Ground everything in the payload.** Do not introduce figures, dates, products, or
+  events that are not in `context_<TICKER>.json`. If the data is silent on something,
+  either omit it or flag the gap explicitly (e.g. "the payload does not disclose net
+  retention") — never fill it with a guess.
+- **No AI filler.** Ban phrases like "crucial role", "it is important to note", "plays
+  a key role", and "in conclusion". Open sections with the analysis itself, not throat-
+  clearing.
+- **Markdown only**, and start each section with the exact heading from the table.
+- **Stay coherent across sections.** Later sections should build on earlier ones (e.g.
+  the recommendation in §5 should follow from the thesis in §1, the operations in §2,
+  and the risks in §4) without restating them verbatim. This is the coherence the old
+  pipeline's running summary was trying to preserve — you get it for free by keeping
+  the whole memo in view, so use it.
+- **Section-specific emphasis:**
+  - §1 — a single crisp thesis sentence, then the valuation snapshot (multiples vs.
+    growth, what the market is pricing in).
+  - §2 — the business model and operating mechanics: revenue mix, customer base,
+    go-to-market, cost structure, and where operating leverage sits.
+  - §3 — alternative-data and macro read-through: what the non-financial signals in
+    the payload imply for the forward numbers. This is the longest section; make it
+    the most analytically differentiated.
+  - §4 — concrete, ranked risks and structural barriers, each tied to its impact on
+    the thesis or the numbers.
+  - §5 — a clear recommendation (direction + conviction) that falls out of §§1–4,
+    with the key variables that would change the call.
+
+## Output
+
+A single file, `TheoryY_Memo_<TICKER>.md`, containing the title plus all five
+sections. Present it to the user when done.
+
+## Quick reference
+
+**Example invocation** — Input: "write the Theory Y memo for PCOR"
+1. `.venv/bin/python3 scripts/fetch_context.py PCOR` → `context_PCOR.json`
+2. Read `context_PCOR.json`.
+3. Write `TheoryY_Memo_PCOR.md`: title + the five `##` sections, in the analyst voice,
+   grounded only in the payload.
+4. Present `TheoryY_Memo_PCOR.md`.

@@ -46,7 +46,7 @@ _aggregator        = ContextAggregator(
 
 mcp = FastMCP("TheoryY_Finance_Oracle")
 
-_OUTPUT_CSV = "TheoryY_Sector_Sheet.csv"
+_OUTPUT_CSV = "output/TheoryY_Sector_Sheet.csv"
 _VALID_TICKERS = set(SECTOR_TICKERS)
 
 
