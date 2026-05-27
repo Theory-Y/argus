@@ -312,7 +312,7 @@ class TestContextAggregatorHelpers(unittest.TestCase):
         agg = ContextAggregator(financial_service=mock_fin, alt_data_service=mock_alt)
         meta = agg._build_meta("PCOR")
         self.assertEqual(meta["target_ticker"], "PCOR")
-        self.assertEqual(meta["schema_version"], "1.0")
+        self.assertEqual(meta["schema_version"], "1.2")
         self.assertIn("generated_at_utc", meta)
 
     def test_build_minified_context_is_valid_json(self):
@@ -323,7 +323,10 @@ class TestContextAggregatorHelpers(unittest.TestCase):
             trailing_ebitda_mm=100.0, forward_pe=40.0,
             yoy_revenue_growth_pct=18.0, ev_revenue=9.5, ev_ebitda=95.0,
         )
-        from alt_data_service import TrendsSignal, FredSeries, SecRiskSnippet, ApifyJobsResult
+        from alt_data_service import (
+            TrendsSignal, FredSeries, SecRiskSnippet, ApifyJobsResult,
+            Sec8KSignal, LitigationSignal,
+        )
 
         mock_fin_svc = MagicMock()
         mock_fin_svc.get_company_financials.return_value = sample_fin
@@ -344,6 +347,12 @@ class TestContextAggregatorHelpers(unittest.TestCase):
         )
         mock_alt_svc.get_job_market_signal.return_value = ApifyJobsResult(
             company_name="Procore", total_open_roles=0, is_stub=True,
+        )
+        mock_alt_svc.get_sec_8k_events.return_value = Sec8KSignal(
+            ticker="PCOR", cik="0001611787",
+        )
+        mock_alt_svc.get_litigation_signal.return_value = LitigationSignal(
+            company_name="Procore", source="Stanford SCAC",
         )
 
         import tempfile, pathlib

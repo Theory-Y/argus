@@ -97,6 +97,12 @@ def main() -> int:
         print(f"ERROR: failed to fetch context: {e}", file=sys.stderr)
         return 2
 
+    try:
+        json.loads(payload)
+    except json.JSONDecodeError as e:
+        print(f"ERROR: MCP returned invalid JSON: {e}", file=sys.stderr)
+        return 2
+
     with open(out_path, "w") as f:
         f.write(payload)
 

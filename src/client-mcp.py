@@ -2,39 +2,38 @@ import asyncio
 import os
 import sys
 from contextlib import AsyncExitStack
-from google import genai
-from google.genai import types
+
+import anthropic
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-MODEL_NAME = "gemini-2.0-flash"
+MODEL_NAME = "claude-sonnet-4-6"
+_MAX_TOKENS = 4096
 
 
-def _mcp_tools_to_gemini(mcp_tools: list) -> list[types.Tool]:
-    """Convert MCP tool descriptors to a single Gemini Tool with FunctionDeclarations."""
-    declarations = []
-    for t in mcp_tools:
-        # Strip JSON Schema fields Gemini doesn't accept (e.g. top-level 'title')
-        schema = {k: v for k, v in t["input_schema"].items() if k != "title"}
-        declarations.append(
-            types.FunctionDeclaration(
-                name=t["name"],
-                description=t["description"],
-                parameters=schema,
-            )
-        )
-    return [types.Tool(function_declarations=declarations)]
+def _mcp_tools_to_claude(mcp_tools: list) -> list[dict]:
+    """Convert MCP tool descriptors to Claude tool format."""
+    return [
+        {
+            "name": t["name"],
+            "description": t["description"],
+            "input_schema": t["input_schema"],
+        }
+        for t in mcp_tools
+    ]
 
 
 async def run_market_agent(ticker: str):
-    gemini = genai.Client()
-    print(f"🔌 Initializing connection to MCP Server for target: {ticker}...")
+    client = anthropic.AsyncAnthropic()
+    print(f"Initializing connection to MCP Server for target: {ticker}...")
 
-    _venv_python = os.path.join(os.path.dirname(__file__), ".venv", "bin", "python3.14")
+    _src_dir = os.path.dirname(os.path.abspath(__file__))
+    _project_root = os.path.dirname(_src_dir)
+    _venv_python = sys.executable
     server_params = StdioServerParameters(
         command=_venv_python,
-        args=[os.path.join(os.path.dirname(__file__), "mcp_server.py")],
-        env=os.environ.copy()
+        args=[os.path.join(_src_dir, "mcp_server.py")],
+        env=os.environ.copy(),
     )
 
     async with AsyncExitStack() as stack:
@@ -44,7 +43,7 @@ async def run_market_agent(ticker: str):
         session = await stack.enter_async_context(ClientSession(read, write))
         await session.initialize()
 
-        print("✅ Connected to TheoryY_Finance_Oracle. Fetching available tools...")
+        print("Connected to TheoryY_Finance_Oracle. Fetching available tools...")
 
         tool_response = await session.list_tools()
         mcp_tools = [
@@ -56,78 +55,69 @@ async def run_market_agent(ticker: str):
             for tool in tool_response.tools
         ]
 
-        gemini_tools = _mcp_tools_to_gemini(mcp_tools)
+        claude_tools = _mcp_tools_to_claude(mcp_tools)
 
         system_prompt = "You are a Principal Equity Research Analyst. Use the provided tools to gather data before writing."
         user_message = f"Please fetch the context payload for {ticker} and write a one-line investment thesis based on the valuation multiples."
 
-        config = types.GenerateContentConfig(
-            system_instruction=system_prompt,
-            tools=gemini_tools,
-            max_output_tokens=1000,
-        )
+        messages = [{"role": "user", "content": user_message}]
 
-        contents = [types.Content(role="user", parts=[types.Part(text=user_message)])]
+        print(f"Asking Claude to analyze {ticker}...")
 
-        print(f"🧠 Asking Gemini to analyze {ticker}...")
-
-        response = await gemini.aio.models.generate_content(
+        response = await client.messages.create(
             model=MODEL_NAME,
-            contents=contents,
-            config=config,
+            max_tokens=_MAX_TOKENS,
+            system=system_prompt,
+            tools=claude_tools,
+            messages=messages,
         )
 
-        # Agentic loop: keep executing tools until Gemini returns a plain text response
-        while True:
-            if not response.candidates:
-                break
-            function_calls = [
-                p.function_call
-                for p in response.candidates[0].content.parts
-                if p.function_call
-            ]
-            if not function_calls:
-                break
+        # Agentic loop: keep executing tools until Claude returns end_turn
+        while response.stop_reason == "tool_use":
+            tool_use_blocks = [b for b in response.content if b.type == "tool_use"]
 
-            # Append model turn to history
-            contents.append(response.candidates[0].content)
+            # Append assistant turn
+            messages.append({"role": "assistant", "content": response.content})
 
-            # Execute each requested tool and collect FunctionResponse parts
-            result_parts = []
-            for fc in function_calls:
-                print(f"🛠️ Gemini requested tool: {fc.name} with args {dict(fc.args)}")
+            # Execute each tool and collect results
+            tool_results = []
+            for tu in tool_use_blocks:
+                print(f"Claude requested tool: {tu.name} with args {tu.input}")
 
-                tool_result = await session.call_tool(fc.name, dict(fc.args))
+                tool_result = await session.call_tool(tu.name, tu.input)
                 tool_output = (
                     tool_result.content[0].text
                     if tool_result.content and hasattr(tool_result.content[0], "text")
                     else ""
                 )
 
-                result_parts.append(
-                    types.Part(
-                        function_response=types.FunctionResponse(
-                            name=fc.name,
-                            response={"result": tool_output},
-                        )
-                    )
-                )
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": tu.id,
+                    "content": tool_output,
+                })
 
-            contents.append(types.Content(role="user", parts=result_parts))
+            messages.append({"role": "user", "content": tool_results})
 
-            print("✍️ Data retrieved. Gemini is continuing analysis...")
+            print("Data retrieved. Claude is continuing analysis...")
 
-            response = await gemini.aio.models.generate_content(
+            response = await client.messages.create(
                 model=MODEL_NAME,
-                contents=contents,
-                config=config,
+                max_tokens=_MAX_TOKENS,
+                system=system_prompt,
+                tools=claude_tools,
+                messages=messages,
             )
 
+        if response.stop_reason == "max_tokens":
+            print("[WARNING] Response was truncated — increase _MAX_TOKENS if needed.")
+
         print("\n" + "=" * 50 + "\n")
-        if response.text is not None:
-            print(response.text)
+        text_blocks = [b for b in response.content if b.type == "text"]
+        if text_blocks:
+            print(text_blocks[-1].text)
         else:
-            print("[No text response — model output may have been blocked by safety filters]")
+            print("[No text response returned]")
         print("\n" + "=" * 50 + "\n")
 
 

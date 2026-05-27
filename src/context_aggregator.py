@@ -80,7 +80,7 @@ COMPETITOR_MAP: Dict[str, List[str]] = {
 # FRED macro indicator used as the sector-wide CRE backdrop
 _FRED_SERIES_ID:  str = "TLNRESCONS"
 _FRED_SERIES_LABEL: str = "Commercial Construction Spending (TLNRESCONS, $MM, SA)"
-_SCHEMA_VERSION:  str = "1.1"
+_SCHEMA_VERSION:  str = "1.2"
 _OUTPUT_DIR:      Path = Path("output")
 
 
@@ -170,9 +170,16 @@ class ContextAggregator:
             "fred_series":     _FRED_SERIES_ID,
         }
 
+    def _get_company_financials_cached(self, ticker: str):
+        if not hasattr(self, "_fin_cache"):
+            self._fin_cache: Dict = {}
+        if ticker not in self._fin_cache:
+            self._fin_cache[ticker] = self._fin.get_company_financials(ticker)
+        return self._fin_cache[ticker]
+
     def _fetch_target(self, ticker: str) -> Dict:
         try:
-            return _to_dict(self._fin.get_company_financials(ticker))
+            return _to_dict(self._get_company_financials_cached(ticker))
         except Exception as exc:
             logger.error("Target financials failed for %s: %s", ticker, exc)
             return _error_node(ticker, exc)
@@ -210,11 +217,11 @@ class ContextAggregator:
             series = self._alt.get_fred_macro(_FRED_SERIES_ID, _FRED_SERIES_LABEL)
             d = _to_dict(series)
             if d.get("latest_value") is None:
-                return {"series_id": _FRED_SERIES_ID, "available": False}
+                return {"series_id": _FRED_SERIES_ID, "available": False, "reason": "no_data"}
             return d
         except Exception as exc:
             logger.error("FRED fetch failed: %s", exc)
-            return {"series_id": _FRED_SERIES_ID, "available": False}
+            return {"series_id": _FRED_SERIES_ID, "available": False, "reason": str(exc)}
 
     def _fetch_sec(self, ticker: str) -> Dict:
         try:
@@ -230,16 +237,9 @@ class ContextAggregator:
             logger.error("8-K events fetch failed for %s: %s", ticker, exc)
             return _error_node(ticker, exc)
 
-    def _fetch_press_releases(self, ticker: str) -> Dict:
-        try:
-            return _to_dict(self._alt.get_press_releases(ticker))
-        except Exception as exc:
-            logger.error("Press release fetch failed for %s: %s", ticker, exc)
-            return _error_node(ticker, exc)
-
     def _fetch_litigation(self, ticker: str) -> Dict:
         try:
-            raw_target = self._fin.get_company_financials(ticker)
+            raw_target = self._get_company_financials_cached(ticker)
             company_name = raw_target.name or ticker
         except Exception:
             company_name = ticker
@@ -252,7 +252,7 @@ class ContextAggregator:
     def _fetch_jobs(self, ticker: str) -> Dict:
         # Company name is taken from the target financials dict when available
         try:
-            raw_target = self._fin.get_company_financials(ticker)
+            raw_target = self._get_company_financials_cached(ticker)
             company_name = raw_target.name or ticker
         except Exception:
             company_name = ticker
