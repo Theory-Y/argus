@@ -24,7 +24,7 @@ Run the fetch script, which connects to `mcp_server.py` over stdio and calls the
 package and can launch the server):
 
 ```bash
-.venv/bin/python3 scripts/fetch_context.py <TICKER>
+.venv/bin/python3 src/fetch_context.py <TICKER>
 ```
 
 This writes `context_<TICKER>.json` to the working directory and prints its path.
@@ -101,7 +101,7 @@ sections. Present it to the user when done.
 ## Quick reference
 
 **Example invocation** — Input: "write the Theory Y memo for PCOR"
-1. `.venv/bin/python3 scripts/fetch_context.py PCOR` → `context_PCOR.json`
+1. `.venv/bin/python3 src/fetch_context.py PCOR` → `context_PCOR.json`
 2. Read `context_PCOR.json`.
 3. Write `TheoryY_Memo_PCOR.md`: title + the five `##` sections, in the analyst voice,
    grounded only in the payload.
