@@ -5,17 +5,47 @@ Pipeline:
   1. pandoc  .md  + reference.dotx  →  .docx        (branded Word output)
   2. pandoc  .docx                  →  .html         (structured content extract)
   3. Inject  institutional CSS      into  .html
-  4. chromium --headless            →  .pdf
+  4. headless browser (chromium/chrome/edge) →  .pdf
 
 Usage:
   .venv/bin/python3 scripts/export_pdf.py output/memos/TheoryY_Memo_MU.md
   .venv/bin/python3 scripts/export_pdf.py output/memos/TheoryY_Memo_MU.md --skip-docx
 """
 
-import argparse, os, re, subprocess, sys, tempfile
+import argparse, os, re, shutil, subprocess, sys, tempfile
 
 REFERENCE_DOTX = "output/theme/reference.dotx"
-CHROMIUM       = "chromium"
+
+# Browser binary names/paths vary by OS and distro. Probed in order; first hit wins.
+_BROWSER_CANDIDATES = [
+    "chromium", "chromium-browser",
+    "google-chrome", "google-chrome-stable", "chrome",
+    "msedge", "microsoft-edge", "microsoft-edge-stable",
+    # macOS application bundles
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "/Applications/Chromium.app/Contents/MacOS/Chromium",
+    "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+    # Windows default install locations
+    r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+    r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+    r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+]
+
+
+def find_browser() -> str:
+    """Locate a Chromium-family browser for headless PDF rendering."""
+    env = os.environ.get("CHROMIUM_BIN") or os.environ.get("CHROME_BIN")
+    if env and (shutil.which(env) or os.path.isfile(env)):
+        return env
+    for cand in _BROWSER_CANDIDATES:
+        found = shutil.which(cand) or (cand if os.path.isfile(cand) else None)
+        if found:
+            return found
+    sys.exit(
+        "ERROR: no Chromium-family browser found for PDF rendering.\n"
+        "Install one of: chromium, google-chrome, or microsoft-edge,\n"
+        "or set CHROMIUM_BIN=/path/to/browser. (See setup.sh / setup.ps1.)"
+    )
 
 # ── institutional CSS injected into pandoc HTML ──────────────────────────────
 CSS = """
@@ -298,9 +328,10 @@ def main():
         tf.write(html)
         tmp_html = tf.name
 
-    # ── Step 3: chromium → pdf ─────────────────────────────────────────────
-    print(f"[3/3] chromium → {pdf_path}")
-    run([CHROMIUM,
+    # ── Step 3: headless browser → pdf ─────────────────────────────────────
+    browser = find_browser()
+    print(f"[3/3] {os.path.basename(browser)} → {pdf_path}")
+    run([browser,
          "--headless", "--no-sandbox",
          "--disable-gpu",
          f"--print-to-pdf={pdf_path}",
