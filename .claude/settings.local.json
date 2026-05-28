@@ -45,7 +45,8 @@
       "Bash(pandoc output/TheoryY_Memo_MU.md --reference-doc=output/theme/reference.dotx -o output/TheoryY_Memo_MU.docx)",
       "Bash(mv output/context_*.json output/context/)",
       "Bash(mv output/TheoryY_Memo_* output/memos/)",
-      "Bash(bash -n setup.sh)"
+      "Bash(bash -n setup.sh)",
+      "Bash(graphify benchmark *)"
     ]
   },
   "enabledMcpjsonServers": [

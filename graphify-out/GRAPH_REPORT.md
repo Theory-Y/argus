@@ -1,256 +1,240 @@
-# Graph Report - .  (2026-05-27)
+# Graph Report - .  (2026-05-28)
 
 ## Corpus Check
-- Corpus is ~22,505 words - fits in a single context window. You may not need a graph.
+- 30 files · ~33,890 words
+- Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 427 nodes · 816 edges · 44 communities (38 shown, 6 thin omitted)
-- Extraction: 77% EXTRACTED · 23% INFERRED · 0% AMBIGUOUS · INFERRED: 190 edges (avg confidence: 0.5)
-- Token cost: 45,021 input · 1,583 output
+- 928 nodes · 1774 edges · 48 communities (34 shown, 14 thin omitted)
+- Extraction: 77% EXTRACTED · 23% INFERRED · 0% AMBIGUOUS · INFERRED: 410 edges (avg confidence: 0.52)
+- Token cost: 99,682 input · 3,312 output
 
 ## Community Hubs (Navigation)
+- [[_COMMUNITY_Context Aggregation & Financial Data|Context Aggregation & Financial Data]]
 - [[_COMMUNITY_Alt Data Service Core|Alt Data Service Core]]
-- [[_COMMUNITY_Alt Data Processors|Alt Data Processors]]
-- [[_COMMUNITY_FRED API Integration|FRED API Integration]]
-- [[_COMMUNITY_Financial Data Service|Financial Data Service]]
-- [[_COMMUNITY_Context Aggregation Layer|Context Aggregation Layer]]
-- [[_COMMUNITY_Agent Orchestration|Agent Orchestration]]
-- [[_COMMUNITY_AAPL Valuation Targets|AAPL Valuation Targets]]
-- [[_COMMUNITY_ASTS Valuation Targets|ASTS Valuation Targets]]
-- [[_COMMUNITY_MCP Server Interface|MCP Server Interface]]
+- [[_COMMUNITY_AAPL Alt Signals Context|AAPL Alt Signals Context]]
+- [[_COMMUNITY_ASTS Alt Signals Context|ASTS Alt Signals Context]]
+- [[_COMMUNITY_AAPL Context Data|AAPL Context Data]]
+- [[_COMMUNITY_ASTS Context Data|ASTS Context Data]]
+- [[_COMMUNITY_Financial Data Transformation|Financial Data Transformation]]
+- [[_COMMUNITY_POET Alt Signals Context|POET Alt Signals Context]]
+- [[_COMMUNITY_CRDO Alt Signals Context|CRDO Alt Signals Context]]
+- [[_COMMUNITY_MU Alt Signals Context|MU Alt Signals Context]]
+- [[_COMMUNITY_RKLB Alt Signals Context|RKLB Alt Signals Context]]
+- [[_COMMUNITY_Package Configuration|Package Configuration]]
+- [[_COMMUNITY_PDF Export Scripts|PDF Export Scripts]]
+- [[_COMMUNITY_Alt Data Processor Design|Alt Data Processor Design]]
+- [[_COMMUNITY_MCP Client & Context Fetch|MCP Client & Context Fetch]]
+- [[_COMMUNITY_Context Aggregator Classes|Context Aggregator Classes]]
+- [[_COMMUNITY_External Data Fetchers|External Data Fetchers]]
+- [[_COMMUNITY_Alt Data Service Methods|Alt Data Service Methods]]
+- [[_COMMUNITY_Litigation Data Signal|Litigation Data Signal]]
+- [[_COMMUNITY_Job Market Signal|Job Market Signal]]
+- [[_COMMUNITY_MCP Server Tools|MCP Server Tools]]
+- [[_COMMUNITY_Claude Plugin Settings|Claude Plugin Settings]]
+- [[_COMMUNITY_POET Google Trends Data|POET Google Trends Data]]
 - [[_COMMUNITY_POET Valuation Targets|POET Valuation Targets]]
-- [[_COMMUNITY_Claude Configuration|Claude Configuration]]
-- [[_COMMUNITY_POET Company Context|POET Company Context]]
-- [[_COMMUNITY_AAPL Alt Signals|AAPL Alt Signals]]
-- [[_COMMUNITY_AAPL Google Trends|AAPL Google Trends]]
-- [[_COMMUNITY_ASTS Alt Signals|ASTS Alt Signals]]
-- [[_COMMUNITY_ASTS Google Trends|ASTS Google Trends]]
-- [[_COMMUNITY_POET Google Trends|POET Google Trends]]
-- [[_COMMUNITY_MCP Client Agent|MCP Client Agent]]
-- [[_COMMUNITY_AAPL Macro FRED Data|AAPL Macro FRED Data]]
-- [[_COMMUNITY_ASTS Macro FRED Data|ASTS Macro FRED Data]]
-- [[_COMMUNITY_POET Macro FRED Data|POET Macro FRED Data]]
-- [[_COMMUNITY_AAPL Job Market Data|AAPL Job Market Data]]
-- [[_COMMUNITY_AAPL Litigation Data|AAPL Litigation Data]]
-- [[_COMMUNITY_AAPL Press Releases|AAPL Press Releases]]
-- [[_COMMUNITY_AAPL SEC Risk Filings|AAPL SEC Risk Filings]]
-- [[_COMMUNITY_AAPL Context Metadata|AAPL Context Metadata]]
-- [[_COMMUNITY_ASTS Job Market Data|ASTS Job Market Data]]
-- [[_COMMUNITY_ASTS Litigation Data|ASTS Litigation Data]]
-- [[_COMMUNITY_ASTS Press Releases|ASTS Press Releases]]
-- [[_COMMUNITY_ASTS SEC Risk Filings|ASTS SEC Risk Filings]]
-- [[_COMMUNITY_ASTS Context Metadata|ASTS Context Metadata]]
-- [[_COMMUNITY_POET SEC 8K Events|POET SEC 8K Events]]
-- [[_COMMUNITY_POET Job Market Data|POET Job Market Data]]
 - [[_COMMUNITY_POET Litigation Data|POET Litigation Data]]
-- [[_COMMUNITY_POET Press Releases|POET Press Releases]]
-- [[_COMMUNITY_POET SEC Risk Filings|POET SEC Risk Filings]]
-- [[_COMMUNITY_Fetch Context Script|Fetch Context Script]]
+- [[_COMMUNITY_Google Trends Tests|Google Trends Tests]]
 - [[_COMMUNITY_Local Claude Settings|Local Claude Settings]]
+- [[_COMMUNITY_POET FRED Macro Data|POET FRED Macro Data]]
+- [[_COMMUNITY_SEC Risk Factor Tests|SEC Risk Factor Tests]]
+- [[_COMMUNITY_Project Dependencies|Project Dependencies]]
+- [[_COMMUNITY_POET Job Market Data|POET Job Market Data]]
+- [[_COMMUNITY_POET Context Metadata|POET Context Metadata]]
+- [[_COMMUNITY_SEC 8-K Events Data|SEC 8-K Events Data]]
+- [[_COMMUNITY_MCP Client Scripts|MCP Client Scripts]]
+- [[_COMMUNITY_Fetch Context Module|Fetch Context Module]]
+- [[_COMMUNITY_POET Research Output|POET Research Output]]
 - [[_COMMUNITY_MCP Server Config|MCP Server Config]]
+- [[_COMMUNITY_Setup Scripts|Setup Scripts]]
+- [[_COMMUNITY_AAPL Research Output|AAPL Research Output]]
 - [[_COMMUNITY_Financial Rationale A|Financial Rationale A]]
 - [[_COMMUNITY_Financial Rationale B|Financial Rationale B]]
 - [[_COMMUNITY_Financial Rationale C|Financial Rationale C]]
 - [[_COMMUNITY_Alt Data Rationale|Alt Data Rationale]]
-- [[_COMMUNITY_Company Financials Type|Company Financials Type]]
+- [[_COMMUNITY_Src Financial Rationale A|Src Financial Rationale A]]
+- [[_COMMUNITY_Src Financial Rationale B|Src Financial Rationale B]]
+- [[_COMMUNITY_Src Financial Rationale C|Src Financial Rationale C]]
+- [[_COMMUNITY_Src Alt Data Rationale|Src Alt Data Rationale]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `ContextAggregator` - 41 edges
-2. `str` - 29 edges
-3. `CompanyFinancials` - 28 edges
-4. `FinancialService` - 26 edges
-5. `str` - 25 edges
-6. `TestFinancialDataTransformer` - 24 edges
-7. `TestGoogleTrendsProcessor` - 22 edges
-8. `TrendsSignal` - 22 edges
-9. `FredSeries` - 22 edges
-10. `ApifyJobsResult` - 22 edges
+1. `AltDataService` - 56 edges
+2. `FinancialService` - 49 edges
+3. `SecRiskSnippet` - 40 edges
+4. `ContextAggregator` - 39 edges
+5. `CompanyFinancials` - 28 edges
+6. `CompanyFinancials` - 26 edges
+7. `TestFinancialDataTransformer` - 26 edges
+8. `str` - 25 edges
+9. `str` - 25 edges
+10. `str` - 25 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `str` --uses--> `CompanyFinancials`  [INFERRED]
-  context_aggregator.py → financial_service.py
-- `ContextAggregator` --uses--> `CompanyFinancials`  [INFERRED]
-  context_aggregator.py → financial_service.py
-- `TestApifyJobScraper` --uses--> `CompanyFinancials`  [INFERRED]
-  test_all.py → financial_service.py
-- `TestContextAggregatorHelpers` --uses--> `CompanyFinancials`  [INFERRED]
-  test_all.py → financial_service.py
-- `TestFinancialDataTransformer` --uses--> `CompanyFinancials`  [INFERRED]
-  test_all.py → financial_service.py
+- `TestGoogleTrendsProcessor` --uses--> `FinancialService`  [INFERRED]
+  test_all.py → context_aggregator.py
+- `TestGoogleTrendsProcessor` --uses--> `ApifyJobsResult`  [INFERRED]
+  test_all.py → alt_data_service.py
+- `TestGoogleTrendsProcessor` --uses--> `GoogleTrendsProcessor`  [INFERRED]
+  test_all.py → alt_data_service.py
+- `TestGoogleTrendsProcessor` --uses--> `SecRiskFactorExtractor`  [INFERRED]
+  test_all.py → alt_data_service.py
+- `TestGoogleTrendsProcessor` --uses--> `TrendsSignal`  [INFERRED]
+  test_all.py → alt_data_service.py
 
-## Communities (44 total, 6 thin omitted)
+## Communities (48 total, 14 thin omitted)
 
-### Community 0 - "Alt Data Service Core"
-Cohesion: 0.07
-Nodes (43): DataFrame, float, str, AltDataService, Any, Path, Exception, FinancialService (+35 more)
+### Community 0 - "Context Aggregation & Financial Data"
+Cohesion: 0.05
+Nodes (43): str, CompanyFinancials, FinancialDataFetcher, FinancialDataTransformer, FinancialExporter, DataFrame, Path, ApifyJobScraper (+35 more)
 
-### Community 1 - "Alt Data Processors"
-Cohesion: 0.06
-Nodes (26): ApifyJobScraper, FredDataProcessor, GoogleTrendsProcessor, Domain: derives velocity and summary statistics from raw Trends data.     Single, Domain: summarises raw FRED observations into a FredSeries dataclass.     Single, Infrastructure + Domain: downloads a 10-K document and extracts the     opening, STUB implementation for Apify-powered job-listing scraper.      To activate:, STUB: LinkedIn / Glassdoor employee count via an Apify LinkedIn actor.         U (+18 more)
+### Community 1 - "Alt Data Service Core"
+Cohesion: 0.05
+Nodes (62): DataFrame, int, str, AltDataService, Any, Path, Exception, FinancialService (+54 more)
 
-### Community 2 - "FRED API Integration"
+### Community 2 - "AAPL Alt Signals Context"
+Cohesion: 0.05
+Nodes (47): alt_signals, google_trends, job_market, litigation, macro_fred, press_releases, sec_8k_events, sec_risk_snippet (+39 more)
+
+### Community 3 - "ASTS Alt Signals Context"
+Cohesion: 0.05
+Nodes (47): alt_signals, google_trends, job_market, litigation, macro_fred, press_releases, sec_8k_events, sec_risk_snippet (+39 more)
+
+### Community 4 - "AAPL Context Data"
+Cohesion: 0.05
+Nodes (47): alt_signals, google_trends, job_market, litigation, macro_fred, press_releases, sec_8k_events, sec_risk_snippet (+39 more)
+
+### Community 5 - "ASTS Context Data"
+Cohesion: 0.05
+Nodes (47): alt_signals, google_trends, job_market, litigation, macro_fred, press_releases, sec_8k_events, sec_risk_snippet (+39 more)
+
+### Community 6 - "Financial Data Transformation"
+Cohesion: 0.09
+Nodes (33): bool, float, str, _growth_to_pct(), _ratio(), _safe_float(), _to_mm(), object (+25 more)
+
+### Community 7 - "POET Alt Signals Context"
+Cohesion: 0.05
+Nodes (46): alt_signals, google_trends, job_market, litigation, macro_fred, press_releases, sec_8k_events, sec_risk_snippet (+38 more)
+
+### Community 8 - "CRDO Alt Signals Context"
+Cohesion: 0.05
+Nodes (44): alt_signals, google_trends, job_market, litigation, macro_fred, sec_8k_events, sec_risk_snippet, keyword (+36 more)
+
+### Community 9 - "MU Alt Signals Context"
+Cohesion: 0.05
+Nodes (44): alt_signals, google_trends, job_market, litigation, macro_fred, sec_8k_events, sec_risk_snippet, keyword (+36 more)
+
+### Community 10 - "RKLB Alt Signals Context"
+Cohesion: 0.05
+Nodes (40): alt_signals, google_trends, job_market, litigation, macro_fred, sec_8k_events, sec_risk_snippet, keyword (+32 more)
+
+### Community 11 - "Package Configuration"
+Cohesion: 0.08
+Nodes (29): author, bugs, url, dependencies, md-to-pdf, description, homepage, arch (+21 more)
+
+### Community 12 - "PDF Export Scripts"
+Cohesion: 0.14
+Nodes (25): border_el(), clear_children(), color_el(), el(), find_style(), get_or_create(), ind_el(), Build output/theme/reference.dotx — Theory Y institutional equity research templ (+17 more)
+
+### Community 13 - "Alt Data Processor Design"
 Cohesion: 0.10
-Nodes (14): int, FredApiFetcher, GoogleTrendsFetcher, PressReleaseFetcher, Infrastructure: wraps pytrends TrendReq.     Single responsibility: issue the HT, Infrastructure: queries the FRED REST API.     API key is read from the FRED_API, Return a list of {date, value} observation dicts, newest first.         Values o, Infrastructure: resolves a ticker symbol → zero-padded 10-digit CIK.     Uses ED (+6 more)
+Nodes (10): FredDataProcessor, GoogleTrendsProcessor, Domain: derives velocity and summary statistics from raw Trends data.     Single, Domain: summarises raw FRED observations into a FredSeries dataclass.     Single, Infrastructure + Domain: downloads a 10-K document and extracts the     opening, SecRiskFactorExtractor, test_all.py — Unit tests for all pure-logic components across the project. No ex, TestFinancialDataTransformer (+2 more)
 
-### Community 3 - "Financial Data Service"
-Cohesion: 0.15
-Nodes (15): bool, DataFrame, float, Path, str, _growth_to_pct(), _ratio(), financial_service.py — Valuation Engine ======================================== (+7 more)
+### Community 14 - "MCP Client & Context Fetch"
+Cohesion: 0.10
+Nodes (23): str, run_market_agent, _fetch, int, str, TheoryY_Finance_Oracle MCP, str, _mcp_tools_to_gemini() (+15 more)
 
-### Community 4 - "Context Aggregation Layer"
-Cohesion: 0.27
-Nodes (9): str, build_all_contexts(), ContextAggregator, _error_node(), Orchestrates FinancialService and AltDataService to build a single     token-eff, Full pipeline for one ticker:           1. Target company financials           2, Generate context files for every ticker in *tickers*.     Returns a dict of {tic, Convert dataclass instances to plain dicts for JSON serialisation. (+1 more)
+### Community 15 - "Context Aggregator Classes"
+Cohesion: 0.24
+Nodes (10): build_all_contexts(), ContextAggregator, _error_node(), str, context_aggregator.py — LLM Payload Builder ====================================, Orchestrates FinancialService and AltDataService to build a single     token-eff, Full pipeline for one ticker:           1. Target company financials           2, Generate context files for every ticker in *tickers*.     Returns a dict of {tic (+2 more)
 
-### Community 5 - "Agent Orchestration"
+### Community 16 - "External Data Fetchers"
+Cohesion: 0.12
+Nodes (18): FredApiFetcher, GoogleTrendsFetcher, _label_items(), PressRelease, PressReleaseFetcher, int, alt_data_service.py — Macro & Alternative Signal Engine ========================, Single press release headline from GlobeNewswire RSS. (+10 more)
+
+### Community 17 - "Alt Data Service Methods"
 Cohesion: 0.18
-Nodes (11): AltDataService, run_market_agent, ContextAggregator, _fetch, FinancialDataFetcher, FinancialDataTransformer, FinancialExporter, FinancialService (+3 more)
+Nodes (7): AltDataService, _html_to_text(), DataFrame, str, Fetch weekly interest-over-time for *keyword*.         Returns an empty DataFram, Returns the direct HTTPS URL of the most recent 10-K primary document,         o, High-level orchestrator for all alternative data sources.     All collaborators
 
-### Community 6 - "AAPL Valuation Targets"
-Cohesion: 0.18
-Nodes (11): target, enterprise_value_mm, ev_ebitda, ev_revenue, forward_pe, market_cap_mm, name, ticker (+3 more)
+### Community 18 - "Litigation Data Signal"
+Cohesion: 0.29
+Nodes (6): LitigationCase, LitigationFetcher, LitigationSignal, Single securities class-action case from Stanford SCAC., Active or recent class-action cases for one company., Securities litigation monitor with two-stage strategy:       1. Stanford SCAC fu
 
-### Community 7 - "ASTS Valuation Targets"
-Cohesion: 0.18
-Nodes (11): target, enterprise_value_mm, ev_ebitda, ev_revenue, forward_pe, market_cap_mm, name, ticker (+3 more)
+### Community 19 - "Job Market Signal"
+Cohesion: 0.23
+Nodes (7): ApifyJobScraper, ApifyJobsResult, Job-listing scrape result (stub until Apify actor is configured)., STUB implementation for Apify-powered job-listing scraper.      To activate:, STUB — returns zeroed mock data.          Live call pattern (replace this body):, STUB: LinkedIn / Glassdoor employee count via an Apify LinkedIn actor.         U, TestApifyJobScraper
 
-### Community 8 - "MCP Server Interface"
+### Community 20 - "MCP Server Tools"
 Cohesion: 0.25
-Nodes (10): Any, str, build_company_context(), generate_sector_sheet(), list_supported_tickers(), Return the set of tickers this server has pre-configured competitor mappings, Validate and normalise a user-supplied ticker list.     Returns a clean list, or, Generate a CSV of valuation metrics (Market Cap, EV, EV/Revenue, EV/EBITDA, (+2 more)
+Nodes (10): build_company_context(), generate_sector_sheet(), list_supported_tickers(), Any, str, Return the set of tickers this server has pre-configured competitor mappings, Validate and normalise a user-supplied ticker list.     Returns a clean list, or, Generate a CSV of valuation metrics (Market Cap, EV, EV/Revenue, EV/EBITDA, (+2 more)
 
-### Community 9 - "POET Valuation Targets"
-Cohesion: 0.20
-Nodes (10): target, enterprise_value_mm, ev_ebitda, ev_revenue, market_cap_mm, name, ticker, trailing_ebitda_mm (+2 more)
-
-### Community 10 - "Claude Configuration"
+### Community 21 - "Claude Plugin Settings"
 Cohesion: 0.22
 Nodes (8): enabledMcpjsonServers, enabledPlugins, code-simplifier@claude-plugins-official, context7@claude-plugins-official, security-guidance@claude-plugins-official, windsor-ai@claude-plugins-official, hooks, PreToolUse
 
-### Community 11 - "POET Company Context"
-Cohesion: 0.25
-Nodes (6): meta, fred_series, generated_at_utc, schema_version, target_ticker, peers
+### Community 22 - "POET Google Trends Data"
+Cohesion: 0.22
+Nodes (9): float, google_trends, keyword, latest_interest, peak_interest, trough_interest, Series, float (+1 more)
 
-### Community 12 - "AAPL Alt Signals"
-Cohesion: 0.29
-Nodes (6): alt_signals, sec_8k_events, peers, cik, events, ticker
+### Community 23 - "POET Valuation Targets"
+Cohesion: 0.22
+Nodes (9): target, enterprise_value_mm, ev_ebitda, ev_revenue, market_cap_mm, name, trailing_ebitda_mm, trailing_revenue_mm (+1 more)
 
-### Community 13 - "AAPL Google Trends"
-Cohesion: 0.29
-Nodes (7): google_trends, keyword, latest_interest, peak_interest, ticker, trough_interest, velocity_pct
+### Community 24 - "POET Litigation Data"
+Cohesion: 0.33
+Nodes (7): litigation, press_releases, cases, error, source, releases, ticker
 
-### Community 14 - "ASTS Alt Signals"
-Cohesion: 0.29
-Nodes (6): alt_signals, sec_8k_events, peers, cik, events, ticker
+### Community 26 - "Local Claude Settings"
+Cohesion: 0.33
+Nodes (5): enabledMcpjsonServers, enabledPlugins, frontend-design@claude-plugins-official, permissions, allow
 
-### Community 15 - "ASTS Google Trends"
-Cohesion: 0.29
-Nodes (7): google_trends, keyword, latest_interest, peak_interest, ticker, trough_interest, velocity_pct
+### Community 27 - "POET FRED Macro Data"
+Cohesion: 0.33
+Nodes (6): macro_fred, latest_date, latest_value, series_id, title, yoy_change_pct
 
-### Community 16 - "POET Google Trends"
-Cohesion: 0.29
-Nodes (7): google_trends, keyword, latest_interest, peak_interest, ticker, trough_interest, velocity_pct
-
-### Community 17 - "MCP Client Agent"
+### Community 29 - "Project Dependencies"
 Cohesion: 0.40
-Nodes (5): str, _mcp_tools_to_gemini(), Convert MCP tool descriptors to a single Gemini Tool with FunctionDeclarations., run_market_agent(), Tool
+Nodes (5): Template Builder, Package Configuration, Python Dependencies, Windows Setup Script, Unix Setup Script
 
-### Community 18 - "AAPL Macro FRED Data"
-Cohesion: 0.33
-Nodes (6): macro_fred, latest_date, latest_value, series_id, title, yoy_change_pct
-
-### Community 19 - "ASTS Macro FRED Data"
-Cohesion: 0.33
-Nodes (6): macro_fred, latest_date, latest_value, series_id, title, yoy_change_pct
-
-### Community 20 - "POET Macro FRED Data"
-Cohesion: 0.33
-Nodes (6): macro_fred, latest_date, latest_value, series_id, title, yoy_change_pct
-
-### Community 21 - "AAPL Job Market Data"
+### Community 30 - "POET Job Market Data"
 Cohesion: 0.40
 Nodes (5): job_market, company_name, engineering_roles, is_stub, total_open_roles
 
-### Community 22 - "AAPL Litigation Data"
-Cohesion: 0.40
-Nodes (5): litigation, cases, company_name, error, source
-
-### Community 23 - "AAPL Press Releases"
-Cohesion: 0.40
-Nodes (5): press_releases, error, releases, source, ticker
-
-### Community 24 - "AAPL SEC Risk Filings"
-Cohesion: 0.40
-Nodes (5): sec_risk_snippet, cik, filing_url, risk_factors_snippet, ticker
-
-### Community 25 - "AAPL Context Metadata"
+### Community 31 - "POET Context Metadata"
 Cohesion: 0.40
 Nodes (5): meta, fred_series, generated_at_utc, schema_version, target_ticker
 
-### Community 26 - "ASTS Job Market Data"
+### Community 32 - "SEC 8-K Events Data"
 Cohesion: 0.40
-Nodes (5): job_market, company_name, engineering_roles, is_stub, total_open_roles
+Nodes (5): Single 8-K filing — metadata only, no document download., cik, events, Single 8-K filing — metadata only, no document download., Sec8KEvent
 
-### Community 27 - "ASTS Litigation Data"
-Cohesion: 0.40
-Nodes (5): litigation, cases, company_name, error, source
-
-### Community 28 - "ASTS Press Releases"
-Cohesion: 0.40
-Nodes (5): press_releases, error, releases, source, ticker
-
-### Community 29 - "ASTS SEC Risk Filings"
-Cohesion: 0.40
-Nodes (5): sec_risk_snippet, cik, filing_url, risk_factors_snippet, ticker
-
-### Community 30 - "ASTS Context Metadata"
-Cohesion: 0.40
-Nodes (5): meta, fred_series, generated_at_utc, schema_version, target_ticker
-
-### Community 31 - "POET SEC 8K Events"
-Cohesion: 0.40
-Nodes (5): alt_signals, sec_8k_events, cik, events, ticker
-
-### Community 32 - "POET Job Market Data"
-Cohesion: 0.40
-Nodes (5): job_market, company_name, engineering_roles, is_stub, total_open_roles
-
-### Community 33 - "POET Litigation Data"
-Cohesion: 0.40
-Nodes (5): litigation, cases, company_name, error, source
-
-### Community 34 - "POET Press Releases"
-Cohesion: 0.40
-Nodes (5): press_releases, error, releases, source, ticker
-
-### Community 35 - "POET SEC Risk Filings"
-Cohesion: 0.40
-Nodes (5): sec_risk_snippet, cik, filing_url, risk_factors_snippet, ticker
-
-### Community 36 - "Fetch Context Script"
+### Community 33 - "MCP Client Scripts"
 Cohesion: 0.50
-Nodes (4): int, str, _fetch(), main()
+Nodes (4): _mcp_tools_to_claude(), str, Convert MCP tool descriptors to Claude tool format., run_market_agent()
 
-### Community 37 - "Local Claude Settings"
+### Community 34 - "Fetch Context Module"
 Cohesion: 0.50
-Nodes (3): enabledMcpjsonServers, permissions, allow
+Nodes (4): _fetch(), main(), int, str
 
 ## Knowledge Gaps
-- **158 isolated node(s):** `DataFrame`, `/home/lunear/theoryy/middlemarket-research-agent/.venv/bin/python3.14`, `target_ticker`, `schema_version`, `generated_at_utc` (+153 more)
+- **328 isolated node(s):** `DataFrame`, `/home/lunear/theoryy/middlemarket-research-agent/.venv/bin/python3.14`, `target_ticker`, `schema_version`, `generated_at_utc` (+323 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **6 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **14 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `ContextAggregator` connect `Context Aggregation Layer` to `Alt Data Service Core`, `MCP Server Interface`, `Alt Data Processors`?**
-  _High betweenness centrality (0.047) - this node is a cross-community bridge._
-- **Why does `CompanyFinancials` connect `Alt Data Service Core` to `Alt Data Processors`, `Financial Data Service`, `Context Aggregation Layer`?**
-  _High betweenness centrality (0.027) - this node is a cross-community bridge._
-- **Why does `TestFinancialDataTransformer` connect `Alt Data Processors` to `Alt Data Service Core`, `Context Aggregation Layer`?**
-  _High betweenness centrality (0.024) - this node is a cross-community bridge._
-- **Are the 20 inferred relationships involving `ContextAggregator` (e.g. with `Any` and `str`) actually correct?**
-  _`ContextAggregator` has 20 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 15 inferred relationships involving `CompanyFinancials` (e.g. with `AltDataService` and `Any`) actually correct?**
-  _`CompanyFinancials` has 15 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 17 inferred relationships involving `FinancialService` (e.g. with `AltDataService` and `Any`) actually correct?**
-  _`FinancialService` has 17 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 10 inferred relationships involving `str` (e.g. with `AltDataService` and `ApifyJobsResult`) actually correct?**
-  _`str` has 10 INFERRED edges - model-reasoned connections that need verification._
+- **Why does `SecRiskSnippet` connect `Context Aggregation & Financial Data` to `SEC 8-K Events Data`, `Alt Data Service Core`, `POET Research Output`, `Financial Data Transformation`, `Alt Data Processor Design`, `Context Aggregator Classes`, `External Data Fetchers`, `Alt Data Service Methods`, `Job Market Signal`, `POET Litigation Data`, `Google Trends Tests`, `SEC Risk Factor Tests`?**
+  _High betweenness centrality (0.068) - this node is a cross-community bridge._
+- **Why does `AltDataService` connect `Alt Data Service Core` to `Context Aggregation & Financial Data`, `SEC 8-K Events Data`, `Financial Data Transformation`, `MCP Client & Context Fetch`, `Alt Data Service Methods`, `Litigation Data Signal`, `Job Market Signal`, `POET Google Trends Data`?**
+  _High betweenness centrality (0.058) - this node is a cross-community bridge._
+- **Why does `FinancialService` connect `Alt Data Service Core` to `Context Aggregation & Financial Data`, `Financial Data Transformation`, `MCP Client & Context Fetch`, `Alt Data Service Methods`, `Litigation Data Signal`, `Job Market Signal`?**
+  _High betweenness centrality (0.038) - this node is a cross-community bridge._
+- **Are the 25 inferred relationships involving `AltDataService` (e.g. with `CompanyFinancials` and `ApifyJobsResult`) actually correct?**
+  _`AltDataService` has 25 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 33 inferred relationships involving `FinancialService` (e.g. with `context_aggregator.py` and `Any`) actually correct?**
+  _`FinancialService` has 33 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 28 inferred relationships involving `SecRiskSnippet` (e.g. with `AltDataService` and `context_aggregator.py`) actually correct?**
+  _`SecRiskSnippet` has 28 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 22 inferred relationships involving `ContextAggregator` (e.g. with `AltDataService` and `ApifyJobsResult`) actually correct?**
+  _`ContextAggregator` has 22 INFERRED edges - model-reasoned connections that need verification._
