@@ -6,6 +6,7 @@ Sources:
   2. FRED API (requests)       — commercial construction macro indicator
   3. SEC EDGAR API (requests)  — most-recent 10-K + Item 1A risk snippet
   4. Apify (stub)              — job-listing scraper (activate with API key)
+  5. Reddit public JSON API    — consumer & investor sentiment (no auth)
 
 Architecture (Clean Architecture + SOLID):
   Each data source has a dedicated Fetcher (I/O) and Processor (pure logic).
@@ -193,6 +194,20 @@ class LitigationSignal:
     source:       str
     cases:        List[LitigationCase] = field(default_factory=list)
     error:        Optional[str] = None
+
+
+@dataclass
+class ConsumerSentimentSignal:
+    """Consumer and public opinion signal derived from Reddit discussions."""
+    ticker:          str
+    company_name:    str
+    post_count:      int
+    sentiment:       Optional[str]    # "positive", "mixed", "negative", or None
+    sentiment_score: Optional[float]  # -1.0 (very negative) to 1.0 (very positive)
+    top_themes:      List[str]        # recurring topics from post titles
+    source:          str              # always "reddit"
+    subreddits:      List[str]        # subreddits that were searched
+    error:           Optional[str] = None
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -843,6 +858,152 @@ class LitigationFetcher:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Reddit Public Sentiment — no API key required
+# ──────────────────────────────────────────────────────────────────────────────
+
+_POSITIVE_WORDS = frozenset({
+    "great", "excellent", "good", "strong", "solid", "impressive", "bullish",
+    "growth", "beat", "outperform", "recommend", "buy", "winner", "best",
+    "improving", "positive", "rising", "gain", "profit", "momentum",
+    "undervalued", "cheap", "opportunity", "upside", "higher",
+})
+_NEGATIVE_WORDS = frozenset({
+    "bad", "poor", "weak", "disappointing", "bearish", "miss", "underperform",
+    "sell", "avoid", "worst", "declining", "negative", "falling", "loss",
+    "cut", "concern", "risk", "overvalued", "expensive", "down", "lower",
+    "terrible", "awful", "broken", "fraud", "crash", "layoffs", "lawsuit",
+})
+_STOPWORDS = frozenset({
+    "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
+    "have", "has", "had", "do", "does", "did", "will", "would", "could",
+    "should", "may", "might", "can", "to", "of", "in", "for", "on", "with",
+    "at", "by", "from", "as", "or", "and", "but", "not", "this", "that",
+    "it", "its", "my", "your", "their", "our", "you", "we", "they",
+    "about", "how", "why", "what", "when", "where", "who", "which", "just",
+    "anyone", "any", "some", "more", "less", "very", "really", "still",
+})
+
+# Base subreddits searched for every ticker
+_BASE_SUBREDDITS: List[str] = ["investing", "stocks"]
+
+# Additional sector-specific subreddits per ticker
+_TICKER_SUBREDDITS: Dict[str, List[str]] = {
+    "PCOR": ["ConstructionManagers", "projectmanagement"],
+    "APPF": ["PropertyManagement", "realestateinvesting"],
+    "Z":    ["RealEstate", "FirstTimeHomeBuyer"],
+    "CSGP": ["CommercialRealEstate", "realestate"],
+    "CBRE": ["CommercialRealEstate", "realestate"],
+    "ADT":  ["homeautomation", "homesecurity"],
+    "HON":  ["buildingautomation", "HVAC"],
+    "CARR": ["HVAC"],
+    "TT":   ["HVAC"],
+    "LII":  ["HVAC"],
+    "CTAS": ["facilitymanagement"],
+    "ABM":  ["facilitymanagement"],
+}
+
+_REDDIT_SEARCH_URL = "https://www.reddit.com/search.json"
+_REDDIT_HEADERS    = {"User-Agent": "TheoryY-ResearchAgent/1.0 (research)"}
+
+
+class RedditSentimentFetcher:
+    """
+    Infrastructure: queries Reddit's public JSON search API (no auth required).
+    Searches investment and sector-specific subreddits for company mentions.
+    """
+    _MAX_POSTS = 25
+    _LOOKBACK  = "year"   # Reddit time filter: hour, day, week, month, year, all
+
+    def __init__(self) -> None:
+        self._session = requests.Session()
+        self._session.headers.update(_REDDIT_HEADERS)
+
+    def fetch_posts(self, query: str, subreddits: List[str]) -> List[Dict]:
+        """
+        Search the given subreddits for *query*.
+        Returns a list of raw post data dicts; empty list on any error.
+        """
+        sr_param = "+".join(subreddits)
+        params: Dict = {
+            "q":           query,
+            "sort":        "relevance",
+            "t":           self._LOOKBACK,
+            "limit":       self._MAX_POSTS,
+            "type":        "link",
+            "restrict_sr": "true",
+        }
+        url = f"https://www.reddit.com/r/{sr_param}/search.json"
+        try:
+            resp = self._session.get(url, params=params, timeout=_HTTP_TIMEOUT)
+            resp.raise_for_status()
+            children = resp.json().get("data", {}).get("children", [])
+            return [c["data"] for c in children if "data" in c]
+        except requests.RequestException as exc:
+            logger.error("Reddit fetch failed (query='%s'): %s", query, exc)
+            return []
+
+
+class ConsumerSentimentProcessor:
+    """
+    Domain: derives a sentiment score and top themes from raw Reddit post data.
+    Single responsibility: signal computation; no I/O.
+    """
+
+    def compute_signal(
+        self,
+        ticker:       str,
+        company_name: str,
+        posts:        List[Dict],
+        subreddits:   List[str],
+    ) -> ConsumerSentimentSignal:
+        if not posts:
+            return ConsumerSentimentSignal(
+                ticker=ticker, company_name=company_name, post_count=0,
+                sentiment=None, sentiment_score=None, top_themes=[],
+                source="reddit", subreddits=subreddits,
+            )
+
+        pos = neg = 0
+        word_freq: Dict[str, int] = {}
+        for post in posts:
+            title = (post.get("title") or "").lower()
+            tokens = re.findall(r"[a-z]{3,}", title)
+            for tok in tokens:
+                if tok in _POSITIVE_WORDS:
+                    pos += 1
+                if tok in _NEGATIVE_WORDS:
+                    neg += 1
+                if tok not in _STOPWORDS and len(tok) > 3:
+                    word_freq[tok] = word_freq.get(tok, 0) + 1
+
+        total = pos + neg
+        score: Optional[float] = None
+        label: Optional[str]   = None
+        if total > 0:
+            score = round((pos - neg) / total, 2)
+            label = "positive" if score > 0.2 else "negative" if score < -0.2 else "mixed"
+
+        # Top 5 themes: most frequent tokens, excluding the ticker/company name itself
+        ticker_tokens = set(re.findall(r"[a-z]{3,}", company_name.lower()))
+        ticker_tokens.add(ticker.lower())
+        themes = [
+            w for w, _ in sorted(word_freq.items(), key=lambda x: -x[1])
+            if w not in ticker_tokens
+        ][:5]
+
+        return ConsumerSentimentSignal(
+            ticker=ticker,
+            company_name=company_name,
+            post_count=len(posts),
+            sentiment=label,
+            sentiment_score=score,
+            top_themes=themes,
+            source="reddit",
+            subreddits=subreddits,
+        )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Service Façade — composes all data sources
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -854,31 +1015,35 @@ class AltDataService:
 
     def __init__(
         self,
-        fred_api_key:      str                           = FRED_API_KEY,
-        trends_fetcher:    Optional[GoogleTrendsFetcher] = None,
-        trends_processor:  Optional[GoogleTrendsProcessor] = None,
-        fred_fetcher:      Optional[FredApiFetcher]      = None,
-        fred_processor:    Optional[FredDataProcessor]   = None,
-        cik_resolver:      Optional[SecCikResolver]      = None,
-        filing_fetcher:    Optional[SecFilingFetcher]    = None,
-        risk_extractor:    Optional[SecRiskFactorExtractor] = None,
-        job_scraper:       Optional[ApifyJobScraper]     = None,
-        sec_8k_fetcher:    Optional[Sec8KFetcher]        = None,
-        pr_fetcher:        Optional[PressReleaseFetcher] = None,
-        lit_fetcher:       Optional[LitigationFetcher]   = None,
+        fred_api_key:        str                               = FRED_API_KEY,
+        trends_fetcher:      Optional[GoogleTrendsFetcher]     = None,
+        trends_processor:    Optional[GoogleTrendsProcessor]   = None,
+        fred_fetcher:        Optional[FredApiFetcher]          = None,
+        fred_processor:      Optional[FredDataProcessor]       = None,
+        cik_resolver:        Optional[SecCikResolver]          = None,
+        filing_fetcher:      Optional[SecFilingFetcher]        = None,
+        risk_extractor:      Optional[SecRiskFactorExtractor]  = None,
+        job_scraper:         Optional[ApifyJobScraper]         = None,
+        sec_8k_fetcher:      Optional[Sec8KFetcher]            = None,
+        pr_fetcher:          Optional[PressReleaseFetcher]     = None,
+        lit_fetcher:         Optional[LitigationFetcher]       = None,
+        sentiment_fetcher:   Optional[RedditSentimentFetcher]  = None,
+        sentiment_processor: Optional[ConsumerSentimentProcessor] = None,
     ) -> None:
-        self._trends_fetcher   = trends_fetcher   or GoogleTrendsFetcher()
-        self._trends_processor = trends_processor or GoogleTrendsProcessor()
-        self._fred_fetcher     = fred_fetcher     or FredApiFetcher(api_key=fred_api_key)
-        self._fred_processor   = fred_processor   or FredDataProcessor()
-        self._cik_resolver     = cik_resolver     or SecCikResolver()
-        self._filing_fetcher   = filing_fetcher   or SecFilingFetcher()
-        self._risk_extractor   = risk_extractor   or SecRiskFactorExtractor()
-        self._job_scraper      = job_scraper      or ApifyJobScraper()
+        self._trends_fetcher      = trends_fetcher      or GoogleTrendsFetcher()
+        self._trends_processor    = trends_processor    or GoogleTrendsProcessor()
+        self._fred_fetcher        = fred_fetcher        or FredApiFetcher(api_key=fred_api_key)
+        self._fred_processor      = fred_processor      or FredDataProcessor()
+        self._cik_resolver        = cik_resolver        or SecCikResolver()
+        self._filing_fetcher      = filing_fetcher      or SecFilingFetcher()
+        self._risk_extractor      = risk_extractor      or SecRiskFactorExtractor()
+        self._job_scraper         = job_scraper         or ApifyJobScraper()
         # Share the CIK resolver so the in-memory cache is reused across all SEC calls
-        self._sec_8k_fetcher   = sec_8k_fetcher   or Sec8KFetcher(cik_resolver=self._cik_resolver)
-        self._pr_fetcher       = pr_fetcher       or PressReleaseFetcher(cik_resolver=self._cik_resolver)
-        self._lit_fetcher      = lit_fetcher      or LitigationFetcher(cik_resolver=self._cik_resolver)
+        self._sec_8k_fetcher      = sec_8k_fetcher      or Sec8KFetcher(cik_resolver=self._cik_resolver)
+        self._pr_fetcher          = pr_fetcher          or PressReleaseFetcher(cik_resolver=self._cik_resolver)
+        self._lit_fetcher         = lit_fetcher         or LitigationFetcher(cik_resolver=self._cik_resolver)
+        self._sentiment_fetcher   = sentiment_fetcher   or RedditSentimentFetcher()
+        self._sentiment_processor = sentiment_processor or ConsumerSentimentProcessor()
 
     # ── public API ────────────────────────────────────────────────────────────
 
@@ -927,3 +1092,9 @@ class AltDataService:
 
     def get_litigation_signal(self, company_name: str, ticker: Optional[str] = None) -> LitigationSignal:
         return self._lit_fetcher.fetch(company_name, ticker=ticker)
+
+    def get_consumer_sentiment(self, ticker: str, company_name: str) -> ConsumerSentimentSignal:
+        subreddits = _BASE_SUBREDDITS + _TICKER_SUBREDDITS.get(ticker.upper(), [])
+        query = f"{ticker} {company_name}"
+        posts = self._sentiment_fetcher.fetch_posts(query, subreddits)
+        return self._sentiment_processor.compute_signal(ticker, company_name, posts, subreddits)

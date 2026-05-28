@@ -64,8 +64,9 @@ Then write these five sections **in order**, each opening with its exact `##` he
 | 1 | `## 1. One-Line Thesis & Valuation Snapshot` | ~400 words |
 | 2 | `## 2. Business Overview & Operations` | ~600 words |
 | 3 | `## 3. Alternative Data & Macro Signals` | ~700 words |
-| 4 | `## 4. Key Risks & Structural Barriers` | ~500 words |
-| 5 | `## 5. Investment Recommendation` | ~300 words |
+| 4 | `## 4. Consumer & Public Opinion` | ~400 words |
+| 5 | `## 5. Key Risks & Structural Barriers` | ~500 words |
+| 6 | `## 6. Investment Recommendation` | ~300 words |
 
 Word targets are guidance, not hard caps — prioritize substance over hitting a count.
 
@@ -100,9 +101,16 @@ margins. Every claim should be anchored to a number or relationship from the pay
   - §3 — alternative-data and macro read-through: what the non-financial signals in
     the payload imply for the forward numbers. This is the longest section; make it
     the most analytically differentiated.
-  - §4 — concrete, ranked risks and structural barriers, each tied to its impact on
+  - §4 — consumer and public opinion: use `alt_signals.consumer_sentiment` from the
+    payload. Cover sentiment label and score, post volume, top recurring themes, and
+    which subreddits surfaced the most signal. Flag if post_count is low (< 5) as
+    limited sample. If error is present, note the data gap instead of omitting the
+    section. Contextualise the sentiment against the business model — negative Reddit
+    chatter means something different for a B2C platform (Zillow) vs. a B2B SaaS
+    (Procore) vs. a facilities conglomerate (Honeywell).
+  - §5 — concrete, ranked risks and structural barriers, each tied to its impact on
     the thesis or the numbers.
-  - §5 — a clear recommendation (direction + conviction) that falls out of §§1–4,
+  - §6 — a clear recommendation (direction + conviction) that falls out of §§1–5,
     with the key variables that would change the call.
 
 ## Output
@@ -150,7 +158,7 @@ Deliverables: `output/memos/TheoryY_Memo_<TICKER>.md` + `output/memos/TheoryY_Me
 0. Ask user: md or docx? → store as `FORMAT`
 1. `.venv/bin/python3 src/fetch_context.py PCOR` → `output/context/context_PCOR.json`
 2. Read `output/context/context_PCOR.json`.
-3. Write `output/memos/TheoryY_Memo_PCOR.md`: title + the five `##` sections, in the analyst voice,
+3. Write `output/memos/TheoryY_Memo_PCOR.md`: title + the six `##` sections, in the analyst voice,
    grounded only in the payload.
 4. **If md:**   `.venv/bin/python3 scripts/export_pdf.py output/memos/TheoryY_Memo_PCOR.md --skip-docx`
    **If docx:** `.venv/bin/python3 scripts/export_pdf.py output/memos/TheoryY_Memo_PCOR.md`

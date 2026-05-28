@@ -10,10 +10,11 @@ Output contract:
     "target":      CompanyFinancials (dict),
     "peers":       [ CompanyFinancials (dict), … ],     ← 3 comparables
     "alt_signals": {
-        "google_trends":    TrendsSignal (dict),
-        "macro_fred":       FredSeries   (dict),
-        "sec_risk_snippet": SecRiskSnippet (dict),
-        "job_market":       ApifyJobsResult (dict)
+        "google_trends":       TrendsSignal (dict),
+        "macro_fred":          FredSeries   (dict),
+        "sec_risk_snippet":    SecRiskSnippet (dict),
+        "job_market":          ApifyJobsResult (dict),
+        "consumer_sentiment":  ConsumerSentimentSignal (dict)
     }
   }
 
@@ -44,6 +45,7 @@ from financial_service import (
 from alt_data_service import (
     AltDataService,
     ApifyJobsResult,
+    ConsumerSentimentSignal,
     FredSeries,
     LitigationSignal,
     PressReleaseSignal,
@@ -80,7 +82,7 @@ COMPETITOR_MAP: Dict[str, List[str]] = {
 # FRED macro indicator used as the sector-wide CRE backdrop
 _FRED_SERIES_ID:  str = "TLNRESCONS"
 _FRED_SERIES_LABEL: str = "Commercial Construction Spending (TLNRESCONS, $MM, SA)"
-_SCHEMA_VERSION:  str = "1.2"
+_SCHEMA_VERSION:  str = "1.3"
 _OUTPUT_DIR:      Path = Path("output")
 
 
@@ -197,12 +199,13 @@ class ContextAggregator:
 
     def _fetch_alt_signals(self, ticker: str) -> Dict:
         return {
-            "google_trends":    self._fetch_trends(ticker),
-            "macro_fred":       self._fetch_fred(),
-            "sec_risk_snippet": self._fetch_sec(ticker),
-            "job_market":       self._fetch_jobs(ticker),
-            "sec_8k_events":    self._fetch_8k_events(ticker),
-            "litigation":       self._fetch_litigation(ticker),
+            "google_trends":      self._fetch_trends(ticker),
+            "macro_fred":         self._fetch_fred(),
+            "sec_risk_snippet":   self._fetch_sec(ticker),
+            "job_market":         self._fetch_jobs(ticker),
+            "sec_8k_events":      self._fetch_8k_events(ticker),
+            "litigation":         self._fetch_litigation(ticker),
+            "consumer_sentiment": self._fetch_consumer_sentiment(ticker),
         }
 
     def _fetch_trends(self, ticker: str) -> Dict:
@@ -247,6 +250,18 @@ class ContextAggregator:
             return _to_dict(self._alt.get_litigation_signal(company_name, ticker=ticker))
         except Exception as exc:
             logger.error("Litigation fetch failed for %s: %s", ticker, exc)
+            return _error_node(ticker, exc)
+
+    def _fetch_consumer_sentiment(self, ticker: str) -> Dict:
+        try:
+            raw_target = self._get_company_financials_cached(ticker)
+            company_name = raw_target.name or ticker
+        except Exception:
+            company_name = ticker
+        try:
+            return _to_dict(self._alt.get_consumer_sentiment(ticker, company_name))
+        except Exception as exc:
+            logger.error("Consumer sentiment failed for %s: %s", ticker, exc)
             return _error_node(ticker, exc)
 
     def _fetch_jobs(self, ticker: str) -> Dict:

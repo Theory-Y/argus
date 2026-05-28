@@ -177,3 +177,76 @@ tests/
 ```
 
 Tests cover pure-logic components only — no network calls, no external API dependencies.
+
+---
+
+## Additional Features
+
+Planned extensions that are not yet implemented. Contributions welcome.
+
+### Multi-source sentiment aggregator
+
+Replace the single Reddit signal with parallel fetches across Trustpilot, G2, Glassdoor, and news sentiment:
+
+```python
+class ConsumerSentimentService:
+    def __init__(self):
+        self.trustpilot = TrustpilotFetcher()   # general consumer reviews (free API tier)
+        self.g2         = G2Fetcher()            # B2B SaaS reviews — relevant for PCOR, APPF, CSGP, Z
+        self.glassdoor  = GlassdoorFetcher()     # employee sentiment as a culture/morale signal
+        self.news       = NewsSentimentAnalyzer() # press tone from RSS/news APIs
+
+    def get_sentiment_profile(self, ticker: str) -> ConsumerSentimentProfile:
+        """Aggregate sentiment across all sources with per-source weighting."""
+```
+
+Example payload shape:
+```json
+{
+  "consumer_reviews": {
+    "trustpilot": { "rating": 4.1, "review_count": 312, "top_themes": ["support", "pricing"] },
+    "g2":         { "rating": 4.4, "review_count": 890, "top_themes": ["ease of use", "integrations"] }
+  },
+  "employee_sentiment": {
+    "glassdoor":  { "rating": 3.8, "review_count": 1200, "culture_score": 3.6 }
+  },
+  "news_sentiment": {
+    "net_sentiment": "positive",
+    "tone_trend": "improving",
+    "recent_headlines": ["Company beats Q3 estimates", "New partnership announced"]
+  },
+  "aggregate_sentiment": "mixed"
+}
+```
+
+Required additions: `TRUSTPILOT_API_KEY` (free), `G2_API_KEY` (free), `GLASSDOOR_API_KEY` env vars.
+
+---
+
+### Reddit + PRAW deep sentiment
+
+Use the official [PRAW](https://praw.readthedocs.io/) library for richer access: threaded comments, upvote ratios, post flair, and subreddit-level volume trends over time. Requires a Reddit app (free OAuth credentials at reddit.com/prefs/apps).
+
+```python
+import praw
+
+reddit = praw.Reddit(
+    client_id=os.getenv("REDDIT_CLIENT_ID"),
+    client_secret=os.getenv("REDDIT_CLIENT_SECRET"),
+    user_agent="TheoryY-ResearchAgent/1.0",
+)
+
+def get_deep_sentiment(ticker: str, lookback_days: int = 90) -> RedditDeepSignal:
+    """
+    Fetches post + comment data from r/investing, r/stocks, and sector subreddits.
+    Returns volume trend, upvote-weighted sentiment, and top comment themes.
+    """
+```
+
+Advantages over the current public JSON approach:
+- Access to comment bodies (not just post titles) for richer sentiment
+- Upvote ratio as a quality-weight for each post
+- Historical volume trend (mentions per week over 90 days) as a momentum signal
+- No rate-limit issues at scale
+
+Required additions: `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET` env vars.
