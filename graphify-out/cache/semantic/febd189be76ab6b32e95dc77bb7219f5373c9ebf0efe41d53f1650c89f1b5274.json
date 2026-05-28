@@ -1,1 +1,0 @@
-{"nodes": [{"id": "client_mcp_py", "label": "client-mcp.py", "file_type": "code", "source_file": "scripts/client-mcp.py"}], "edges": [{"source": "client_mcp_py", "target": "mcp_server_py", "relation": "calls", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "scripts/client-mcp.py"}], "hyperedges": []}

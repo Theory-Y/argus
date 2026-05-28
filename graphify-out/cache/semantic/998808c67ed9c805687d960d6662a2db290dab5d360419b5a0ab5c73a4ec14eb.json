@@ -1,1 +1,0 @@
-{"nodes": [{"id": "theoryy_memo_mu_pdf", "label": "TheoryY_Memo_MU.pdf", "file_type": "document", "source_file": "output/memos/TheoryY_Memo_MU.pdf"}], "edges": [{"source": "theoryy_memo_mu_pdf", "target": "export_pdf_py", "relation": "semantically_similar_to", "confidence": "INFERRED", "confidence_score": 0.8, "source_file": "output/memos/TheoryY_Memo_MU.pdf"}], "hyperedges": []}

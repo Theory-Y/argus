@@ -10,17 +10,6 @@
     "setup:win": "powershell -ExecutionPolicy Bypass -File setup.ps1"
   },
   "systemDependencies": {
-    "pandoc": {
-      "version": ">=3.0",
-      "purpose": "Markdown to .docx conversion with .dotx style template",
-      "install": {
-        "macos": "brew install pandoc",
-        "arch": "sudo pacman -S pandoc",
-        "ubuntu": "sudo apt-get install pandoc",
-        "fedora": "sudo dnf install pandoc",
-        "manual": "https://pandoc.org/installing.html"
-      }
-    },
     "chromium": {
       "version": "bundled via md-to-pdf/puppeteer",
       "purpose": "Markdown to PDF conversion with CSS theme",

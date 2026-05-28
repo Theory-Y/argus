@@ -26,12 +26,12 @@ install_pkg() {
 
 # ── 1. Node dependencies ──────────────────────────────────────────────────────
 echo ""
-echo "[1/5] Installing Node.js dependencies..."
+echo "[1/3] Installing Node.js dependencies..."
 npm install
 
 # ── 2. Python virtual environment ────────────────────────────────────────────
 echo ""
-echo "[2/5] Setting up Python virtual environment..."
+echo "[2/3] Setting up Python virtual environment..."
 # Recreate if pip's shebang interpreter no longer exists on disk
 # (happens when the project is moved — shebangs bake in the old absolute path)
 if [ -d ".venv" ] && [ -f ".venv/bin/pip" ]; then
@@ -48,56 +48,21 @@ fi
 # Install the full, declared dependency set (not a hardcoded subset).
 .venv/bin/pip install --quiet -r requirements.txt
 
-# ── 3. System dependency: pandoc ─────────────────────────────────────────────
+# ── 3. Node module: md-to-pdf (bundled with Chromium/Puppeteer) ───────────────
 echo ""
-echo "[3/5] Checking for pandoc..."
-if command -v pandoc &>/dev/null; then
-  echo "  pandoc $(pandoc --version | head -1 | awk '{print $2}') already installed."
+echo "[3/3] Verifying md-to-pdf installation..."
+if [ -x "./node_modules/.bin/md-to-pdf" ]; then
+  echo "  md-to-pdf ready (bundled with npm dependencies)."
 else
-  echo "  pandoc not found. Installing..."
-  install_pkg pandoc || {
-    echo "  Install pandoc manually: https://pandoc.org/installing.html"; exit 1; }
+  echo "  WARNING: md-to-pdf not found in node_modules."
+  echo "  Run 'npm install' to set it up."
 fi
 
-# ── 4. System dependency: headless browser (for PDF rendering) ───────────────
 echo ""
-echo "[4/5] Checking for a Chromium-family browser (PDF rendering)..."
-BROWSER=""
-for b in chromium chromium-browser google-chrome google-chrome-stable \
-         microsoft-edge microsoft-edge-stable; do
-  if command -v "$b" &>/dev/null; then BROWSER="$b"; break; fi
-done
-# macOS app bundles aren't on PATH — check the standard locations too.
-if [ -z "$BROWSER" ]; then
-  for p in "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
-           "/Applications/Chromium.app/Contents/MacOS/Chromium"; do
-    [ -x "$p" ] && BROWSER="$p" && break
-  done
-fi
-if [ -n "$BROWSER" ]; then
-  echo "  Found browser: $BROWSER"
-else
-  echo "  No browser found. Installing chromium..."
-  if [[ "$OSTYPE" == "darwin"* ]]; then
-    if command -v brew &>/dev/null; then
-      brew install --cask chromium || true
-    else
-      echo "  Homebrew not found — install Chrome/Chromium manually."
-    fi
-  else
-    # Debian/Ubuntu call it chromium-browser; most others use chromium.
-    install_pkg chromium || install_pkg chromium-browser || true
-  fi
-  if command -v chromium &>/dev/null || command -v chromium-browser &>/dev/null \
-     || [ -x "/Applications/Chromium.app/Contents/MacOS/Chromium" ]; then
-    echo "  chromium installed."
-  else
-    echo "  WARNING: could not auto-install a browser."
-    echo "  Install Chrome/Chromium/Edge manually, or set CHROMIUM_BIN=/path/to/browser."
-  fi
-fi
-
-# ── 5. Generate the branded .dotx reference template ─────────────────────────
+echo "=== Setup complete ===" -ForegroundColor Green
+echo ""
+echo "Quick-start:"
+echo "  Export memo to PDF : python3 scripts/export_pdf.py output/memos/TheoryY_Memo_TICKER.md"
 echo ""
 echo "[5/5] Generating branded reference template → output/theme/reference.dotx"
 mkdir -p output/theme
