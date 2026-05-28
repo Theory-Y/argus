@@ -1,133 +1,119 @@
 # Investment Memo: ASTS
-**AST SpaceMobile, Inc. | Nasdaq: ASTS**
-**Memo Date: May 28, 2026 | Analyst: Theory Y Equity Research**
-**Sector: Space Infrastructure / Satellite Telecommunications**
-
----
 
 ## 1. One-Line Thesis & Valuation Snapshot
 
-AST SpaceMobile is the only company with an FCC-licensed, commercially operational direct-to-device (D2D) satellite broadband network that works with unmodified smartphones — a structural moat in the race to become the wholesale coverage layer beneath every mobile network operator on earth, priced today on a revenue-ramp faith trade that demands disciplined sizing.
+AST SpaceMobile is priced at 462x trailing revenue on $85M of initial commercial sales — the market is paying today for a total addressable market capture scenario that the trailing financials cannot yet underwrite.
 
-**Valuation Snapshot (as of August 2025 data; public filings through Q2 2025):**
+**Valuation Snapshot (trailing twelve months)**
 
-As of mid-2025, ASTS traded in a wide band reflecting competing narratives: the bear case pricing in serial dilution and execution risk against a SpaceX/T-Mobile juggernaut, the bull case pricing in a multi-billion-dollar recurring revenue stream from MNO wholesale contracts. With ~250–280M fully diluted shares outstanding (post-Block 2 equity raises) and a stock oscillating between ~$12–$32 during H1 2025, the implied enterprise value ranged from approximately $3.0B to $8.5B. Against trailing twelve-month revenue of sub-$20M (predominantly grant/government revenue and early commercial trials), any EV/Revenue multiple is a distraction — the market is pricing probability-weighted DCF scenarios on a constellation that does not yet exist at commercial scale.
+| Metric | Value |
+|---|---|
+| Market Capitalization | $50.7B |
+| Enterprise Value | $39.3B |
+| Implied Net Cash | ~$11.5B |
+| Trailing Revenue | $84.94M |
+| Trailing EBITDA | -$316.39M |
+| EBITDA Margin | N/M (-373%) |
+| YoY Revenue Growth | +1,952% |
+| EV / Revenue | 462x |
+| EV / EBITDA | N/M |
+| Forward P/E | N/A |
 
-The more useful framing: Block 1 (5 BlueBird satellites, commercially live as of late 2024) demonstrated technical feasibility with AT&T and Verizon. Block 2 (~60 next-generation satellites planned for 2025–2026 launch cadence) is the revenue inflection. At full Block 2 deployment, AST management has guided toward capacity to serve approximately 20–25M subscribers in the US alone, with carrier MOU economics suggesting wholesale pricing of $5–10/subscriber/month for seamless coverage access. If 10M subscribers are activated at $7/month average wholesale rate across contracted MNOs, that's ~$840M annualized revenue — at 1.5–2.0x that figure's EV implied by mid-range share prices, the market is effectively pricing in 50–60% probability of commercial-scale execution with a mid-cycle revenue multiple of 4–5x. That is not irrationally expensive for a winner-take-most infrastructure position, but it leaves zero margin for delays, dilution, or competitive displacement.
+The single most structurally important figure in the payload is that EV ($39.3B) sits $11.5B *below* market cap ($50.7B) — implying net cash of approximately $11.5B on the balance sheet. This is not a distressed cash burn story; it is a well-capitalized buildout story. The February 2026 8-K cluster confirms the source: back-to-back structured financing transactions (debt + unregistered equity) raised this capital ahead of a critical deployment phase. That cash is the bridge between today's $85M revenue run rate and the revenue base the $50.7B market cap requires to rationalize.
 
-The stock is not a value trade. It is a real-option instrument on satellite infrastructure dominance.
+The 1,952% YoY revenue growth rate is the metric the bull case rests on — it confirms commercialization has begun. However, 1,952% growth off a near-zero base is a base-effect figure; the absolute dollar increment is modest relative to the multiple. The forward trajectory of that growth rate, not the trailing rate, is the underwriting variable this payload cannot resolve.
 
 ---
 
 ## 2. Business Overview & Operations
 
-AST SpaceMobile builds and operates a space-based cellular broadband network designed to provide 4G LTE and 5G NR connectivity directly to standard unmodified mobile handsets — no satellite phone, no specialized modem, no app required. This is the core technical claim that separates AST from every prior satellite telephony venture (Iridium, Globalstar, Ligado) and from SpaceX Starlink's current consumer broadband product.
+AST SpaceMobile is building a space-based cellular broadband network. With $84.94M in trailing revenue, the company is at the earliest stage of commercial revenue generation — the 1,952% YoY growth rate reflects a ramp from near-zero rather than acceleration off a mature base. The EBITDA loss of -$316.39M (-373% margin) reflects the capital intensity of deploying satellite infrastructure ahead of subscriber scale.
 
-**Technology Architecture**
+The net cash position of approximately $11.5B is the direct output of the February 2026 financing events. The February 17 8-K (Items 1.01, 2.03, 3.02) discloses entry into a Material Agreement alongside a Direct Financial Obligation and unregistered equity sales; the February 20 filing (Items 2.03, 3.02, 8.01) layers on additional debt and equity issuance three days later. Back-to-back raises within a three-day window signal a targeted structured transaction — likely a commercial partnership with an embedded financing component — rather than an opportunistic market tap. The use of unregistered equity (Item 3.02) points to a private placement with strategic or institutional counterparties, which may carry commercial implications beyond the financial terms.
 
-The BlueBird satellite bus uses an exceptionally large phased-array antenna — the largest commercial communications arrays ever deployed in low earth orbit — to concentrate enough downlink energy to reach a standard 3GPP-compliant handset with a sub-0.5W transmitter. Block 1 BlueBirds (launched September 2024, 5 satellites) validated this architecture at 4G speeds in sub-2 GHz licensed spectrum. Block 2 satellites are designed with larger arrays and higher power budgets targeting 5G NR with multi-channel operation, which will substantially increase per-satellite capacity.
+The implied cash runway at current burn: -$316M EBITDA annually against ~$11.5B net cash implies approximately 36 months. This is not a near-term liquidity concern. The critical question is whether burn accelerates before it decelerates, since satellite constellation buildout typically requires increasing capital deployment as launch cadence increases. The payload does not provide forward capex guidance or a segment-level cost breakdown, so the burn trajectory cannot be modeled from available data.
 
-**Revenue Model**
-
-AST's go-to-market is B2B wholesale, not direct-to-consumer. Mobile network operators license access to AST's satellite coverage layer to offer their subscribers seamless connectivity in geographic areas where terrestrial infrastructure is economically unviable to build. The MNO bears subscriber acquisition, billing, and retention costs; AST receives a wholesale fee per active subscriber or a revenue share. This model has two important operating implications:
-
-1. **Customer concentration is high but credit quality is exceptional.** AT&T and Verizon anchor the US commercial agreements. Internationally, Vodafone Group, Telefónica, Rakuten Mobile, and others have signed commercial agreements covering populations across Europe, Japan, and emerging markets. These are investment-grade counterparties with long-duration contracts and high switching costs once integrated.
-
-2. **AST's cost structure is predominantly satellite CapEx and launch costs**, not a variable cost per subscriber served. Once a satellite is in orbit and its licensed spectrum is cleared, the marginal cost of serving an additional subscriber is negligible — this is the operating leverage story. Fixed costs are the constellation build-out; incremental revenue drops largely to gross margin.
-
-**Cost Structure and Operating Leverage**
-
-Satellite manufacturing and launch represent ~$150–250M per Block 2 tranche (exact figures not publicly disclosed at the per-satellite level). Operating expenses include ground station infrastructure, spectrum licensing maintenance, R&D for Block 3/next-gen development, and G&A for a ~700-person company (as of 2025 headcount disclosures). EBITDA is deeply negative in the build phase — AST was burning ~$60–90M per quarter in 2024–2025 before meaningful commercial revenue. The operating leverage thesis depends entirely on Block 2 satellites becoming revenue-generating before the balance sheet requires another large equity raise at dilutive prices.
-
-**Go-to-Market Status**
-
-Block 1 commercial service launched with AT&T and Verizon in late 2024, covering portions of the continental US for beta subscribers. Revenue recognition under these agreements was limited by satellite count and coverage density. Block 2 launch cadence (targeting SpaceX Falcon 9 rideshares through 2025) is the single most important near-term execution variable. Until Block 2 is substantially deployed, AST has a proof-of-concept product, not a commercial-scale service.
+Hiring trends are marked `available: false` in the payload. The January 16, 2026 5.02 filing discloses a director or officer departure or appointment; for a pre-scale company executing a technically complex buildout, management continuity is a first-order concern, and the specific role affected is not disclosed in the payload.
 
 ---
 
 ## 3. Alternative Data & Macro Signals
 
-**The Connectivity Gap TAM is Real and Growing**
+**Google Trends: Sustained Maximum — Not a Decayed Spike**
 
-ITU and GSMA data consistently show approximately 3–4 billion people in areas where mobile broadband is technically unavailable or economically underserved by terrestrial networks. The economics of towers in low-population-density or complex terrain geographies do not pencil for MNOs — return on invested capital for rural tower builds is typically below the 8–10% WACC threshold at population densities below ~500 people/sq km. Satellite coverage-as-a-service to MNOs removes that CapEx burden entirely. This is not a speculative market — it is a documented failure of terrestrial economics that satellite infrastructure can address at meaningfully lower per-unit cost.
+The Google Trends signal for "ASTS" is the most analytically differentiated data point in the payload. Velocity is +123.49%, peak interest is 100 (maximum), and — the critical observation — latest interest is also 100. ASTS is not showing the spike-and-partial-decay pattern typical of event-driven attention bursts; it is registering maximum search interest at the time of data pull with no visible decay. Trough interest is 18, meaning current interest runs at 5.6x the historical floor.
 
-**MNO CapEx Discipline Favors the AST Model**
+A sustained maximum reading — as distinct from a spike that has partially reverted — typically signals either an unresolved ongoing narrative where attention continues to compound, or a continuous flow of new catalysts sustaining volume. The ASTS 8-K record supports the latter: a Q1 earnings release on May 11, a Reg FD + Other Events filing on April 20, two earnings-period filings (February 11 and March 2), and the February structured financing cluster. Each event is capable of generating fresh search activity, and the combination produces the sustained maximum visible in the data.
 
-Post-2022, major global MNOs have been under sustained pressure to improve free cash flow and reduce leverage after heavy 5G spectrum auction and deployment spending. AT&T's $20B+ 5G midband buildout and debt load, combined with activist pressure on capital allocation, creates a structural preference for coverage-gap solutions that don't require additional CapEx on their balance sheet. AST's wholesale model is essentially off-balance-sheet rural coverage for its carrier partners — economically attractive precisely because MNO capex cycles are constrained.
+For a pre-scale company with a binary outcome thesis, sustained peak search interest cuts two ways. It confirms active market engagement — the thesis is being evaluated broadly. But it also means the stock is priced with elevated speculative positioning: maximum attention at speculative multiples creates sharp two-way volatility risk on any catalyst that updates the commercial ramp narrative.
 
-**Government and Defense Demand as an Underappreciated Signal**
+**February 2026 8-K Cluster: Material Agreement + Structured Financing**
 
-The US Space Development Agency, DARPA, and Department of Defense have publicly funded AST's technology development through multiple contracts totaling over $150M in aggregate through 2025. This is not charity — DoD has a direct operational interest in resilient, non-terrestrial communications for troops and assets in denied or degraded environments. Government revenue provides a floor under the income statement during commercial ramp and validates the technology at the highest due-diligence standard. No commercial customer scrutinizes a satellite communication architecture more thoroughly than the Pentagon.
+The three-day financing cluster (February 17–20) is the most material event sequence in the payload. Item 1.01 (Material Agreement) on February 17, combined with Items 2.03 and 3.02, suggests a transaction structure where a commercial partnership generated both contractual commitments and a simultaneous capital raise. The April 20 Reg FD + Other Events filing is an out-of-cycle investor communication — likely a strategic announcement or milestone update. The content of both events is outside the payload but represents the two highest-priority documents for anyone underwriting the commercial trajectory.
 
-**Spectrum Licensing as a Competitive Moat**
+The May 11, 2026 earnings filing (Items 2.02 + 7.01) — the most recent event in the payload — marks the first results disclosure since the structured financing. Whether revenue growth sustained above the base-effect 1,952% rate and how EBITDA loss per dollar of revenue is tracking are the central questions from this filing. The payload records the event but not the content.
 
-AST holds FCC Part 25 satellite licenses to operate in licensed carrier spectrum (rather than ISM/unlicensed bands). This is structurally significant: because AST transmits in spectrum already licensed to its MNO partners (AT&T and Verizon spectrum, Vodafone spectrum, etc.), there is no new spectrum risk and no interference concern for the end-user device. SpaceX's T-Mobile D2D partnership operates in T-Mobile's licensed spectrum under a different regulatory structure, but SpaceX's multi-operator ambitions face a more complex spectrum-sharing puzzle. AST's single-operator-per-market model aligns incentives cleanly.
+**Macro: Commercial Construction Spending**
 
-**The SpaceX Competitive Threat: Competitive but Not Displacement**
+The TLNRESCONS series at +0.21% YoY (March 2026) is a muted macro read-through. Satellite network deployment is not constrained by terrestrial construction cycles, making this the least relevant macro signal for ASTS. Noted for completeness; limited analytical weight here.
 
-The T-Mobile/SpaceX D2D service (Beta launched 2024, commercial rollout 2025) is the most-cited bear catalyst. Evaluating it accurately requires separating the US domestic market (where T-Mobile/SpaceX competes directly with AST/AT&T and AST/Verizon) from the international market (where SpaceX has no comparable carrier agreements outside a handful of markets). In the US, T-Mobile/SpaceX has messaging and initial data service but has not demonstrated the multi-megabit 5G NR throughput that AST's Block 2 targets. For enterprise and government use cases requiring real broadband capability — not just SMS/low-bitrate voice — AST's technical architecture is differentiated. The market will likely support two D2D operators in the US (as it supports multiple MNOs), with network differentiation driving carrier selection. Outside the US, AST's multi-carrier global agreements represent a substantial lead over SpaceX's current international D2D footprint.
+**Litigation: Complete Blind Spot**
 
-**FCC Regulatory Environment**
-
-The FCC's 2024 Report and Order enabling supplemental coverage from space (SCS) provided the regulatory framework for D2D satellite services in licensed spectrum. This rule, while contested in some procedural dimensions, codified AST's operating model. A reversal would be a severe regulatory risk; absent that, the framework is established and AST is building within it.
-
-**Capital Markets Environment**
-
-ASTS has been a capital-intensive equity story since its 2021 SPAC merger, requiring multiple follow-on equity raises. The 2024–2025 period saw AST successfully raise capital at various price points, with the balance sheet backstopped by the DoD contracts and equity lines. However, the share count inflation from ~165M shares at the SPAC to 250M+ by mid-2025 has been a persistent dilution drag on per-share value accretion. The key forward signal is whether Block 2 commercial revenue can outpace the remaining CapEx funding requirement, reducing the probability of another large dilutive raise.
+Both Stanford SCAC and the EDGAR EFTS fallback failed, leaving the litigation picture entirely opaque. This is a full data gap — not a confirmation of no litigation. For a company deploying novel space-based infrastructure in a heavily regulated spectrum environment, IP disputes and regulatory challenges are realistic first-order risks the payload cannot address.
 
 ---
 
 ## 4. Consumer & Public Opinion
 
-AST SpaceMobile's B2B wholesale structure means end-consumer sentiment is largely irrelevant to the core investment thesis — subscribers never interact with "AST SpaceMobile" as a brand; they interact with AT&T, Verizon, or Vodafone. Negative or positive consumer sentiment about the MNO partners flows through to AST only insofar as it affects subscriber counts and MNO commercial health.
+The Reddit sentiment module returned 0 posts and no data — the pull encountered a 403 block from r/investing and r/stocks. Unlike the INTC analysis where the B2B business model limits Reddit's diagnostic relevance, the gap carries more weight for ASTS.
 
-That said, the retail investor community around ASTS is exceptionally active and opinion-forming in ways that materially affect the stock's short-term trading dynamics. Reddit communities (particularly r/ASTS and r/SpaceMobile) and StockTwits maintain large, engaged retail investor bases that correlate satellite deployment updates with stock price moves. The announcement of Block 1 commercial go-live generated multi-day trading volume anomalies exceeding 5x average. This retail engagement creates both liquidity (tight spreads, responsive price discovery) and volatility risk (momentum-driven drawdowns on any execution stumble).
+AST SpaceMobile's end service — direct-to-handset cellular broadband — is fundamentally consumer-facing, even if the current commercial structure routes through carrier agreements. Early adopter communities discussing coverage experience, device compatibility, pricing, and service reliability would provide leading signal on retention and churn dynamics that become critical at scale. The subreddits queried (r/investing, r/stocks) may also underrepresent the most signal-dense communities for a space-tech name; dedicated communities were not in scope.
 
-Public opinion on satellite connectivity broadly is favorable — rural broadband access is a bipartisan political priority in the US, and the FCC's Broadband Data Collection maps consistently show large rural coverage gaps that politicians across the aisle want addressed. This creates a supportive regulatory environment and positions AST as aligned with public-interest connectivity goals, which reduces headline regulatory risk.
-
-The one consumer-facing dimension that matters to the thesis is MNO subscriber churn and satisfaction in coverage areas. Anecdotally, field tests and beta user reports for Block 1 service in the US have been positive on connectivity availability (the fact that service exists where terrestrial coverage does not) but mixed on throughput consistency under current single-digit satellite count. Block 2 will substantially improve this, but consumer-facing performance credibility for the carrier partners depends on execution.
+The information asymmetry here is notable: Google Trends at sustained maximum (latest = 100) confirms elevated public engagement, but without community data the character of that engagement — bullish excitement, skeptical debate, or frustrated early adopters — is uncharacterized. For a stock at 462x EV/Revenue with maximum search interest, that ambiguity is itself a positioning risk.
 
 ---
 
 ## 5. Key Risks & Structural Barriers
 
-**1. Execution Risk: Constellation Scale vs. Commercial Viability**
-The most immediate and probability-weighted risk. Block 1 (5 satellites) provides limited coverage density and throughput. Block 2 (~60 satellites) is required for commercially meaningful service. Any launch failure, manufacturing delay, or satellite anomaly that substantially reduces Block 2 satellite count or delays deployment by 12+ months compresses the commercial revenue ramp directly and accelerates the need for additional capital. Space is unforgiving — a single major on-orbit failure of a large Block 2 satellite cannot be repaired. The probability of at least one partial mission failure in a 60+ satellite program is non-trivial; the question is whether AST has sized its constellation plan with sufficient redundancy.
+**1. No Trailing Floor: Valuation Is Entirely Future-Dependent**
+At 462x EV/Revenue with negative EBITDA, there is no fundamental floor in the trailing metrics. The $50.7B market cap is purely optionality value — it prices a future revenue base orders of magnitude larger than $85M. Any disappointing data point on the commercial ramp can trigger severe multiple compression with no earnings-based support level below.
 
-**2. Capital Structure and Dilution Risk**
-AST's balance sheet has been funded primarily through equity rather than debt, given the pre-revenue profile. Each equity raise above current market prices is accretive; each raise below current prices is dilutive to existing holders. The company's cash runway, against a Block 2 manufacturing and launch budget of several hundred million dollars, creates ongoing binary risk around equity issuance timing and price. If the stock re-rates downward before the final Block 2 funding tranches, dilution could be severe. Public filings through Q2 2025 do not yet indicate full Block 2 funding closure — this remains an open variable.
+**2. Burn Acceleration Risk Before EBITDA Inflection**
+The -$316M EBITDA loss against ~$11.5B net cash implies approximately three years of runway at current burn. But satellite constellation buildout is capital-intensive and front-loaded: launch and operational costs required to achieve coverage density likely increase before revenue scale provides offset. If burn accelerates to -$600M or -$800M annually as the constellation expands, the runway shortens materially and future capital raises introduce additional dilution.
 
-**3. Competitive Displacement by SpaceX/T-Mobile**
-While SpaceX's D2D service does not immediately replicate AST's technical architecture or multi-carrier global agreements, SpaceX's execution track record, launch cost advantage (Starlink satellites ride their own rockets at near-zero marginal launch cost), and balance sheet are objectively superior to AST's. If SpaceX chooses to aggressively expand D2D carrier agreements globally and achieves competitive throughput with its next-generation satellites, AST's international first-mover advantage erodes faster than the current MOU pipeline would suggest. The risk is not displacement today — it is relative execution pace over the next 24–36 months.
+**3. Financing Overhang from Unregistered Equity Sales**
+The February 2026 private placements (Item 3.02 across two filings) involved unregistered equity securities that typically carry registration rights. When those securities become freely tradable, they create supply pressure. The size, pricing, and lock-up terms are not in the payload — a due diligence gap with direct dilution implications.
 
-**4. MNO Partnership Concentration and Non-Binding Nature**
-Several of AST's international carrier agreements are MOUs — memoranda of understanding — not binding commercial contracts with revenue commitments. An MNO that deprioritizes coverage-gap investment, changes strategy, or enters into a competing arrangement (e.g., a national carrier signing with SpaceX or with a regional D2D alternative) reduces AST's total addressable paying-subscriber base. The disclosed AT&T and Verizon agreements in the US are further along commercially, but terms of revenue sharing are not publicly disclosed in sufficient detail to model revenue per subscriber with confidence.
+**4. Litigation: Complete Coverage Gap**
+Both data sources failed. For a company operating in spectrum-constrained, internationally regulated satellite communications, IP litigation and regulatory challenge risk is material. The payload provides zero coverage, which is not the same as zero risk.
 
-**5. Spectrum Complexity in Emerging Markets**
-Internationally, AST's value proposition depends on receiving regulatory approval to operate in each carrier's licensed spectrum in each jurisdiction. Regulatory timelines in emerging markets (sub-Saharan Africa, South/Southeast Asia, Latin America) are unpredictable and subject to local spectrum policy shifts. India, one of the largest potential markets, has been complex for satellite broadband entrants broadly. Any jurisdiction-by-jurisdiction spectrum delay reduces the subscriber addressable market in the near-to-medium term and pushes out revenue recognition.
+**5. Leadership Change in January 2026**
+A single 5.02 filing (January 16, 2026) for a pre-scale company executing a complex technical buildout is more consequential than at a mature company with established processes. The role affected is not in the payload; risk is proportional to how operationally critical the position is.
+
+**6. Google Trends at Maximum: Elevated Volatility Regime**
+Sustained peak search interest in a pre-profit name at speculative multiples creates a fragile positioning backdrop. Any catalyst — positive or negative — lands into an already-elevated attention environment, amplifying price moves in both directions. The May 11 Q1 earnings release is the most proximate such catalyst.
 
 ---
 
 ## 6. Investment Recommendation
 
-**Rating: Speculative Buy | Conviction: Moderate | Time Horizon: 18–30 months**
+**Direction: Speculative Long (risk-tolerant mandates) / Avoid (fundamental mandates) — Conviction: High Uncertainty**
 
-ASTS represents a high-asymmetry, high-risk position in a winner-take-most infrastructure category. The technology works — Block 1 demonstrated that. The business model is sound — wholesale D2D connectivity to investment-grade MNOs is a superior revenue quality profile compared to direct consumer satellite services. The international agreement pipeline is real and differentiated from SpaceX's current footprint.
+ASTS is a binary outcome investment, not a fundamental compounder. The payload is unambiguous: 462x EV/Revenue, -373% EBITDA margin, and 1,952% revenue growth from a near-zero base cannot be underwritten with DCF. The investment decision reduces to whether the commercial ramp achieves escape velocity before capital is exhausted.
 
-The recommendation is Speculative Buy rather than outright Buy for two reasons: (1) the stock is not optically cheap on any current-revenue multiple — it is priced on successful Block 2 deployment, and that deployment is subject to execution risk that cannot be diversified away; (2) the capital structure trajectory requires either commercial revenue acceleration or additional dilution, and both timing and price of any future equity raise are unknown. Position sizing should reflect that this is a real-option instrument, not a cash-flow compounder.
+**In favor of the bull case:** Revenue growth of +1,952% confirms commercialization has started — the thesis is not theoretical. Net cash of ~$11.5B provides 36+ months of runway without near-term dilution pressure. The February 2026 Material Agreement + structured financing implies institutional conviction from counterparties with information advantages on the buildout timeline. Sustained Google Trends maximum (latest = 100) reflects active, ongoing market engagement rather than a fading narrative.
 
-**What would upgrade the call to Buy:**
-- Block 2 launches proceeding on schedule with confirmed on-orbit health by end of 2025
-- At least one binding commercial revenue contract with disclosed per-subscriber economics
-- Balance sheet evidence that Block 2 manufacturing and launch is fully funded without a large equity raise
+**In favor of caution:** No trailing earnings floor; multiple can compress severely on any ramp disappointment. Burn acceleration risk as the constellation scales is unquantifiable from the payload. Unregistered equity placements create future supply overhang. Litigation picture is fully opaque.
 
-**What would downgrade the call to Sell/Avoid:**
-- A major on-orbit satellite failure reducing Block 2 operational capacity below commercial viability thresholds
-- A large below-market equity raise ($10/share or below) that confirms capital desperation
-- Binding SpaceX/T-Mobile international carrier agreements in AST's top-5 international markets
+**Variables that would change the call:**
 
-The long-term structural case for D2D satellite connectivity as a universal coverage layer is one of the more durable infrastructure theses in the current technology landscape. Whether AST specifically captures it depends on 24 months of execution that is binary in nature. Size accordingly.
+- Q1 2026 earnings content (May 11 8-K): if revenue growth on an absolute dollar basis is accelerating and EBITDA loss per revenue dollar is improving, that narrows the uncertainty range and argues for higher conviction
+- The April 20 Reg FD disclosure content: an out-of-cycle strategic communication is the highest-information document in the payload and warrants priority review
+- Full terms of the February structured financing: counterparty identity, pricing, and registration rights determine both the dilution overhang and the commercial partnership signal strength
+- Any additional 5.02 filings before the commercial ramp is established would sharply increase execution risk
+
+For mandates requiring positive EBITDA or earnings-based multiples, ASTS is uninvestable on current fundamentals. For mandates that can hold binary, optionality-based positions — where $11.5B net cash provides a partial capital floor — the revenue trajectory and institutional financing signal argue for a small, sized position with defined loss tolerance. The answer changes materially on Q1 2026 earnings content, which the May 11 8-K contains and this payload does not.
 
 ---
 
-*Data sources: AST SpaceMobile public SEC filings (10-K/10-Q through Q2 2025), FCC license records, company press releases and investor presentations through August 2025, GSMA connectivity gap data, ITU broadband access statistics. All financial figures based on public disclosures; where figures are estimated or extrapolated from partial disclosures, this is indicated in context. This memo does not constitute investment advice.*
+*Data sourced from TheoryY Finance Oracle MCP Server. Generated 2026-05-28. All figures from context payload; forward estimates not independently verified.*
