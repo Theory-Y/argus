@@ -180,6 +180,45 @@ Tests cover pure-logic components only — no network calls, no external API dep
 
 ---
 
+## Selling this as a service
+
+The repo can run as a managed service without exposing the research engine. The
+design keeps one hard boundary: the **client** speaks only HTTP and contains no
+proprietary logic, so it is safe to distribute, while the **engine + memo prompt**
+stay behind the server. A single `AUTH_MODE` env var flips the business model.
+
+```
+client/ (CLI + web, zero IP)  ──HTTP──▶  server/ (FastAPI)  ──▶  core/ + src/ (engine, hidden prompt)
+                                                              └─▶  Anthropic API (writes the memo)
+```
+
+| Layer | Path | Role |
+|-------|------|------|
+| Engine façade, hidden prompt, Anthropic writer, render | `core/` | Proprietary — server-side only in SaaS |
+| API (auth, billing, jobs, storage) | `server/` | Run by you (SaaS) or the buyer (self-host) |
+| CLI + Python SDK | `client/python/` | `pip install theory-y` → `theory-y memo PCOR` |
+| Web dashboard | `client/web/` | React + Vite; Generate / History / Account |
+| Deploy + packaging | `infra/` | Dockerfile, compose, `PACKAGING.md` |
+
+**Two modes, one codebase** (`AUTH_MODE`):
+- `license` — offline license-key check, no billing. For **source-sale / self-host**.
+- `saas` — DB-backed API keys + Stripe quota; the memo is written server-side via the
+  Anthropic API, so the prompt never leaves your servers.
+
+Run it locally (license mode):
+
+```bash
+pip install -r requirements.txt -r server/requirements.txt
+export ANTHROPIC_API_KEY=sk-ant-...        # plus FRED_API_KEY / SEC_USER_AGENT
+uvicorn server.app:app --reload            # http://localhost:8000
+cd client/web && npm install && npm run dev # http://localhost:5173
+```
+
+Or the whole stack via Docker: `docker compose -f infra/docker-compose.yml up --build`.
+See `infra/PACKAGING.md` for exactly what ships in a source sale vs a SaaS deploy.
+
+---
+
 ## Additional Features
 
 Planned extensions that are not yet implemented. Contributions welcome.

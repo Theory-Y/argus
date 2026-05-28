@@ -4,3 +4,12 @@ graphify-out/cost.json        # local only
 
 .env
 node_modules/
+
+# Service build artifacts & local state
+client/web/dist/
+*.db
+theoryy_service.db
+output/service/
+__pycache__/
+*.pyc
+.venv/

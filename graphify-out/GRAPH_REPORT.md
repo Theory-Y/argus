@@ -1,13 +1,18 @@
-# Graph Report - .  (2026-05-28)
+# Graph Report - middlemarket-research-agent  (2026-05-28)
 
 ## Corpus Check
-- 30 files · ~33,890 words
+- 92 files · ~51,617 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 928 nodes · 1774 edges · 48 communities (34 shown, 14 thin omitted)
-- Extraction: 77% EXTRACTED · 23% INFERRED · 0% AMBIGUOUS · INFERRED: 410 edges (avg confidence: 0.52)
-- Token cost: 99,682 input · 3,312 output
+- 1579 nodes · 2555 edges · 131 communities (113 shown, 18 thin omitted)
+- Extraction: 89% EXTRACTED · 11% INFERRED · 0% AMBIGUOUS · INFERRED: 282 edges (avg confidence: 0.53)
+- Token cost: 0 input · 0 output
+
+## Graph Freshness
+- Built from commit: `e94c502d`
+- Run `git rev-parse HEAD` and compare to check if the graph is stale.
+- Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - [[_COMMUNITY_Context Aggregation & Financial Data|Context Aggregation & Financial Data]]
@@ -45,7 +50,6 @@
 - [[_COMMUNITY_SEC 8-K Events Data|SEC 8-K Events Data]]
 - [[_COMMUNITY_MCP Client Scripts|MCP Client Scripts]]
 - [[_COMMUNITY_Fetch Context Module|Fetch Context Module]]
-- [[_COMMUNITY_POET Research Output|POET Research Output]]
 - [[_COMMUNITY_MCP Server Config|MCP Server Config]]
 - [[_COMMUNITY_Setup Scripts|Setup Scripts]]
 - [[_COMMUNITY_AAPL Research Output|AAPL Research Output]]
@@ -57,184 +61,564 @@
 - [[_COMMUNITY_Src Financial Rationale B|Src Financial Rationale B]]
 - [[_COMMUNITY_Src Financial Rationale C|Src Financial Rationale C]]
 - [[_COMMUNITY_Src Alt Data Rationale|Src Alt Data Rationale]]
+- [[_COMMUNITY_Community 48|Community 48]]
+- [[_COMMUNITY_Community 49|Community 49]]
+- [[_COMMUNITY_Community 50|Community 50]]
+- [[_COMMUNITY_Community 51|Community 51]]
+- [[_COMMUNITY_Community 52|Community 52]]
+- [[_COMMUNITY_Community 53|Community 53]]
+- [[_COMMUNITY_Community 54|Community 54]]
+- [[_COMMUNITY_Community 55|Community 55]]
+- [[_COMMUNITY_Community 56|Community 56]]
+- [[_COMMUNITY_Community 57|Community 57]]
+- [[_COMMUNITY_Community 58|Community 58]]
+- [[_COMMUNITY_Community 59|Community 59]]
+- [[_COMMUNITY_Community 60|Community 60]]
+- [[_COMMUNITY_Community 61|Community 61]]
+- [[_COMMUNITY_Community 62|Community 62]]
+- [[_COMMUNITY_Community 63|Community 63]]
+- [[_COMMUNITY_Community 64|Community 64]]
+- [[_COMMUNITY_Community 65|Community 65]]
+- [[_COMMUNITY_Community 66|Community 66]]
+- [[_COMMUNITY_Community 67|Community 67]]
+- [[_COMMUNITY_Community 68|Community 68]]
+- [[_COMMUNITY_Community 69|Community 69]]
+- [[_COMMUNITY_Community 70|Community 70]]
+- [[_COMMUNITY_Community 71|Community 71]]
+- [[_COMMUNITY_Community 72|Community 72]]
+- [[_COMMUNITY_Community 73|Community 73]]
+- [[_COMMUNITY_Community 74|Community 74]]
+- [[_COMMUNITY_Community 75|Community 75]]
+- [[_COMMUNITY_Community 76|Community 76]]
+- [[_COMMUNITY_Community 77|Community 77]]
+- [[_COMMUNITY_Community 78|Community 78]]
+- [[_COMMUNITY_Community 79|Community 79]]
+- [[_COMMUNITY_Community 80|Community 80]]
+- [[_COMMUNITY_Community 81|Community 81]]
+- [[_COMMUNITY_Community 82|Community 82]]
+- [[_COMMUNITY_Community 83|Community 83]]
+- [[_COMMUNITY_Community 84|Community 84]]
+- [[_COMMUNITY_Community 85|Community 85]]
+- [[_COMMUNITY_Community 86|Community 86]]
+- [[_COMMUNITY_Community 87|Community 87]]
+- [[_COMMUNITY_Community 88|Community 88]]
+- [[_COMMUNITY_Community 89|Community 89]]
+- [[_COMMUNITY_Community 90|Community 90]]
+- [[_COMMUNITY_Community 91|Community 91]]
+- [[_COMMUNITY_Community 92|Community 92]]
+- [[_COMMUNITY_Community 93|Community 93]]
+- [[_COMMUNITY_Community 94|Community 94]]
+- [[_COMMUNITY_Community 95|Community 95]]
+- [[_COMMUNITY_Community 96|Community 96]]
+- [[_COMMUNITY_Community 97|Community 97]]
+- [[_COMMUNITY_Community 98|Community 98]]
+- [[_COMMUNITY_Community 99|Community 99]]
+- [[_COMMUNITY_Community 100|Community 100]]
+- [[_COMMUNITY_Community 101|Community 101]]
+- [[_COMMUNITY_Community 102|Community 102]]
+- [[_COMMUNITY_Community 103|Community 103]]
+- [[_COMMUNITY_Community 104|Community 104]]
+- [[_COMMUNITY_Community 105|Community 105]]
+- [[_COMMUNITY_Community 106|Community 106]]
+- [[_COMMUNITY_Community 107|Community 107]]
+- [[_COMMUNITY_Community 108|Community 108]]
+- [[_COMMUNITY_Community 109|Community 109]]
+- [[_COMMUNITY_Community 110|Community 110]]
+- [[_COMMUNITY_Community 111|Community 111]]
+- [[_COMMUNITY_Community 112|Community 112]]
+- [[_COMMUNITY_Community 113|Community 113]]
+- [[_COMMUNITY_Community 114|Community 114]]
+- [[_COMMUNITY_Community 115|Community 115]]
+- [[_COMMUNITY_Community 116|Community 116]]
+- [[_COMMUNITY_Community 117|Community 117]]
+- [[_COMMUNITY_Community 118|Community 118]]
+- [[_COMMUNITY_Community 119|Community 119]]
+- [[_COMMUNITY_Community 120|Community 120]]
+- [[_COMMUNITY_Community 121|Community 121]]
+- [[_COMMUNITY_Community 122|Community 122]]
+- [[_COMMUNITY_Community 123|Community 123]]
+- [[_COMMUNITY_Community 124|Community 124]]
+- [[_COMMUNITY_Community 125|Community 125]]
+- [[_COMMUNITY_Community 126|Community 126]]
+- [[_COMMUNITY_Community 130|Community 130]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `AltDataService` - 56 edges
-2. `FinancialService` - 49 edges
-3. `SecRiskSnippet` - 40 edges
-4. `ContextAggregator` - 39 edges
-5. `CompanyFinancials` - 28 edges
+1. `ContextAggregator` - 46 edges
+2. `str` - 33 edges
+3. `Client` - 28 edges
+4. `str` - 27 edges
+5. `TestFinancialDataTransformer` - 27 edges
 6. `CompanyFinancials` - 26 edges
-7. `TestFinancialDataTransformer` - 26 edges
-8. `str` - 25 edges
-9. `str` - 25 edges
-10. `str` - 25 edges
+7. `FinancialService` - 26 edges
+8. `get_settings()` - 26 edges
+9. `Principal` - 26 edges
+10. `TestGoogleTrendsProcessor` - 25 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `TestGoogleTrendsProcessor` --uses--> `FinancialService`  [INFERRED]
-  test_all.py → context_aggregator.py
-- `TestGoogleTrendsProcessor` --uses--> `ApifyJobsResult`  [INFERRED]
-  test_all.py → alt_data_service.py
-- `TestGoogleTrendsProcessor` --uses--> `GoogleTrendsProcessor`  [INFERRED]
-  test_all.py → alt_data_service.py
-- `TestGoogleTrendsProcessor` --uses--> `SecRiskFactorExtractor`  [INFERRED]
-  test_all.py → alt_data_service.py
-- `TestGoogleTrendsProcessor` --uses--> `TrendsSignal`  [INFERRED]
-  test_all.py → alt_data_service.py
+- `TestApifyJobScraper` --uses--> `CompanyFinancials`  [INFERRED]
+  tests/test_all.py → src/financial_service.py
+- `TestFinancialDataTransformer` --uses--> `CompanyFinancials`  [INFERRED]
+  tests/test_all.py → src/financial_service.py
+- `TestFredDataProcessor` --uses--> `CompanyFinancials`  [INFERRED]
+  tests/test_all.py → src/financial_service.py
+- `TestGoogleTrendsProcessor` --uses--> `CompanyFinancials`  [INFERRED]
+  tests/test_all.py → src/financial_service.py
+- `TestSecRiskFactorExtractor` --uses--> `CompanyFinancials`  [INFERRED]
+  tests/test_all.py → src/financial_service.py
 
-## Communities (48 total, 14 thin omitted)
+## Communities (131 total, 18 thin omitted)
 
 ### Community 0 - "Context Aggregation & Financial Data"
-Cohesion: 0.05
-Nodes (43): str, CompanyFinancials, FinancialDataFetcher, FinancialDataTransformer, FinancialExporter, DataFrame, Path, ApifyJobScraper (+35 more)
+Cohesion: 0.10
+Nodes (36): AuthProvider, Principal, server.auth.base — the AuthProvider contract shared by both modes., The authenticated caller. ``id`` is None for open/self-host license mode., Resolve a token into a Principal, or raise HTTPException(401)., Raise HTTPException(402) if the principal is over quota., Record a billable action (no-op in license mode)., authenticate() (+28 more)
 
 ### Community 1 - "Alt Data Service Core"
-Cohesion: 0.05
-Nodes (62): DataFrame, int, str, AltDataService, Any, Path, Exception, FinancialService (+54 more)
+Cohesion: 0.12
+Nodes (39): AltDataService, Any, Exception, FinancialService, AltDataService, ApifyJobsResult, ConsumerSentimentSignal, FredSeries (+31 more)
 
 ### Community 2 - "AAPL Alt Signals Context"
-Cohesion: 0.05
-Nodes (47): alt_signals, google_trends, job_market, litigation, macro_fred, press_releases, sec_8k_events, sec_risk_snippet (+39 more)
+Cohesion: 0.20
+Nodes (10): target, enterprise_value_mm, ev_ebitda, ev_revenue, forward_pe, market_cap_mm, name, trailing_ebitda_mm (+2 more)
 
 ### Community 3 - "ASTS Alt Signals Context"
-Cohesion: 0.05
-Nodes (47): alt_signals, google_trends, job_market, litigation, macro_fred, press_releases, sec_8k_events, sec_risk_snippet (+39 more)
+Cohesion: 0.20
+Nodes (10): target, enterprise_value_mm, ev_ebitda, ev_revenue, forward_pe, market_cap_mm, name, trailing_ebitda_mm (+2 more)
 
 ### Community 4 - "AAPL Context Data"
-Cohesion: 0.05
-Nodes (47): alt_signals, google_trends, job_market, litigation, macro_fred, press_releases, sec_8k_events, sec_risk_snippet (+39 more)
+Cohesion: 0.04
+Nodes (49): code:bash ($(cat graphify-out/.graphify_python) -c "), code:block11 ([Agent tool call 1: files 1-15, subagent_type="general-purpo), code:bash (PROJECT_ROOT=$(cat graphify-out/.graphify_root)), code:block13 (You are a graphify extraction subagent. Read the files liste), code:bash ($(cat graphify-out/.graphify_python) -c "), code:bash ($(cat graphify-out/.graphify_python) -c "), code:bash ($(cat graphify-out/.graphify_python) -c "), code:bash ($(cat graphify-out/.graphify_python) -c ") (+41 more)
 
 ### Community 5 - "ASTS Context Data"
-Cohesion: 0.05
-Nodes (47): alt_signals, google_trends, job_market, litigation, macro_fred, press_releases, sec_8k_events, sec_risk_snippet (+39 more)
+Cohesion: 0.12
+Nodes (25): api, ApiError, downloadMemo(), req(), setTokenGetter(), tokenGetter(), ApiKeyCreated, ApiKeyInfo (+17 more)
 
 ### Community 6 - "Financial Data Transformation"
-Cohesion: 0.09
-Nodes (33): bool, float, str, _growth_to_pct(), _ratio(), _safe_float(), _to_mm(), object (+25 more)
+Cohesion: 0.12
+Nodes (14): CompanyFinancials, FinancialDataFetcher, FinancialExporter, DataFrame, Path, financial_service.py — Valuation Engine ========================================, Converts a list of CompanyFinancials objects into publication-ready output., Fetch → transform → write CSV. Returns the data for downstream use. (+6 more)
 
 ### Community 7 - "POET Alt Signals Context"
-Cohesion: 0.05
-Nodes (46): alt_signals, google_trends, job_market, litigation, macro_fred, press_releases, sec_8k_events, sec_risk_snippet (+38 more)
+Cohesion: 0.22
+Nodes (9): target, enterprise_value_mm, ev_ebitda, ev_revenue, market_cap_mm, name, trailing_ebitda_mm, trailing_revenue_mm (+1 more)
 
 ### Community 8 - "CRDO Alt Signals Context"
-Cohesion: 0.05
-Nodes (44): alt_signals, google_trends, job_market, litigation, macro_fred, sec_8k_events, sec_risk_snippet, keyword (+36 more)
+Cohesion: 0.04
+Nodes (48): alt_signals, google_trends, job_market, litigation, macro_fred, sec_8k_events, sec_risk_snippet, keyword (+40 more)
 
 ### Community 9 - "MU Alt Signals Context"
-Cohesion: 0.05
-Nodes (44): alt_signals, google_trends, job_market, litigation, macro_fred, sec_8k_events, sec_risk_snippet, keyword (+36 more)
+Cohesion: 0.04
+Nodes (48): alt_signals, google_trends, job_market, litigation, macro_fred, sec_8k_events, sec_risk_snippet, keyword (+40 more)
 
 ### Community 10 - "RKLB Alt Signals Context"
 Cohesion: 0.05
-Nodes (40): alt_signals, google_trends, job_market, litigation, macro_fred, sec_8k_events, sec_risk_snippet, keyword (+32 more)
+Nodes (45): alt_signals, google_trends, job_market, litigation, macro_fred, sec_8k_events, sec_risk_snippet, keyword (+37 more)
 
 ### Community 11 - "Package Configuration"
-Cohesion: 0.08
-Nodes (29): author, bugs, url, dependencies, md-to-pdf, description, homepage, arch (+21 more)
+Cohesion: 0.07
+Nodes (35): author, bugs, url, install, purpose, version, dependencies, md-to-pdf (+27 more)
 
 ### Community 12 - "PDF Export Scripts"
-Cohesion: 0.14
+Cohesion: 0.16
 Nodes (25): border_el(), clear_children(), color_el(), el(), find_style(), get_or_create(), ind_el(), Build output/theme/reference.dotx — Theory Y institutional equity research templ (+17 more)
 
 ### Community 13 - "Alt Data Processor Design"
-Cohesion: 0.10
-Nodes (10): FredDataProcessor, GoogleTrendsProcessor, Domain: derives velocity and summary statistics from raw Trends data.     Single, Domain: summarises raw FRED observations into a FredSeries dataclass.     Single, Infrastructure + Domain: downloads a 10-K document and extracts the     opening, SecRiskFactorExtractor, test_all.py — Unit tests for all pure-logic components across the project. No ex, TestFinancialDataTransformer (+2 more)
+Cohesion: 0.09
+Nodes (11): FredDataProcessor, Domain: summarises raw FRED observations into a FredSeries dataclass.     Single, Domain: summarises raw FRED observations into a FredSeries dataclass.     Single, Infrastructure + Domain: downloads a 10-K document and extracts the     opening, Infrastructure + Domain: downloads a 10-K document and extracts the     opening, SecRiskFactorExtractor, FinancialDataTransformer, Maps a raw yfinance info dict → CompanyFinancials.     Single responsibility: da (+3 more)
 
 ### Community 14 - "MCP Client & Context Fetch"
-Cohesion: 0.10
-Nodes (23): str, run_market_agent, _fetch, int, str, TheoryY_Finance_Oracle MCP, str, _mcp_tools_to_gemini() (+15 more)
+Cohesion: 0.50
+Nodes (4): PDF Exporter, Context Fetcher, MCP Server Implementation, Theory Y Memo Skill
 
 ### Community 15 - "Context Aggregator Classes"
-Cohesion: 0.24
-Nodes (10): build_all_contexts(), ContextAggregator, _error_node(), str, context_aggregator.py — LLM Payload Builder ====================================, Orchestrates FinancialService and AltDataService to build a single     token-eff, Full pipeline for one ticker:           1. Target company financials           2, Generate context files for every ticker in *tickers*.     Returns a dict of {tic (+2 more)
+Cohesion: 0.17
+Nodes (11): build_all_contexts(), _error_node(), str, context_aggregator.py — LLM Payload Builder ====================================, Full pipeline for one ticker:           1. Target company financials           2, Full pipeline for one ticker:           1. Target company financials           2, Generate context files for every ticker in *tickers*.     Returns a dict of {tic, Generate context files for every ticker in *tickers*.     Returns a dict of {tic (+3 more)
 
 ### Community 16 - "External Data Fetchers"
-Cohesion: 0.12
-Nodes (18): FredApiFetcher, GoogleTrendsFetcher, _label_items(), PressRelease, PressReleaseFetcher, int, alt_data_service.py — Macro & Alternative Signal Engine ========================, Single press release headline from GlobeNewswire RSS. (+10 more)
+Cohesion: 0.08
+Nodes (20): ConsumerSentimentProcessor, FredApiFetcher, PressReleaseFetcher, Infrastructure: queries the FRED REST API.     API key is read from the FRED_API, Infrastructure: queries the FRED REST API.     API key is read from the FRED_API, Infrastructure: resolves a ticker symbol → zero-padded 10-digit CIK.     Uses ED, Infrastructure: resolves a ticker symbol → zero-padded 10-digit CIK.     Uses ED, Infrastructure: retrieves the URL of the primary document in the most recent 10- (+12 more)
 
 ### Community 17 - "Alt Data Service Methods"
-Cohesion: 0.18
-Nodes (7): AltDataService, _html_to_text(), DataFrame, str, Fetch weekly interest-over-time for *keyword*.         Returns an empty DataFram, Returns the direct HTTPS URL of the most recent 10-K primary document,         o, High-level orchestrator for all alternative data sources.     All collaborators
+Cohesion: 0.12
+Nodes (11): Series, GoogleTrendsFetcher, DataFrame, float, int, Infrastructure: wraps pytrends TrendReq.     Single responsibility: issue the HT, Infrastructure: wraps pytrends TrendReq.     Single responsibility: issue the HT, Fetch weekly interest-over-time for *keyword*.         Returns an empty DataFram (+3 more)
 
 ### Community 18 - "Litigation Data Signal"
-Cohesion: 0.29
-Nodes (6): LitigationCase, LitigationFetcher, LitigationSignal, Single securities class-action case from Stanford SCAC., Active or recent class-action cases for one company., Securities litigation monitor with two-stage strategy:       1. Stanford SCAC fu
+Cohesion: 0.13
+Nodes (17): _html_to_text(), _label_items(), LitigationCase, LitigationFetcher, LitigationSignal, PressRelease, str, Single press release headline from GlobeNewswire RSS. (+9 more)
 
 ### Community 19 - "Job Market Signal"
-Cohesion: 0.23
-Nodes (7): ApifyJobScraper, ApifyJobsResult, Job-listing scrape result (stub until Apify actor is configured)., STUB implementation for Apify-powered job-listing scraper.      To activate:, STUB — returns zeroed mock data.          Live call pattern (replace this body):, STUB: LinkedIn / Glassdoor employee count via an Apify LinkedIn actor.         U, TestApifyJobScraper
+Cohesion: 0.18
+Nodes (8): ApifyJobScraper, STUB implementation for Apify-powered job-listing scraper.      To activate:, STUB implementation for Apify-powered job-listing scraper.      To activate:, STUB — returns zeroed mock data.          Live call pattern (replace this body):, STUB — returns zeroed mock data.          Live call pattern (replace this body):, STUB: LinkedIn / Glassdoor employee count via an Apify LinkedIn actor.         U, STUB: LinkedIn / Glassdoor employee count via an Apify LinkedIn actor.         U, TestApifyJobScraper
 
 ### Community 20 - "MCP Server Tools"
-Cohesion: 0.25
-Nodes (10): build_company_context(), generate_sector_sheet(), list_supported_tickers(), Any, str, Return the set of tickers this server has pre-configured competitor mappings, Validate and normalise a user-supplied ticker list.     Returns a clean list, or, Generate a CSV of valuation metrics (Market Cap, EV, EV/Revenue, EV/EBITDA, (+2 more)
+Cohesion: 0.29
+Nodes (9): build_company_context(), generate_sector_sheet(), list_supported_tickers(), str, Return the set of tickers this server has pre-configured competitor mappings, Validate and normalise a user-supplied ticker list.     Returns a clean list, or, Generate a CSV of valuation metrics (Market Cap, EV, EV/Revenue, EV/EBITDA,, Build a minified JSON context payload for a single company, combining:       • F (+1 more)
 
 ### Community 21 - "Claude Plugin Settings"
 Cohesion: 0.22
 Nodes (8): enabledMcpjsonServers, enabledPlugins, code-simplifier@claude-plugins-official, context7@claude-plugins-official, security-guidance@claude-plugins-official, windsor-ai@claude-plugins-official, hooks, PreToolUse
 
 ### Community 22 - "POET Google Trends Data"
-Cohesion: 0.22
-Nodes (9): float, google_trends, keyword, latest_interest, peak_interest, trough_interest, Series, float (+1 more)
+Cohesion: 0.05
+Nodes (38): code:block1 (/graphify                                             # full), code:bash (if [ ! -f graphify-out/.graphify_python ]; then), code:bash ($(cat graphify-out/.graphify_python) -c "), code:bash ($(cat graphify-out/.graphify_python) -c "), code:bash ($(cat graphify-out/.graphify_python) -c "), code:bash (if [ ! -f graphify-out/.graphify_extract.json ]; then), code:bash ($(cat graphify-out/.graphify_python) -c "), code:bash ($(cat graphify-out/.graphify_python) -c ") (+30 more)
 
 ### Community 23 - "POET Valuation Targets"
-Cohesion: 0.22
-Nodes (9): target, enterprise_value_mm, ev_ebitda, ev_revenue, market_cap_mm, name, trailing_ebitda_mm, trailing_revenue_mm (+1 more)
+Cohesion: 0.13
+Nodes (25): datetime, Base, Job, JobStatus, _now(), server.db.models — persistence schema.  Used in both modes: license mode only wr, Subscription, UsageRecord (+17 more)
 
 ### Community 24 - "POET Litigation Data"
-Cohesion: 0.33
-Nodes (7): litigation, press_releases, cases, error, source, releases, ticker
+Cohesion: 0.07
+Nodes (28): Additional Features, code:block1 (Claude Code  →  /theory-y-memo TICKER), code:python (class ConsumerSentimentService:), code:json ({), code:python (import praw), code:bash (# macOS / Linux), code:block3 (/theory-y-memo PCOR), code:bash (# 1. Fetch the context payload) (+20 more)
+
+### Community 25 - "Google Trends Tests"
+Cohesion: 0.27
+Nodes (4): GoogleTrendsProcessor, Domain: derives velocity and summary statistics from raw Trends data.     Single, Domain: derives velocity and summary statistics from raw Trends data.     Single, TestGoogleTrendsProcessor
 
 ### Community 26 - "Local Claude Settings"
 Cohesion: 0.33
 Nodes (5): enabledMcpjsonServers, enabledPlugins, frontend-design@claude-plugins-official, permissions, allow
 
 ### Community 27 - "POET FRED Macro Data"
-Cohesion: 0.33
-Nodes (6): macro_fred, latest_date, latest_value, series_id, title, yoy_change_pct
+Cohesion: 0.15
+Nodes (21): BaseModel, Account management (SaaS mode): signup, login, API keys, usage.  All routes 404, POST /api/v1/sector — valuation comparables CSV for a list of tickers., list_tickers(), GET /api/v1/tickers — the supported universe + peer mappings., Principal, ApiKeyCreated, ApiKeyCreateRequest (+13 more)
+
+### Community 28 - "SEC Risk Factor Tests"
+Cohesion: 0.16
+Nodes (20): BaseSettings, construct_event(), create_billing_portal(), create_checkout_session(), server.billing.stripe_client — thin Stripe wrapper (SaaS mode only)., _stripe(), _web_base(), init_db() (+12 more)
 
 ### Community 29 - "Project Dependencies"
 Cohesion: 0.40
 Nodes (5): Template Builder, Package Configuration, Python Dependencies, Windows Setup Script, Unix Setup Script
 
 ### Community 30 - "POET Job Market Data"
-Cohesion: 0.40
-Nodes (5): job_market, company_name, engineering_roles, is_stub, total_open_roles
+Cohesion: 0.09
+Nodes (22): 1. One-Line Thesis & Valuation Snapshot, 2. Business Overview & Operations, 3. Alternative Data & Macro Signals, 4. Key Risks & Structural Barriers, 5. Investment Recommendation, Board & Governance Activity, Capital Allocation & Balance Sheet Signal, China Market Risk (+14 more)
 
 ### Community 31 - "POET Context Metadata"
-Cohesion: 0.40
-Nodes (5): meta, fred_series, generated_at_utc, schema_version, target_ticker
+Cohesion: 0.14
+Nodes (8): _Block, _FakeClient, _FinalMessage, _Messages, Unit tests for the server-side memo writer and prompt — no live API calls., _Stream, test_write_memo_concatenates_only_text_blocks(), test_write_memo_returns_text_and_caches_system_prompt()
 
 ### Community 32 - "SEC 8-K Events Data"
-Cohesion: 0.40
-Nodes (5): Single 8-K filing — metadata only, no document download., cik, events, Single 8-K filing — metadata only, no document download., Sec8KEvent
+Cohesion: 0.11
+Nodes (18): dependencies, react, react-dom, react-router-dom, devDependencies, @types/react, @types/react-dom, typescript (+10 more)
 
 ### Community 33 - "MCP Client Scripts"
 Cohesion: 0.50
 Nodes (4): _mcp_tools_to_claude(), str, Convert MCP tool descriptors to Claude tool format., run_market_agent()
 
 ### Community 34 - "Fetch Context Module"
+Cohesion: 0.07
+Nodes (45): bool, int, str, float, int, Path, str, Context (+37 more)
+
+### Community 39 - "Financial Rationale A"
+Cohesion: 0.11
+Nodes (18): compilerOptions, allowImportingTsExtensions, isolatedModules, jsx, lib, module, moduleResolution, noEmit (+10 more)
+
+### Community 40 - "Financial Rationale B"
+Cohesion: 0.11
+Nodes (18): 1. Business Overview, 2. Financial Analysis, 3. Investment Thesis, 4. Risk Factors, 5. Material Events (Last 12 Months via SEC 8-K Feed), 6. Litigation Monitor, 7. Investment Signals Summary, 8. Recommendation (+10 more)
+
+### Community 41 - "Financial Rationale C"
+Cohesion: 0.17
+Nodes (16): ApiKeyCreated, ApiKeyCreateRequest, ApiKeyInfo, ApiKey, LoginRequest, create_key(), list_keys(), login() (+8 more)
+
+### Community 42 - "Alt Data Rationale"
+Cohesion: 0.22
+Nodes (14): server.auth.saas — DB-backed API keys + plan quota for the hosted offering., current_billing_period(), get_plan(), Plan, plan_for_stripe_price(), quota_for(), server.billing.plans — subscription tiers and their monthly memo quotas., Reverse-map a Stripe price id back to a plan name (for webhook handling). (+6 more)
+
+### Community 48 - "Community 48"
+Cohesion: 0.12
+Nodes (15): code:bash (.venv/bin/python3 src/fetch_context.py <TICKER>), code:markdown (# Investment Memo: <TICKER>), code:bash (.venv/bin/python3 scripts/export_pdf.py output/memos/TheoryY), code:bash (.venv/bin/python3 scripts/export_pdf.py output/memos/TheoryY), code:bash (.venv/bin/python3 scripts/build_reference_dotx.py), If FORMAT = docx, If FORMAT = md, Output (+7 more)
+
+### Community 49 - "Community 49"
+Cohesion: 0.23
+Nodes (11): object, _growth_to_pct(), bool, float, str, _ratio(), Fetch and transform a single ticker synchronously., Fetch all tickers with a polite inter-request delay.         Returns results in (+3 more)
+
+### Community 50 - "Community 50"
+Cohesion: 0.31
+Nodes (14): MemoCreate, MemoFormat, MemoJob, create_memo(), download_memo(), get_memo(), _job_to_schema(), list_memos() (+6 more)
+
+### Community 51 - "Community 51"
+Cohesion: 0.30
+Nodes (13): _bcrypt_hash(), _bcrypt_verify(), generate_api_key(), hash_password(), hash_secret(), bool, str, server.security — password/secret hashing, API-key minting, JWT issuance. (+5 more)
+
+### Community 52 - "Community 52"
+Cohesion: 0.27
+Nodes (4): LocalStorage, int, str, S3Storage
+
+### Community 53 - "Community 53"
+Cohesion: 0.24
+Nodes (11): build_context(), export_sector_sheet(), Path, str, core.engine — internal façade over the deterministic data engine in ../src.  PRO, Fetch the deterministic data payload for one ticker; return minified JSON., Return the pre-configured ticker universe and peer mappings., Normalise a user-supplied ticker list.      Mirrors ``mcp_server._resolve_ticker (+3 more)
+
+### Community 54 - "Community 54"
+Cohesion: 0.18
+Nodes (11): target, enterprise_value_mm, ev_ebitda, ev_revenue, forward_pe, market_cap_mm, name, ticker (+3 more)
+
+### Community 55 - "Community 55"
+Cohesion: 0.22
+Nodes (9): str, int, str, core.memo.prompt — the proprietary memo-writing system prompt.  This is the sing, Build the per-request user turn: the ticker plus its data payload., user_message(), core.memo.writer — server-side memo generation via the Anthropic API.  This is w, Generate the five-section memo markdown for ``ticker`` from ``context_json``. (+1 more)
+
+### Community 56 - "Community 56"
+Cohesion: 0.22
+Nodes (6): get_queue(), InProcessQueue, server.jobs.queue — enqueue background work.  Defaults to an in-process thread p, RQQueue, int, str
+
+### Community 57 - "Community 57"
+Cohesion: 0.18
+Nodes (11): target, enterprise_value_mm, ev_ebitda, ev_revenue, forward_pe, market_cap_mm, name, ticker (+3 more)
+
+### Community 58 - "Community 58"
+Cohesion: 0.20
+Nodes (9): code:bash (pip install theory-y          # from PyPI (hosted SaaS users), code:bash (# Hosted SaaS: log in, token is saved for you), code:bash (theory-y tickers                       # supported universe), code:python (from theory_y import Client), Configure, Install, SDK, TheoryY Research — Python client (+1 more)
+
+### Community 59 - "Community 59"
+Cohesion: 0.22
+Nodes (10): litigation, press_releases, cases, company_name, error, source, error, releases (+2 more)
+
+### Community 60 - "Community 60"
+Cohesion: 0.22
+Nodes (10): sec_8k_events, sec_risk_snippet, cik, events, ticker, cik, filing_url, risk_factors_snippet (+2 more)
+
+### Community 61 - "Community 61"
+Cohesion: 0.22
+Nodes (10): litigation, press_releases, cases, company_name, error, source, error, releases (+2 more)
+
+### Community 62 - "Community 62"
+Cohesion: 0.22
+Nodes (10): sec_8k_events, sec_risk_snippet, cik, events, ticker, cik, filing_url, risk_factors_snippet (+2 more)
+
+### Community 63 - "Community 63"
+Cohesion: 0.20
+Nodes (10): consumer_sentiment, company_name, error, post_count, sentiment, sentiment_score, source, subreddits (+2 more)
+
+### Community 64 - "Community 64"
+Cohesion: 0.22
+Nodes (10): litigation, press_releases, cases, company_name, error, source, error, releases (+2 more)
+
+### Community 65 - "Community 65"
+Cohesion: 0.22
+Nodes (10): sec_8k_events, sec_risk_snippet, cik, events, ticker, cik, filing_url, risk_factors_snippet (+2 more)
+
+### Community 66 - "Community 66"
+Cohesion: 0.20
+Nodes (9): code:bash (# Build a source tarball (everything except local junk / sec), code:python (from server.auth.license import mint_license_token), code:bash (# Python CLI/SDK → PyPI), code:bash (grep -rnE "import (core|src)|from (core|src)" client/       ), Isolation invariant (CI-checkable), Model A — Source sale (high premium), Model B — SaaS (hosted, lifetime + ops fee), Packaging & distribution (+1 more)
+
+### Community 67 - "Community 67"
+Cohesion: 0.20
+Nodes (10): consumer_sentiment, company_name, error, post_count, sentiment, sentiment_score, source, subreddits (+2 more)
+
+### Community 68 - "Community 68"
+Cohesion: 0.22
+Nodes (9): current_user(), Session, str, User, server.deps — shared FastAPI dependencies for SaaS web-session routes., Block account/billing routes when running in license mode., Resolve a web-session JWT into a User, or 401.      Accepts the JWT via either `, require_saas() (+1 more)
+
+### Community 69 - "Community 69"
+Cohesion: 0.22
+Nodes (8): compilerOptions, allowSyntheticDefaultImports, composite, module, moduleResolution, skipLibCheck, strict, include
+
+### Community 70 - "Community 70"
+Cohesion: 0.32
+Nodes (7): Path, str, theory_y.config — resolve base URL + credential from flags / env / config file., Precedence: explicit arg → env var → saved config file → default., _read_file(), resolve(), save()
+
+### Community 71 - "Community 71"
+Cohesion: 0.25
+Nodes (7): alt_signals, meta, fred_series, generated_at_utc, schema_version, target_ticker, peers
+
+### Community 72 - "Community 72"
+Cohesion: 0.25
+Nodes (7): alt_signals, meta, fred_series, generated_at_utc, schema_version, target_ticker, peers
+
+### Community 73 - "Community 73"
+Cohesion: 0.25
+Nodes (7): alt_signals, meta, fred_series, generated_at_utc, schema_version, target_ticker, peers
+
+### Community 74 - "Community 74"
+Cohesion: 0.25
+Nodes (7): 1. One-Line Thesis & Valuation Snapshot, 2. Business Overview & Operations, 3. Alternative Data & Macro Signals, 4. Consumer & Public Opinion, 5. Key Risks & Structural Barriers, 6. Investment Recommendation, Investment Memo: META
+
+### Community 75 - "Community 75"
+Cohesion: 0.25
+Nodes (8): alt_signals, job_market, sec_8k_events, available, company, cik, events, ticker
+
+### Community 76 - "Community 76"
+Cohesion: 0.29
+Nodes (7): google_trends, keyword, latest_interest, peak_interest, ticker, trough_interest, velocity_pct
+
+### Community 77 - "Community 77"
+Cohesion: 0.29
+Nodes (7): google_trends, keyword, latest_interest, peak_interest, ticker, trough_interest, velocity_pct
+
+### Community 78 - "Community 78"
+Cohesion: 0.29
+Nodes (7): google_trends, keyword, latest_interest, peak_interest, ticker, trough_interest, velocity_pct
+
+### Community 79 - "Community 79"
+Cohesion: 0.29
+Nodes (7): google_trends, keyword, latest_interest, peak_interest, ticker, trough_interest, velocity_pct
+
+### Community 80 - "Community 80"
+Cohesion: 0.33
+Nodes (6): _ensure_reference_dotx(), Path, str, core.render — turn a memo markdown file into PDF (and optionally DOCX).  Thin wr, Render ``md_path`` to PDF + DOCX via the .dotx pipeline.      Returns a dict of, render()
+
+### Community 81 - "Community 81"
+Cohesion: 0.29
+Nodes (6): 1. One-Line Thesis & Valuation Snapshot, 2. Business Overview & Operations, 3. Alternative Data & Macro Signals, 4. Key Risks & Structural Barriers, 5. Investment Recommendation, Investment Memo: CRDO
+
+### Community 82 - "Community 82"
+Cohesion: 0.29
+Nodes (6): 1. One-Line Thesis & Valuation Snapshot, 2. Business Overview & Operations, 3. Alternative Data & Macro Signals, 4. Key Risks & Structural Barriers, 5. Investment Recommendation, Investment Memo: MU
+
+### Community 83 - "Community 83"
+Cohesion: 0.29
+Nodes (6): 1. One-Line Thesis & Valuation Snapshot, 2. Business Overview & Operations, 3. Alternative Data & Macro Signals, 4. Key Risks & Structural Barriers, 5. Investment Recommendation, Investment Memo: POET Technologies Inc. (POET)
+
+### Community 84 - "Community 84"
+Cohesion: 0.29
+Nodes (6): 1. One-Line Thesis & Valuation Snapshot, 2. Business Overview & Operations, 3. Alternative Data & Macro Signals, 4. Key Risks & Structural Barriers, 5. Investment Recommendation, Investment Memo: RKLB
+
+### Community 85 - "Community 85"
+Cohesion: 0.29
+Nodes (7): 10. Monetization Models, code:block24 (Free:    5 memos/month), code:block25 (Free:    5 memos/month, limited to 14 tickers), code:block26 (Lifetime: $299 (one-time)), Option A: Usage-Based, Option B: Subscription-Only (No usage tracking), Option C: One-Time Purchase
+
+### Community 86 - "Community 86"
+Cohesion: 0.29
+Nodes (6): 11. File Structure Summary, 13. Cost Estimate (AWS Example), code:block27 (theoryy-service/), Key Decisions to Make, Overview, TheoryY Service Architecture Plan
+
+### Community 87 - "Community 87"
+Cohesion: 0.29
+Nodes (7): 1. Service Tiers & Deployment Model, code:block1 (Client → HTTPS → Cloud API Gateway → Private Research Engine), code:block2 (Client → HTTPS → Customer's API Server → Private Research En), code:block3 (Client → Local Python daemon → Private Research Engine), Option A: SaaS (Recommended for scale), Option B: Hybrid (On-premise option), Option C: Embedded (Lowest friction)
+
+### Community 88 - "Community 88"
+Cohesion: 0.29
+Nodes (7): 2. API Design (Private Backend), Authentication, code:block4 (POST /api/v1/memos/generate), code:block5 (Header: Authorization: Bearer <API_KEY>), code:block6 (X-RateLimit-Limit: 10), Core REST Endpoints, Rate Limiting & Quotas
+
+### Community 89 - "Community 89"
+Cohesion: 0.29
+Nodes (7): 3. Client Applications, 3a. Web Client (Primary), 3b. CLI Client (Secondary), 3c. Integrations (Future), code:block7 (Frontend: React + TypeScript (Vite or Next.js)), code:block8 (Tool: Python Click or Node.js commander), code:block9 (- Slack bot: /theory-y PCOR → posts memo preview in channel)
+
+### Community 90 - "Community 90"
+Cohesion: 0.29
+Nodes (7): 6. Authentication & Access Control, API Key Management, Billing Integration, code:block14 (1. Sign up at web client → create account), code:block15 (User Dashboard:), code:block16 (Stripe integration:), User Onboarding Flow
+
+### Community 91 - "Community 91"
+Cohesion: 0.29
+Nodes (7): 7. Security & Compliance, code:block17 (✓ Private backend (never exposed to client)), code:block18 (✓ All traffic: HTTPS only), code:block19 (GDPR:), Compliance, Data Security, Source Code Protection
+
+### Community 92 - "Community 92"
+Cohesion: 0.29
+Nodes (7): google_trends, keyword, latest_interest, peak_interest, ticker, trough_interest, velocity_pct
+
+### Community 93 - "Community 93"
+Cohesion: 0.29
+Nodes (6): meta, fred_series, generated_at_utc, schema_version, target_ticker, peers
+
+### Community 94 - "Community 94"
+Cohesion: 0.33
+Nodes (6): macro_fred, latest_date, latest_value, series_id, title, yoy_change_pct
+
+### Community 95 - "Community 95"
+Cohesion: 0.33
+Nodes (6): macro_fred, latest_date, latest_value, series_id, title, yoy_change_pct
+
+### Community 96 - "Community 96"
+Cohesion: 0.33
+Nodes (5): alt_signals, job_market, available, company, peers
+
+### Community 97 - "Community 97"
+Cohesion: 0.33
+Nodes (6): macro_fred, latest_date, latest_value, series_id, title, yoy_change_pct
+
+### Community 98 - "Community 98"
+Cohesion: 0.33
+Nodes (6): macro_fred, latest_date, latest_value, series_id, title, yoy_change_pct
+
+### Community 99 - "Community 99"
+Cohesion: 0.33
+Nodes (6): 5. Data & Storage Strategy, Cache Layer, code:block12 (Redis:), code:block13 (User requests memo), Download Strategy, What's Stored Where
+
+### Community 100 - "Community 100"
+Cohesion: 0.33
+Nodes (6): macro_fred, latest_date, latest_value, series_id, title, yoy_change_pct
+
+### Community 101 - "Community 101"
 Cohesion: 0.50
-Nodes (4): _fetch(), main(), int, str
+Nodes (5): CheckoutRequest, checkout(), portal(), User, UrlResponse
+
+### Community 102 - "Community 102"
+Cohesion: 0.40
+Nodes (5): job_market, company_name, engineering_roles, is_stub, total_open_roles
+
+### Community 103 - "Community 103"
+Cohesion: 0.40
+Nodes (5): job_market, company_name, engineering_roles, is_stub, total_open_roles
+
+### Community 104 - "Community 104"
+Cohesion: 0.40
+Nodes (5): litigation, cases, company_name, error, source
+
+### Community 105 - "Community 105"
+Cohesion: 0.40
+Nodes (5): sec_risk_snippet, cik, filing_url, risk_factors_snippet, ticker
+
+### Community 106 - "Community 106"
+Cohesion: 0.40
+Nodes (5): meta, fred_series, generated_at_utc, schema_version, target_ticker
+
+### Community 107 - "Community 107"
+Cohesion: 0.40
+Nodes (5): job_market, company_name, engineering_roles, is_stub, total_open_roles
+
+### Community 108 - "Community 108"
+Cohesion: 0.40
+Nodes (5): 12. Implementation Roadmap, Phase 1: MVP (8-10 weeks), Phase 2: Polish & Scale (4-6 weeks), Phase 3: Enterprise (6-8 weeks), Phase 4: Ecosystem (Ongoing)
+
+### Community 109 - "Community 109"
+Cohesion: 0.40
+Nodes (5): 4. Backend Architecture (Private), Code Structure, code:block10 (backend/), code:block11 (POST /api/v1/memos/generate), Job Processing Flow
+
+### Community 110 - "Community 110"
+Cohesion: 0.40
+Nodes (5): 8. Deployment & DevOps, Backend Deployment, Client Deployment, code:block20 (Option A: Containerized (Recommended)), code:block21 (Web client:)
+
+### Community 111 - "Community 111"
+Cohesion: 0.40
+Nodes (5): 9. Monitoring & Observability, code:block22 (Internal (you only):), code:block23 (Logs (ELK Stack or CloudWatch):), Dashboards, Logging & Tracing
+
+### Community 112 - "Community 112"
+Cohesion: 0.40
+Nodes (5): litigation, cases, company_name, error, source
+
+### Community 113 - "Community 113"
+Cohesion: 0.40
+Nodes (5): sec_risk_snippet, cik, filing_url, risk_factors_snippet, ticker
+
+### Community 114 - "Community 114"
+Cohesion: 0.60
+Nodes (5): Request, _upsert_subscription(), webhook(), Session, str
+
+### Community 115 - "Community 115"
+Cohesion: 0.50
+Nodes (4): sec_8k_events, cik, events, ticker
+
+### Community 116 - "Community 116"
+Cohesion: 0.50
+Nodes (4): PlainTextResponse, sector_sheet(), SectorRequest, Principal
 
 ## Knowledge Gaps
-- **328 isolated node(s):** `DataFrame`, `/home/lunear/theoryy/middlemarket-research-agent/.venv/bin/python3.14`, `target_ticker`, `schema_version`, `generated_at_utc` (+323 more)
+- **632 isolated node(s):** `/home/lunear/theoryy/middlemarket-research-agent/.venv/bin/python3.14`, `name`, `description`, `main`, `test` (+627 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **14 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **18 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `SecRiskSnippet` connect `Context Aggregation & Financial Data` to `SEC 8-K Events Data`, `Alt Data Service Core`, `POET Research Output`, `Financial Data Transformation`, `Alt Data Processor Design`, `Context Aggregator Classes`, `External Data Fetchers`, `Alt Data Service Methods`, `Job Market Signal`, `POET Litigation Data`, `Google Trends Tests`, `SEC Risk Factor Tests`?**
-  _High betweenness centrality (0.068) - this node is a cross-community bridge._
-- **Why does `AltDataService` connect `Alt Data Service Core` to `Context Aggregation & Financial Data`, `SEC 8-K Events Data`, `Financial Data Transformation`, `MCP Client & Context Fetch`, `Alt Data Service Methods`, `Litigation Data Signal`, `Job Market Signal`, `POET Google Trends Data`?**
-  _High betweenness centrality (0.058) - this node is a cross-community bridge._
-- **Why does `FinancialService` connect `Alt Data Service Core` to `Context Aggregation & Financial Data`, `Financial Data Transformation`, `MCP Client & Context Fetch`, `Alt Data Service Methods`, `Litigation Data Signal`, `Job Market Signal`?**
-  _High betweenness centrality (0.038) - this node is a cross-community bridge._
-- **Are the 25 inferred relationships involving `AltDataService` (e.g. with `CompanyFinancials` and `ApifyJobsResult`) actually correct?**
-  _`AltDataService` has 25 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 33 inferred relationships involving `FinancialService` (e.g. with `context_aggregator.py` and `Any`) actually correct?**
-  _`FinancialService` has 33 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 28 inferred relationships involving `SecRiskSnippet` (e.g. with `AltDataService` and `context_aggregator.py`) actually correct?**
-  _`SecRiskSnippet` has 28 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 22 inferred relationships involving `ContextAggregator` (e.g. with `AltDataService` and `ApifyJobsResult`) actually correct?**
-  _`ContextAggregator` has 22 INFERRED edges - model-reasoned connections that need verification._
+- **Why does `datetime` connect `POET Valuation Targets` to `Alt Data Service Core`, `Financial Data Transformation`, `Alt Data Rationale`, `Context Aggregator Classes`, `Community 51`?**
+  _High betweenness centrality (0.045) - this node is a cross-community bridge._
+- **Why does `ContextAggregator` connect `Alt Data Service Core` to `Financial Data Transformation`, `Alt Data Processor Design`, `Context Aggregator Classes`, `Litigation Data Signal`, `Job Market Signal`, `MCP Server Tools`, `Community 53`, `Google Trends Tests`?**
+  _High betweenness centrality (0.012) - this node is a cross-community bridge._
+- **Why does `get_settings()` connect `SEC Risk Factor Tests` to `Context Aggregation & Financial Data`, `Community 68`, `Financial Rationale C`, `Alt Data Rationale`, `Community 51`, `POET Valuation Targets`, `Community 56`?**
+  _High betweenness centrality (0.007) - this node is a cross-community bridge._
+- **Are the 27 inferred relationships involving `ContextAggregator` (e.g. with `build_context()` and `Any`) actually correct?**
+  _`ContextAggregator` has 27 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 4 inferred relationships involving `Client` (e.g. with `bool` and `int`) actually correct?**
+  _`Client` has 4 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 11 inferred relationships involving `str` (e.g. with `AltDataService` and `ApifyJobsResult`) actually correct?**
+  _`str` has 11 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 16 inferred relationships involving `TestFinancialDataTransformer` (e.g. with `ApifyJobScraper` and `ApifyJobsResult`) actually correct?**
+  _`TestFinancialDataTransformer` has 16 INFERRED edges - model-reasoned connections that need verification._
