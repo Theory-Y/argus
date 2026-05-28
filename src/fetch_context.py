@@ -103,6 +103,7 @@ def main() -> int:
         print(f"ERROR: MCP returned invalid JSON: {e}", file=sys.stderr)
         return 2
 
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
     with open(out_path, "w") as f:
         f.write(payload)
 

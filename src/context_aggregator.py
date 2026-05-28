@@ -83,7 +83,7 @@ COMPETITOR_MAP: Dict[str, List[str]] = {
 _FRED_SERIES_ID:  str = "TLNRESCONS"
 _FRED_SERIES_LABEL: str = "Commercial Construction Spending (TLNRESCONS, $MM, SA)"
 _SCHEMA_VERSION:  str = "1.3"
-_OUTPUT_DIR:      Path = Path("output")
+_OUTPUT_DIR:      Path = Path("output") / "context"
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -145,6 +145,7 @@ class ContextAggregator:
         minified = json.dumps(payload, separators=(",", ":"), default=str)
 
         output_path = self._output_dir / f"context_{ticker}.json"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(minified, encoding="utf-8")
         logger.info(
             "Context saved → %s  (%d chars, %d KB)",
