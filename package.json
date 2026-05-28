@@ -1,0 +1,45 @@
+{
+  "name": "middlemarket-research-agent",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "setup": "node -e \"require('os').platform()==='win32'?require('child_process').execSync('powershell -ExecutionPolicy Bypass -File setup.ps1',{stdio:'inherit'}):require('child_process').execSync('bash setup.sh',{stdio:'inherit'})\"",
+    "setup:unix": "bash setup.sh",
+    "setup:win": "powershell -ExecutionPolicy Bypass -File setup.ps1"
+  },
+  "systemDependencies": {
+    "pandoc": {
+      "version": ">=3.0",
+      "purpose": "Markdown to .docx conversion with .dotx style template",
+      "install": {
+        "macos": "brew install pandoc",
+        "arch": "sudo pacman -S pandoc",
+        "ubuntu": "sudo apt-get install pandoc",
+        "fedora": "sudo dnf install pandoc",
+        "manual": "https://pandoc.org/installing.html"
+      }
+    },
+    "chromium": {
+      "version": "bundled via md-to-pdf/puppeteer",
+      "purpose": "Markdown to PDF conversion with CSS theme",
+      "install": "installed automatically with md-to-pdf"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Theory-Y/theoryy-middlemarket-research-agent.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Theory-Y/theoryy-middlemarket-research-agent/issues"
+  },
+  "homepage": "https://github.com/Theory-Y/theoryy-middlemarket-research-agent#readme",
+  "dependencies": {
+    "md-to-pdf": "^5.2.5"
+  }
+}

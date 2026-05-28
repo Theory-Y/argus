@@ -35,10 +35,22 @@
       "Bash(mv /home/lunear/theoryy/middlemarket-research-agent/financial_service.py  src/)",
       "Bash(mv /home/lunear/theoryy/middlemarket-research-agent/context_aggregator.py src/)",
       "Bash(.venv/bin/python3 *)",
-      "Bash(python3 *)"
+      "Bash(python3 *)",
+      "Bash(./node_modules/.bin/md-to-pdf *)",
+      "Bash(pandoc --version)",
+      "Bash(libreoffice --version)",
+      "Bash(npm --version)",
+      "Bash(chmod +x *)",
+      "Bash(npm run *)",
+      "Bash(pandoc output/TheoryY_Memo_MU.md --reference-doc=output/theme/reference.dotx -o output/TheoryY_Memo_MU.docx)",
+      "Bash(mv output/context_*.json output/context/)",
+      "Bash(mv output/TheoryY_Memo_* output/memos/)"
     ]
   },
   "enabledMcpjsonServers": [
     "middlemarket-research"
-  ]
+  ],
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true
+  }
 }

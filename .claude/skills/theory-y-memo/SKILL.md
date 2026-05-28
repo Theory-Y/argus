@@ -17,6 +17,18 @@ strictly in that data.
 > Just keep the sections coherent and non-repetitive (see Writing rules). The only
 > code that still needs to run is the data fetch.
 
+## Phase 0 — Ask the user for output format
+
+Before fetching any data, use the `AskUserQuestion` tool to ask:
+
+> **Which output format do you want for this memo?**
+> - **Markdown (.md)** — plain markdown file; PDF rendered via CSS theme
+> - **Word (.docx)** — formatted Word document using the branded `.dotx` style template; PDF also generated
+
+Store the answer as `FORMAT` (either `md` or `docx`) and proceed.
+
+---
+
 ## Phase 1 — Fetch the data payload
 
 Run the fetch script, which connects to `mcp_server.py` over stdio and calls the
@@ -27,11 +39,11 @@ package and can launch the server):
 .venv/bin/python3 src/fetch_context.py <TICKER>
 ```
 
-This writes `context_<TICKER>.json` to the working directory and prints its path.
-If the venv lives elsewhere or the server file is not `./mcp_server.py`, pass
+This writes `output/context/context_<TICKER>.json` and prints its path.
+If the venv lives elsewhere or the server file is not `./src/mcp_server.py`, pass
 `--server-python` and `--server` (run with `--help` for all options).
 
-Then **read `context_<TICKER>.json`**. This JSON is your single source of truth.
+Then **read `output/context/context_<TICKER>.json`**. This JSON is your single source of truth.
 
 **If the fetch fails** (server missing, tool error), stop and report the exact error
 to the user rather than writing a memo from memory — fabricated financials are worse
@@ -39,7 +51,7 @@ than no memo. Do not substitute your own training knowledge about the company.
 
 ## Phase 2 — Write the memo
 
-Write to `TheoryY_Memo_<TICKER>.md`. Start the file with:
+Write to `output/memos/TheoryY_Memo_<TICKER>.md`. Start the file with:
 
 ```markdown
 # Investment Memo: <TICKER>
@@ -95,14 +107,51 @@ margins. Every claim should be anchored to a number or relationship from the pay
 
 ## Output
 
-A single file, `TheoryY_Memo_<TICKER>.md`, containing the title plus all five
-sections. Present it to the user when done.
+Always write the memo content to `output/memos/TheoryY_Memo_<TICKER>.md` first — markdown is
+the canonical source regardless of chosen format. Then follow the path for `FORMAT`:
+
+### If FORMAT = md
+
+```bash
+.venv/bin/python3 scripts/export_pdf.py output/memos/TheoryY_Memo_<TICKER>.md --skip-docx
+```
+
+This routes through the `.dotx` pipeline: `.md` → `.docx` (pandoc + reference.dotx) → HTML →
+PDF (chromium headless). `--skip-docx` skips the Word file and produces only the PDF.
+
+Deliverables: `output/memos/TheoryY_Memo_<TICKER>.md` + `output/memos/TheoryY_Memo_<TICKER>.pdf`
+
+### If FORMAT = docx
+
+Single command — generates both `.docx` (branded Word) and `.pdf` (from that same `.docx`):
+
+```bash
+.venv/bin/python3 scripts/export_pdf.py output/memos/TheoryY_Memo_<TICKER>.md
+```
+
+Pipeline (all handled inside the script):
+1. `pandoc .md --reference-doc=output/theme/reference.dotx → .docx`
+2. `pandoc .docx → HTML`  (structured content from the styled Word document)
+3. Inject institutional CSS matching the `.dotx` palette
+4. `chromium --headless → .pdf`
+
+If `output/theme/reference.dotx` is missing or corrupt, regenerate it:
+```bash
+.venv/bin/python3 scripts/build_reference_dotx.py
+```
+
+Deliverables: `output/memos/TheoryY_Memo_<TICKER>.md` + `output/memos/TheoryY_Memo_<TICKER>.docx` + `output/memos/TheoryY_Memo_<TICKER>.pdf`
+
+---
 
 ## Quick reference
 
 **Example invocation** — Input: "write the Theory Y memo for PCOR"
-1. `.venv/bin/python3 src/fetch_context.py PCOR` → `context_PCOR.json`
-2. Read `context_PCOR.json`.
-3. Write `TheoryY_Memo_PCOR.md`: title + the five `##` sections, in the analyst voice,
+0. Ask user: md or docx? → store as `FORMAT`
+1. `.venv/bin/python3 src/fetch_context.py PCOR` → `output/context/context_PCOR.json`
+2. Read `output/context/context_PCOR.json`.
+3. Write `output/memos/TheoryY_Memo_PCOR.md`: title + the five `##` sections, in the analyst voice,
    grounded only in the payload.
-4. Present `TheoryY_Memo_PCOR.md`.
+4. **If md:**   `.venv/bin/python3 scripts/export_pdf.py output/memos/TheoryY_Memo_PCOR.md --skip-docx`
+   **If docx:** `.venv/bin/python3 scripts/export_pdf.py output/memos/TheoryY_Memo_PCOR.md`
+5. Present all output paths to the user.

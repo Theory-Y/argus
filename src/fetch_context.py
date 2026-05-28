@@ -81,7 +81,7 @@ def main() -> int:
     parser.add_argument(
         "--out",
         default=None,
-        help="Output JSON path (default: context_<TICKER>.json in CWD)",
+        help="Output JSON path (default: output/context/context_<TICKER>.json)",
     )
     args = parser.parse_args()
 
@@ -89,7 +89,7 @@ def main() -> int:
         print(f"ERROR: MCP server not found at {args.server}", file=sys.stderr)
         return 1
 
-    out_path = args.out or os.path.join(os.getcwd(), "output", f"context_{args.ticker}.json")
+    out_path = args.out or os.path.join(os.getcwd(), "output", "context", f"context_{args.ticker}.json")
 
     try:
         payload = asyncio.run(_fetch(args.ticker, args.server, args.server_python))
