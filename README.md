@@ -1,6 +1,6 @@
 # TheoryY Middle-Market Research Agent
 
-An MCP server and Claude Code skill that generates institutional-grade equity research memos for PropTech & Facilities companies. Point it at a ticker and get a five-section investment memo grounded in live financial data — no fabricated numbers.
+An MCP server and Claude Code skill that generates institutional-grade equity research memos. It originated as a PropTech & Facilities tool and now ships peer mappings for semiconductors/AI infrastructure and mega-cap tech as well. Point it at a ticker and get a six-section investment memo grounded in live financial data — no fabricated numbers.
 
 ## How it works
 
@@ -37,7 +37,9 @@ Claude writes the memo from the fetched JSON — it never fills in financials fr
 
 ## Supported tickers
 
-14 pre-configured PropTech & Facilities names with peer mappings:
+Pre-configured names with peer mappings (`COMPETITOR_MAP` in `src/context_aggregator.py`):
+
+**PropTech & Facilities** (original universe)
 
 | Ticker | Company | Peer Group |
 |--------|---------|------------|
@@ -56,7 +58,20 @@ Claude writes the memo from the fetched JSON — it never fills in financials fr
 | APPF | AppFolio | PCOR, CSGP, Z |
 | Z | Zillow Group | CSGP, APPF, PCOR |
 
-Any ticker outside this list can still be queried — it will have an empty peers list.
+**Semiconductors & AI infrastructure / mega-cap tech**
+
+| Ticker | Company | Peer Group |
+|--------|---------|------------|
+| NVDA | NVIDIA | AMD, AVGO, TSM |
+| AMD | Advanced Micro Devices | NVDA, AVGO, INTC |
+| AVGO | Broadcom | NVDA, AMD, QCOM |
+| TSM | Taiwan Semiconductor | NVDA, AVGO, INTC |
+| INTC | Intel | AMD, NVDA, TSM |
+| MU | Micron | NVDA, AMD, TSM |
+| QCOM | Qualcomm | AVGO, NVDA, AMD |
+| META | Meta Platforms | GOOGL, MSFT, AMZN |
+
+Any ticker outside this list can still be queried, but its `peers` array comes back empty. That is a **coverage gap, not a signal that no comparables exist** — the memo skill is instructed to source comparables externally in that case and to add the ticker's cluster to `COMPETITOR_MAP`. See the peer-comparison rule in `.claude/skills/theory-y-memo/SKILL.md`.
 
 ## Setup
 
@@ -112,7 +127,7 @@ The server exposes three tools to Claude Code via `.mcp.json`:
 
 | Tool | Description |
 |------|-------------|
-| `build_company_context` | Builds a minified JSON payload for one ticker: fundamentals, 3 peers, Google Trends velocity, FRED macro, SEC 10-K risk snippet, SEC 8-K events, press releases, litigation monitor |
+| `build_company_context` | Builds a minified JSON payload (schema 1.5) for one ticker: fundamentals, up to 3 peers, Google Trends velocity, FRED macro (with a `relevance` flag — see below), SEC 10-K risk snippet, SEC 8-K events, press releases, litigation monitor |
 | `generate_sector_sheet` | Exports a CSV of valuation metrics (Market Cap, EV, EV/Revenue, EV/EBITDA, Fwd P/E, YoY Revenue Growth) for a list of tickers |
 | `list_supported_tickers` | Returns the pre-configured ticker universe and competitor mappings |
 
@@ -121,7 +136,7 @@ The server exposes three tools to Claude Code via `.mcp.json`:
 | Source | Signal | Auth |
 |--------|--------|------|
 | yfinance | Fundamentals, valuation multiples | None |
-| FRED API | Commercial construction spending (TLNRESCONS) | Free API key |
+| FRED API | Commercial construction spending (TLNRESCONS), tagged with a `relevance` flag — `high` for CRE-linked PropTech/Facilities issuers, `low` (treat as backdrop only) otherwise | Free API key |
 | Google Trends (pytrends) | 12-month search-interest velocity | None |
 | SEC EDGAR | 10-K Item 1A risk snippet, 8-K material events | User-Agent header |
 | GlobeNewswire RSS | Last 5 press releases | None |
@@ -145,13 +160,18 @@ output/
 
 ## Memo structure
 
-Each memo has five sections:
+Each memo has six sections:
 
-1. **Business Overview** — what the company does, market position, revenue model
-2. **Financial Snapshot** — key metrics pulled directly from the context payload
-3. **Competitive Landscape** — peer comparison using the pre-configured comparables
-4. **Alternative Signal Review** — Google Trends velocity, macro backdrop, SEC filings, litigation, press releases
-5. **Investment Considerations** — risks and potential catalysts grounded in the data
+1. **One-Line Thesis & Valuation Snapshot** — the thesis plus multiples vs. growth, including an explicit forward-earnings bridge and a cross-sectional peer comp
+2. **Business Overview & Operations** — business model, revenue/segment mix, cost structure, and where operating leverage sits
+3. **Alternative Data & Macro Signals** — Google Trends velocity, macro backdrop, SEC filings, litigation — gated on a stated transmission mechanism
+4. **Consumer & Public Opinion** — multi-source sentiment (StockTwits, Yahoo, HackerNews, news), weighted and contextualized to the business type
+5. **Key Risks & Structural Barriers** — concrete, ranked risks tied to the thesis
+6. **Investment Recommendation** — direction + conviction with the variables that would change the call
+
+### Analytical rigor requirements
+
+The memo skill enforces six non-negotiable rules (in `.claude/skills/theory-y-memo/SKILL.md`) that exist to prevent recurring failures: (1) bridge every valuation gap with explicit implied-earnings math; (2) always build a peer comp — source externally if `peers` is empty; (3) source segment mix from filings when the payload omits it; (4) run an internal-contradiction check before finalizing; (5) gate each macro/alt-data signal on a stated transmission mechanism (honoring the FRED `relevance` flag); (6) investigate governance/litigation signals or name the next source (proxy, PACER) rather than leaving an unexplained flag. External figures are distinguished from payload-derived ones in a closing Sourcing note.
 
 ## Project structure
 
@@ -173,10 +193,10 @@ tests/
 ## Running tests
 
 ```bash
-.venv/bin/python3 -m pytest tests/
+.venv/bin/python3 -m unittest tests.test_all -v
 ```
 
-Tests cover pure-logic components only — no network calls, no external API dependencies.
+Tests cover pure-logic components only — no network calls, no external API dependencies. (The venv ships `unittest`, not `pytest`.)
 
 ---
 
