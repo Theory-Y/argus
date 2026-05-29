@@ -90,18 +90,26 @@ Place each token on its own blank line at these anchors:
 | `[[chart:sentiment_sources]]` | §4 | right after the per-source sentiment table (diverging per-source bars) |
 
 The chart figures **complement** the tables — keep the tables; the visuals make the
-numbers digestible, they do not replace the analysis. Reference a figure in prose
-where it helps (e.g. "the trailing-year curve in Figure 1 …"), but never assert a
-number that only appears in a chart without it also being in the payload/table.
+numbers digestible, they do not replace the analysis. You may reference a figure in
+prose where it helps, but never assert a number that only appears in a chart without
+it also being in the payload/table. Avoid hard-coding a figure number in prose (e.g.
+"see Figure 3"): charts and tables share one auto-assigned sequence, so the number a
+given figure receives depends on what precedes it — refer to figures by description
+instead ("the trailing-year price curve …").
 
-## Visual elements (numbered tables)
+## Visual elements (numbered figures)
 
-Every table gets a numbered caption. On the line **immediately above** each
-markdown table, place a `[[table:Caption text]]` token — the exporter turns it
-into a left-aligned `Table N — Caption text` heading above that table and numbers
-the tables in their own running sequence (Table 1, Table 2, …), separate from the
-`Figure N` sequence used for charts. Write the caption as a short descriptive
-title, e.g.:
+Charts and tables are numbered together in a **single running `Figure N` sequence**,
+assigned by the exporter in the order the figures appear in the document. You do not
+write the numbers yourself — the exporter walks the assembled document top-to-bottom
+and labels each chart and table `Figure 1`, `Figure 2`, … in turn, so a table that
+sits above a chart gets the lower number automatically.
+
+Every table gets a caption. On the line **immediately above** each markdown table,
+place a `[[table:Caption text]]` token — the exporter turns it into a
+`Figure N — Caption text` label placed **below** the table (matching the position
+and style of chart figcaptions) and folds it into the shared sequence. Write the
+caption as a short descriptive title, e.g.:
 
 ```
 [[table:Valuation snapshot — capitalization and trailing multiples]]
@@ -113,8 +121,7 @@ title, e.g.:
 Caption every table you include (the valuation snapshot, peer comps, segment/revenue
 mix, and per-source sentiment tables). Tokens with no following table are dropped
 cleanly, and tables without a token simply render unnumbered, so the token is always
-safe to add. Charts stay **Figure N**; tables are **Table N** — two independent
-sequences.
+safe to add.
 
 ## Persona and voice
 

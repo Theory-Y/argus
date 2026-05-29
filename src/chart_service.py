@@ -48,6 +48,13 @@ RED     = "#B23A3A"   # negative sentiment / below-zero
 FONT_SANS  = "Calibri, Arial, sans-serif"
 FONT_SERIF = "'EB Garamond', Georgia, serif"
 
+# Figures (charts AND tables) are numbered in a single running sequence assigned
+# in document order by the exporter, not here — a chart never knows how many
+# tables precede it. Each caption therefore opens with this placeholder; the
+# exporter's renumber pass swaps the Nth occurrence for "Figure N".
+# NOTE: export_pdf.py matches this exact literal (FIG_PLACEHOLDER_RE) — keep in sync.
+FIG_PLACEHOLDER = "[[#fig]]"
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Low-level helpers
@@ -280,7 +287,7 @@ def price_history_svg(
 
     asof = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     cap = (
-        f"<strong>Figure 1 — {_esc(ticker)} share price, trailing {period}.</strong> "
+        f"<strong>{FIG_PLACEHOLDER} — {_esc(ticker)} share price, trailing {period}.</strong> "
         f"Adjusted daily close (navy) with {ma_window}-day moving average (gold). "
         f"52-wk range ${lo:,.2f}–${hi:,.2f}. Source: Yahoo Finance, as of {asof}."
     )
@@ -378,7 +385,7 @@ def valuation_comps_svg(context: Dict) -> str:
         else "no payload peers — see externally-sourced comp table above"
     )
     cap = (
-        f"<strong>Figure 2 — Relative valuation.</strong> {_esc(tkr)} (gold) vs. "
+        f"<strong>{FIG_PLACEHOLDER} — Relative valuation.</strong> {_esc(tkr)} (gold) vs. "
         f"peers (navy) on forward P/E and EV/Revenue. {peer_note}."
     )
     return _figure(svg, cap)
@@ -438,7 +445,7 @@ def margins_svg(context: Dict) -> str:
         f'{"".join(blocks)}</svg>'
     )
     cap = (
-        f"<strong>Figure 3 — Operating leverage.</strong> TTM EBITDA margin and "
+        f"<strong>{FIG_PLACEHOLDER} — Operating leverage.</strong> TTM EBITDA margin and "
         f"YoY revenue growth on TTM revenue of {rev_lab}. Source: MCP payload."
     )
     return _figure(svg, cap)
@@ -493,7 +500,7 @@ def search_trends_svg(context: Dict) -> str:
         fill="{vel_col}" font-family="{FONT_SANS}">{arrow} {abs(vel or 0):.1f}% velocity</text>
 </svg>'''
     cap = (
-        f"<strong>Figure 4 — Attention signal.</strong> Latest search interest "
+        f"<strong>{FIG_PLACEHOLDER} — Attention signal.</strong> Latest search interest "
         f"({latest:.0f}/100) within its trailing trough–peak band ({trough:.0f}–{peak:.0f}). "
         f"Source: Google Trends (MCP payload)."
     )
@@ -578,7 +585,7 @@ def sentiment_sources_svg(context: Dict) -> str:
     )
     agg_txt = f"Aggregate {agg:+.2f} across {total} posts. " if agg is not None else ""
     cap = (
-        f"<strong>Figure 5 — Public opinion.</strong> {agg_txt}Per-source mean "
+        f"<strong>{FIG_PLACEHOLDER} — Public opinion.</strong> {agg_txt}Per-source mean "
         f"sentiment; bar opacity scales with source weight, n = message count. "
         f"Source: multi-source sentiment (MCP payload)."
     )

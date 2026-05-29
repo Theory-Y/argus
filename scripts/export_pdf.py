@@ -25,6 +25,12 @@ except Exception as _chart_exc:                              # pragma: no cover
 REFERENCE_DOTX = "output/theme/reference.dotx"
 CONTEXT_DIR = "output/context"
 
+# Shared figure-number placeholder. Charts (chart_service) and tables both emit
+# this in their captions; number_figures() swaps each for "Figure N" in document
+# order. Sourced from chart_service so the literal lives in one place, with a
+# fallback for when the chart module fails to import (tables still need it).
+FIG_PLACEHOLDER = getattr(chart_service, "FIG_PLACEHOLDER", "[[#fig]]")
+
 # Pandoc markdown dialect. Subscript/superscript are disabled because memos use
 # "~" to mean "approximately" (e.g. ~$306.6B); with the default extension on,
 # a "~" pair silently turns the text between them into a <sub> run, which then
@@ -193,18 +199,19 @@ table{
   margin:14px 0 18px;
   page-break-inside:avoid;
 }
-/* Numbered table caption — mirrors figure captions (figcaption) so the two
-   share one visual language: navy bold label, Calibri, left-aligned. */
+/* Numbered table caption — same visual language as chart figcaptions:
+   Calibri 8.5pt, slate colour, navy bold label, border-top rule, placed below. */
 caption{
-  caption-side:top;
+  caption-side:bottom;
   text-align:left;
   font-family:"Calibri",Arial,sans-serif;
   font-size:8.5pt;
   font-weight:400;
   color:var(--slate);
   line-height:1.4;
-  padding:0 0 6px;
-  margin:0;
+  padding:7px 0 0;
+  margin-top:8px;
+  border-top:1px solid var(--rule);
 }
 caption strong{color:var(--navy);font-weight:700}
 thead tr{
@@ -405,30 +412,51 @@ def inject_charts(html: str, ticker: str, context: dict) -> str:
 
 def inject_table_captions(html: str) -> str:
     """
-    Turn every ``[[table:Caption]]`` token into a numbered ``<caption>`` on the
-    table that follows it. Tables are numbered in their own sequence (Table 1,
-    Table 2, …), independent of the figure (chart) sequence. Tokens with no
-    following table, or tables with no token, are left untouched.
+    Turn every ``[[table:Caption]]`` token into a ``<caption>`` on the table that
+    follows it, placed below the table (caption-side:bottom) and styled to match
+    the chart figcaptions. The caption opens with the shared figure placeholder
+    rather than a number — ``number_figures`` assigns the running figure number
+    later, in document order, so tables and charts share one sequence. Tokens
+    with no following table, or tables with no token, are left untouched.
     """
-    counter = {"n": 0}
-
     def _replace(match: "re.Match") -> str:
-        counter["n"] += 1
         title = match.group(1).strip()
         table_open = match.group(2)
         return (
             f"{table_open}\n"
-            f'<caption><strong>Table {counter["n"]} — {title}</strong></caption>'
+            f"<caption><strong>{FIG_PLACEHOLDER} — {title}</strong></caption>"
         )
 
     new_html, n = _TABLE_TOKEN_RE.subn(_replace, html)
     if n:
-        print(f"      · numbered {n} table(s)")
+        print(f"      · captioned {n} table(s)")
     # Any leftover [[table:…]] tokens (no following table) are stripped cleanly.
     new_html = re.sub(
         r"(?:<p>)?\s*\[\[table:.*?\]\]\s*(?:</p>)?", "", new_html,
         flags=re.IGNORECASE | re.DOTALL,
     )
+    return new_html
+
+
+def number_figures(html: str) -> str:
+    """
+    Assign the single running ``Figure N`` sequence shared by charts and tables.
+
+    Both chart figcaptions (from chart_service) and table captions open with
+    ``FIG_PLACEHOLDER``. This pass walks the fully-assembled HTML top-to-bottom
+    and replaces the Nth placeholder with ``Figure N``, so the numbers always
+    match the order figures actually appear in the document — regardless of how
+    charts and tables interleave.
+    """
+    counter = {"n": 0}
+
+    def _replace(_match: "re.Match") -> str:
+        counter["n"] += 1
+        return f"Figure {counter['n']}"
+
+    new_html, n = re.subn(re.escape(FIG_PLACEHOLDER), _replace, html)
+    if n:
+        print(f"      · numbered {n} figure(s) in document order")
     return new_html
 
 
@@ -484,8 +512,10 @@ def main():
         context = load_context(ticker, args.context)
         html = inject_charts(html, ticker, context)
 
-    # Number tables (independent of charts; runs for both chart modes).
+    # Caption tables (runs for both chart modes), then assign the single running
+    # Figure N sequence over charts + tables in the order they appear.
     html = inject_table_captions(html)
+    html = number_figures(html)
 
     with tempfile.NamedTemporaryFile(suffix=".html", mode="w",
                                      delete=False, encoding="utf-8") as tf:
