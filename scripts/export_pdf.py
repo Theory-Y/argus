@@ -313,9 +313,13 @@ def main():
              "-o", docx_path])
         print(f"      ✓ {docx_path}")
 
-    # ── Step 2: docx → html ────────────────────────────────────────────────
-    print(f"[2/3] pandoc  {docx_path} → HTML")
-    result = run(["pandoc", docx_path, "-t", "html", "--standalone"])
+    # ── Step 2: docx → html (or md → html when skipping docx) ───────────────
+    if args.skip_docx:
+        print(f"[2/3] pandoc  {md_path} → HTML")
+        result = run(["pandoc", md_path, "-t", "html", "--standalone"])
+    else:
+        print(f"[2/3] pandoc  {docx_path} → HTML")
+        result = run(["pandoc", docx_path, "-t", "html", "--standalone"])
     html = result.stdout
 
     # ── Inject CSS + header ────────────────────────────────────────────────
@@ -340,7 +344,10 @@ def main():
     os.unlink(tmp_html)
     size = os.path.getsize(pdf_path)
     print(f"      ✓ {pdf_path}  ({size/1024:.0f} KB)")
-    print(f"\nDeliverables\n  Word : {docx_path}\n  PDF  : {pdf_path}")
+    if args.skip_docx:
+        print(f"\nDeliverables\n  PDF  : {pdf_path}")
+    else:
+        print(f"\nDeliverables\n  Word : {docx_path}\n  PDF  : {pdf_path}")
 
 
 if __name__ == "__main__":
