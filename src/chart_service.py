@@ -176,21 +176,31 @@ def price_history_svg(
             f'font-size="9" fill="{SLATE}" font-family="{FONT_SANS}">${gv:,.0f}</text>'
         )
 
-    # ── x labels: first day of each month present in the window ──────────────────
+    # ── x labels: first trading day of each month in the window ──────────────────
+    # A trailing window often opens mid/late-month, so the first month tick can
+    # land only a few pixels from the next one. Enforce a minimum horizontal gap
+    # so adjacent month labels (e.g. "May"/"Jun") never collide.
+    MIN_LABEL_GAP = 34.0
     xlabels = []
     seen_months = set()
+    last_label_x = -1e9
     for i, dstr in enumerate(dates):
         mkey = dstr[:7]
-        if mkey not in seen_months:
-            seen_months.add(mkey)
-            try:
-                lab = datetime.strptime(dstr, "%Y-%m-%d").strftime("%b")
-            except ValueError:
-                lab = dstr[5:7]
-            xlabels.append(
-                f'<text x="{x(i):.1f}" y="{H - 12:.1f}" text-anchor="middle" '
-                f'font-size="8.5" fill="{SLATE}" font-family="{FONT_SANS}">{lab}</text>'
-            )
+        if mkey in seen_months:
+            continue
+        seen_months.add(mkey)
+        xi = x(i)
+        if xi - last_label_x < MIN_LABEL_GAP:
+            continue
+        last_label_x = xi
+        try:
+            lab = datetime.strptime(dstr, "%Y-%m-%d").strftime("%b")
+        except ValueError:
+            lab = dstr[5:7]
+        xlabels.append(
+            f'<text x="{xi:.1f}" y="{H - 12:.1f}" text-anchor="middle" '
+            f'font-size="8.5" fill="{SLATE}" font-family="{FONT_SANS}">{lab}</text>'
+        )
 
     # ── 52-wk high/low band ──────────────────────────────────────────────────────
     band = (
@@ -227,11 +237,16 @@ def price_history_svg(
     chg_pct = (last / first - 1) * 100 if first else 0.0
     chg_col = GREEN if chg_pct >= 0 else RED
     lx, ly = x(n - 1), y(last)
+    label_y = max(mt + 9, ly - 9)          # keep the label inside the plot top
     callout = (
         f'<circle cx="{lx:.1f}" cy="{ly:.1f}" r="3.2" fill="{NAVY}" '
         f'stroke="{WHITE}" stroke-width="1.2"/>'
-        f'<text x="{lx - 4:.1f}" y="{ly - 7:.1f}" text-anchor="end" font-size="10.5" '
-        f'font-weight="700" fill="{NAVY}" font-family="{FONT_SANS}">${last:,.2f}</text>'
+        # white halo (paint-order=stroke) keeps the value legible where it would
+        # otherwise sit on top of the price line near a peak.
+        f'<text x="{lx - 4:.1f}" y="{label_y:.1f}" text-anchor="end" font-size="10.5" '
+        f'font-weight="700" fill="{NAVY}" font-family="{FONT_SANS}" '
+        f'stroke="{WHITE}" stroke-width="2.6" paint-order="stroke" '
+        f'stroke-linejoin="round">${last:,.2f}</text>'
     )
 
     legend = (

@@ -94,6 +94,28 @@ numbers digestible, they do not replace the analysis. Reference a figure in pros
 where it helps (e.g. "the trailing-year curve in Figure 1 …"), but never assert a
 number that only appears in a chart without it also being in the payload/table.
 
+## Visual elements (numbered tables)
+
+Every table gets a numbered caption. On the line **immediately above** each
+markdown table, place a `[[table:Caption text]]` token — the exporter turns it
+into a left-aligned `Table N — Caption text` heading above that table and numbers
+the tables in their own running sequence (Table 1, Table 2, …), separate from the
+`Figure N` sequence used for charts. Write the caption as a short descriptive
+title, e.g.:
+
+```
+[[table:Valuation snapshot — capitalization and trailing multiples]]
+
+| Metric | Value |
+|---|---|
+```
+
+Caption every table you include (the valuation snapshot, peer comps, segment/revenue
+mix, and per-source sentiment tables). Tokens with no following table are dropped
+cleanly, and tables without a token simply render unnumbered, so the token is always
+safe to add. Charts stay **Figure N**; tables are **Table N** — two independent
+sequences.
+
 ## Persona and voice
 
 Write as a **Principal Equity Research Analyst covering the target company's sector**

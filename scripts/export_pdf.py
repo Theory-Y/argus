@@ -25,9 +25,23 @@ except Exception as _chart_exc:                              # pragma: no cover
 REFERENCE_DOTX = "output/theme/reference.dotx"
 CONTEXT_DIR = "output/context"
 
+# Pandoc markdown dialect. Subscript/superscript are disabled because memos use
+# "~" to mean "approximately" (e.g. ~$306.6B); with the default extension on,
+# a "~" pair silently turns the text between them into a <sub> run, which then
+# fights the surrounding <strong> and renders in the wrong (serif/bold) font.
+PANDOC_MD = "markdown-subscript-superscript"
+
 # Matches [[chart:name]] tokens, including the <p>…</p> pandoc wraps them in.
 _CHART_TOKEN_RE = re.compile(
     r"(?:<p>)?\s*\[\[chart:([a-z_]+)\]\]\s*(?:</p>)?", re.IGNORECASE
+)
+
+# Matches a [[table:Caption text]] token immediately followed by its <table>.
+# The caption text is everything up to the closing "]]". The trailing <table>
+# is captured so the caption can be injected into that exact table.
+_TABLE_TOKEN_RE = re.compile(
+    r"(?:<p>)?\s*\[\[table:(.*?)\]\]\s*(?:</p>)?\s*(<table\b[^>]*>)",
+    re.IGNORECASE | re.DOTALL,
 )
 
 # Browser binary names/paths vary by OS and distro. Probed in order; first hit wins.
@@ -179,6 +193,20 @@ table{
   margin:14px 0 18px;
   page-break-inside:avoid;
 }
+/* Numbered table caption — mirrors figure captions (figcaption) so the two
+   share one visual language: navy bold label, Calibri, left-aligned. */
+caption{
+  caption-side:top;
+  text-align:left;
+  font-family:"Calibri",Arial,sans-serif;
+  font-size:8.5pt;
+  font-weight:400;
+  color:var(--slate);
+  line-height:1.4;
+  padding:0 0 6px;
+  margin:0;
+}
+caption strong{color:var(--navy);font-weight:700}
 thead tr{
   background:var(--navy);
   color:var(--white);
@@ -375,6 +403,35 @@ def inject_charts(html: str, ticker: str, context: dict) -> str:
     return new_html
 
 
+def inject_table_captions(html: str) -> str:
+    """
+    Turn every ``[[table:Caption]]`` token into a numbered ``<caption>`` on the
+    table that follows it. Tables are numbered in their own sequence (Table 1,
+    Table 2, …), independent of the figure (chart) sequence. Tokens with no
+    following table, or tables with no token, are left untouched.
+    """
+    counter = {"n": 0}
+
+    def _replace(match: "re.Match") -> str:
+        counter["n"] += 1
+        title = match.group(1).strip()
+        table_open = match.group(2)
+        return (
+            f"{table_open}\n"
+            f'<caption><strong>Table {counter["n"]} — {title}</strong></caption>'
+        )
+
+    new_html, n = _TABLE_TOKEN_RE.subn(_replace, html)
+    if n:
+        print(f"      · numbered {n} table(s)")
+    # Any leftover [[table:…]] tokens (no following table) are stripped cleanly.
+    new_html = re.sub(
+        r"(?:<p>)?\s*\[\[table:.*?\]\]\s*(?:</p>)?", "", new_html,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    return new_html
+
+
 def main():
     parser = argparse.ArgumentParser(description="Export memo to PDF via .dotx pipeline")
     parser.add_argument("md_path", help="Path to the markdown memo")
@@ -400,6 +457,7 @@ def main():
     if not args.skip_docx:
         print(f"[1/3] pandoc  {md_path} → {docx_path}  (using {REFERENCE_DOTX})")
         run(["pandoc", md_path,
+             "-f", PANDOC_MD,
              "--reference-doc", REFERENCE_DOTX,
              "-o", docx_path])
         print(f"      ✓ {docx_path}")
@@ -407,7 +465,8 @@ def main():
     # ── Step 2: docx → html (or md → html when skipping docx) ───────────────
     if args.skip_docx:
         print(f"[2/3] pandoc  {md_path} → HTML")
-        result = run(["pandoc", md_path, "-t", "html", "--standalone"])
+        result = run(["pandoc", md_path, "-f", PANDOC_MD,
+                      "-t", "html", "--standalone"])
     else:
         print(f"[2/3] pandoc  {docx_path} → HTML")
         result = run(["pandoc", docx_path, "-t", "html", "--standalone"])
@@ -424,6 +483,9 @@ def main():
     else:
         context = load_context(ticker, args.context)
         html = inject_charts(html, ticker, context)
+
+    # Number tables (independent of charts; runs for both chart modes).
+    html = inject_table_captions(html)
 
     with tempfile.NamedTemporaryFile(suffix=".html", mode="w",
                                      delete=False, encoding="utf-8") as tf:

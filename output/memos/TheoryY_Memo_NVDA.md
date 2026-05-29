@@ -4,6 +4,8 @@
 
 NVIDIA is the only company in the comparable set compounding revenue at 85% while running a 65% EBITDA margin, and at 17.1x forward earnings the market is paying the lowest growth-adjusted multiple in the peer group for the highest-quality earnings stream in semiconductors.
 
+[[table:Valuation snapshot — NVDA capitalization and trailing multiples]]
+
 | Metric | Value |
 |---|---|
 | Market cap | $5,236B |
@@ -20,6 +22,8 @@ NVIDIA is the only company in the comparable set compounding revenue at 85% whil
 [[chart:price_history]]
 
 The 17.1x forward P/E reads as "cheap" only until it is bridged against the trailing base. Capitalizing the $5,236B cap at 17.08x implies forward net income of **~$306.6B**. Against TTM EBITDA of $165.5B — and trailing net income necessarily below that, roughly ~$132B at NVIDIA's ~52% net margin — that forward earnings pool is **~2.3x the trailing base**. A 17x forward multiple is therefore not a present-tense figure: it discounts an out-year (FY2028-type) consensus that already assumes one-to-two more years of the current 85% trajectory, with margins held near record. Priced on trailing earnings the stock is ~40x, not 17x. The term structure is the honest framing: **~40x trailing P/E → high-20s NTM → 17x out-year**.
+
+[[table:Peer comparables — NVDA vs. AMD, AVGO, and TSM on valuation, growth, and margin]]
 
 | Metric | NVDA | AMD | AVGO | TSM |
 |---|---|---|---|---|
@@ -38,6 +42,8 @@ The 17.1x forward P/E reads as "cheap" only until it is bridged against the trai
 ## 2. Business Overview & Operations
 
 NVIDIA's revenue is now a near-pure-play on accelerated computing. The payload does not break out segments, so the mix below is sourced from the Q1 FY2027 release (reported May 20, 2026):
+
+[[table:Revenue mix — Q1 FY2027 segment breakdown (sourced from the May 20, 2026 release)]]
 
 | Segment (Q1 FY27) | Revenue | YoY | Share |
 |---|---|---|---|
@@ -70,6 +76,8 @@ The leverage cuts both ways. The cost line that matters is COGS, governed by HBM
 ## 4. Consumer & Public Opinion
 
 Blended sentiment is **positive at +0.24 across 107 posts** — an adequate sample, weighted toward StockTwits (native Bull/Bear labels, full weight) with news and forum sources layered behind it.
+
+[[table:Sentiment by source — message volume, mean score, and weighting across channels]]
 
 | Source | Messages | Score | Weight |
 |---|---|---|---|
