@@ -61,12 +61,12 @@ Then write these five sections **in order**, each opening with its exact `##` he
 
 | # | Section heading | Target length |
 |---|-----------------|---------------|
-| 1 | `## 1. One-Line Thesis & Valuation Snapshot` | ~400 words |
-| 2 | `## 2. Business Overview & Operations` | ~600 words |
-| 3 | `## 3. Alternative Data & Macro Signals` | ~700 words |
-| 4 | `## 4. Consumer & Public Opinion` | ~400 words |
-| 5 | `## 5. Key Risks & Structural Barriers` | ~500 words |
-| 6 | `## 6. Investment Recommendation` | ~300 words |
+| 1 | `## 1. One-Line Thesis & Valuation Snapshot` | ~250 words |
+| 2 | `## 2. Business Overview & Operations` | ~350 words |
+| 3 | `## 3. Alternative Data & Macro Signals` | ~450 words |
+| 4 | `## 4. Consumer & Public Opinion` | ~250 words |
+| 5 | `## 5. Key Risks & Structural Barriers` | ~300 words |
+| 6 | `## 6. Investment Recommendation` | ~200 words |
 
 Word targets are guidance, not hard caps — prioritize substance over hitting a count.
 

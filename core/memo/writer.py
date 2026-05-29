@@ -19,8 +19,8 @@ from .prompt import SYSTEM_PROMPT, user_message
 
 # Default to the most capable model; override per-deployment via ANTHROPIC_MODEL.
 _DEFAULT_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-opus-4-7")
-_DEFAULT_EFFORT = os.environ.get("ANTHROPIC_EFFORT", "high")
-_DEFAULT_MAX_TOKENS = int(os.environ.get("ANTHROPIC_MAX_TOKENS", "16000"))
+_DEFAULT_EFFORT = os.environ.get("ANTHROPIC_EFFORT", "medium")
+_DEFAULT_MAX_TOKENS = int(os.environ.get("ANTHROPIC_MAX_TOKENS", "6000"))
 
 
 def write_memo(

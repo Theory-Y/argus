@@ -138,6 +138,10 @@ from alt_data_service import (
     ApifyJobScraper,
     TrendsSignal,
     FredSeries,
+    MultiSourceSentimentAggregator,
+    _RawSourceResult,
+    _score_texts,
+    normalize_company_name,
 )
 
 
@@ -268,8 +272,10 @@ class TestSecRiskFactorExtractor(unittest.TestCase):
 
 class TestApifyJobScraper(unittest.TestCase):
 
-    def test_stub_returns_zero_roles(self):
-        scraper = ApifyJobScraper()
+    def test_stub_returns_zero_roles_when_unconfigured(self):
+        # Explicit empty creds → deterministic stub regardless of env vars.
+        scraper = ApifyJobScraper(api_key="", actor_id="")
+        self.assertFalse(scraper.is_configured)
         result = scraper.get_open_engineering_roles("Procore")
         self.assertTrue(result.is_stub)
         self.assertEqual(result.total_open_roles, 0)
@@ -277,10 +283,131 @@ class TestApifyJobScraper(unittest.TestCase):
         self.assertEqual(result.company_name, "Procore")
 
     def test_headcount_proxy_stub(self):
-        scraper = ApifyJobScraper()
+        scraper = ApifyJobScraper(api_key="", actor_id="")
         result = scraper.get_headcount_proxy("Procore")
         self.assertTrue(result["is_stub"])
         self.assertIsNone(result["employee_estimate"])
+
+    def test_is_configured_requires_both_key_and_actor(self):
+        self.assertFalse(ApifyJobScraper(api_key="k", actor_id="").is_configured)
+        self.assertFalse(ApifyJobScraper(api_key="", actor_id="a").is_configured)
+        self.assertTrue(ApifyJobScraper(api_key="k", actor_id="a").is_configured)
+
+    def test_normalize_coerces_heterogeneous_items(self):
+        scraper = ApifyJobScraper(api_key="k", actor_id="a")
+        items = [
+            {"title": "Senior Software Engineer", "location": "NYC", "url": "u1"},
+            {"positionName": "Account Executive"},          # not engineering
+            {"jobTitle": "Backend Developer", "jobUrl": "u2"},
+        ]
+        result = scraper._normalize("Acme", items)
+        self.assertFalse(result.is_stub)
+        self.assertEqual(result.total_open_roles, 3)
+        self.assertEqual(len(result.engineering_roles), 2)
+        self.assertEqual(result.engineering_roles[0]["title"], "Senior Software Engineer")
+
+
+class TestNormalizeCompanyName(unittest.TestCase):
+
+    def test_strips_corporate_suffixes(self):
+        self.assertEqual(normalize_company_name("Procore Technologies, Inc."), "Procore Technologies")
+        self.assertEqual(normalize_company_name("Apple Inc."), "Apple")
+        self.assertEqual(normalize_company_name("Carrier Global Corporation"), "Carrier Global")
+
+    def test_empty_falls_back_to_input(self):
+        # An all-suffix name must not collapse to an empty query.
+        self.assertEqual(normalize_company_name("Inc"), "Inc")
+
+
+# ─── multi-source sentiment ───────────────────────────────────────────────────
+
+
+class TestScoreTexts(unittest.TestCase):
+
+    def test_positive_dominates(self):
+        score, freq = _score_texts(["strong growth and a solid beat", "bullish momentum"])
+        self.assertIsNotNone(score)
+        self.assertGreater(score, 0)
+        self.assertIn("growth", freq)
+
+    def test_no_lexicon_hits_returns_none(self):
+        score, _ = _score_texts(["the quick brown fox jumps"])
+        self.assertIsNone(score)
+
+    def test_empty_input(self):
+        score, freq = _score_texts([])
+        self.assertIsNone(score)
+        self.assertEqual(freq, {})
+
+
+class _FakeSource:
+    """Test double returning a preset _RawSourceResult."""
+    def __init__(self, result):
+        self._result = result
+    def fetch(self, *args, **kwargs):
+        return self._result
+
+
+class TestMultiSourceSentimentAggregator(unittest.TestCase):
+
+    def _agg(self, st, hn, rd):
+        return MultiSourceSentimentAggregator(
+            stocktwits=_FakeSource(st),
+            hackernews=_FakeSource(hn),
+            reddit=_FakeSource(rd),
+        )
+
+    def test_blends_and_records_each_source(self):
+        agg = self._agg(
+            st=_RawSourceResult("stocktwits", ["great buy"], 12, native_score=0.8),
+            hn=_RawSourceResult("hackernews", ["solid product growth"], 10),
+            rd=_RawSourceResult("reddit", ["bullish on this one"], 8),
+        )
+        sig = agg.get_signal("AAPL", "Apple")
+        self.assertEqual(sig.source, "multi_source")
+        self.assertEqual(sig.post_count, 30)
+        self.assertEqual(len(sig.sources), 3)
+        self.assertIsNotNone(sig.sentiment_score)
+        self.assertEqual(sig.sentiment, "positive")
+        # Stocktwits native score is used and weighted highest.
+        st_src = next(s for s in sig.sources if s.source == "stocktwits")
+        self.assertEqual(st_src.sentiment_score, 0.8)
+        self.assertTrue(st_src.available)
+
+    def test_reddit_403_does_not_blank_signal(self):
+        agg = self._agg(
+            st=_RawSourceResult("stocktwits", ["strong beat"], 15, native_score=0.6),
+            hn=_RawSourceResult("hackernews", [], 0),
+            rd=_RawSourceResult("reddit", [], 0, error="403 Client Error"),
+        )
+        sig = agg.get_signal("INTC", "Intel")
+        self.assertIsNotNone(sig.sentiment_score)
+        self.assertIsNone(sig.error)            # at least one source had data
+        rd_src = next(s for s in sig.sources if s.source == "reddit")
+        self.assertFalse(rd_src.available)
+        self.assertEqual(rd_src.weight, 0.0)
+        self.assertIn("403", rd_src.error or "")
+
+    def test_all_sources_empty_sets_error(self):
+        agg = self._agg(
+            st=_RawSourceResult("stocktwits", [], 0, error="404"),
+            hn=_RawSourceResult("hackernews", [], 0),
+            rd=_RawSourceResult("reddit", [], 0, error="403"),
+        )
+        sig = agg.get_signal("XYZ", "Nonexistent")
+        self.assertEqual(sig.post_count, 0)
+        self.assertIsNone(sig.sentiment_score)
+        self.assertIsNone(sig.sentiment)
+        self.assertIsNotNone(sig.error)
+
+    def test_single_source_labels_source_by_name(self):
+        agg = self._agg(
+            st=_RawSourceResult("stocktwits", ["good"], 5, native_score=0.5),
+            hn=_RawSourceResult("hackernews", [], 0),
+            rd=_RawSourceResult("reddit", [], 0),
+        )
+        sig = agg.get_signal("MU", "Micron")
+        self.assertEqual(sig.source, "stocktwits")
 
 
 # ─── context_aggregator ───────────────────────────────────────────────────────
@@ -312,7 +439,7 @@ class TestContextAggregatorHelpers(unittest.TestCase):
         agg = ContextAggregator(financial_service=mock_fin, alt_data_service=mock_alt)
         meta = agg._build_meta("PCOR")
         self.assertEqual(meta["target_ticker"], "PCOR")
-        self.assertEqual(meta["schema_version"], "1.2")
+        self.assertEqual(meta["schema_version"], "1.4")
         self.assertIn("generated_at_utc", meta)
 
     def test_build_minified_context_is_valid_json(self):

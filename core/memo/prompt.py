@@ -16,12 +16,12 @@ from __future__ import annotations
 # Section structure: (heading, target words). The model must emit these exact
 # headings, in order, after a `# Investment Memo: <TICKER>` title line.
 SECTIONS: list[tuple[str, int]] = [
-    ("## 1. One-Line Thesis & Valuation Snapshot", 400),
-    ("## 2. Business Overview & Operations", 600),
-    ("## 3. Alternative Data & Macro Signals", 700),
-    ("## 4. Consumer & Public Opinion", 400),
-    ("## 5. Key Risks & Structural Barriers", 500),
-    ("## 6. Investment Recommendation", 300),
+    ("## 1. One-Line Thesis & Valuation Snapshot", 250),
+    ("## 2. Business Overview & Operations", 350),
+    ("## 3. Alternative Data & Macro Signals", 450),
+    ("## 4. Consumer & Public Opinion", 250),
+    ("## 5. Key Risks & Structural Barriers", 300),
+    ("## 6. Investment Recommendation", 200),
 ]
 
 _SECTION_TABLE = "\n".join(
@@ -83,12 +83,16 @@ go-to-market, cost structure, and where operating leverage sits.
 - §3 — alternative-data and macro read-through: what the non-financial signals \
 imply for the forward numbers. This is the longest, most analytically \
 differentiated section.
-- §4 — consumer and public opinion: use `alt_signals.consumer_sentiment`. Cover \
-the sentiment label and score, post volume, top recurring themes, and which \
-subreddits surfaced the most signal. Flag low samples (post_count < 5) as \
-limited. If an `error` is present, note the data gap instead of omitting the \
-section. Contextualise sentiment against the business model (B2C platform vs. \
-B2B SaaS vs. facilities conglomerate).
+- §4 — consumer and public opinion: use `alt_signals.consumer_sentiment`, which \
+blends three public sources (Stocktwits investor stream with native Bull/Bear \
+labels, HackerNews tech/B2B discussion, and Reddit investing subreddits). Cover \
+the blended sentiment label and score, total message volume, and top recurring \
+themes. Use the `sources` breakdown to weigh credibility — note when the signal \
+leans on one source, and treat Stocktwits' label-based score as the most \
+reliable. Flag low samples (post_count < 5) as limited. If an `error` is present \
+(e.g. all sources empty, or Reddit 403), note the data gap instead of omitting \
+the section. Contextualise sentiment against the business model (B2C platform \
+vs. B2B SaaS vs. facilities conglomerate).
 - §5 — concrete, ranked risks and structural barriers, each tied to its impact \
 on the thesis or the numbers.
 - §6 — a clear recommendation (direction + conviction) that falls out of §§1–5, \

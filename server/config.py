@@ -20,8 +20,8 @@ class Settings(BaseSettings):
     # ── Memo generation (Anthropic) ──────────────────────────────────────────
     # ANTHROPIC_API_KEY is read directly by the anthropic SDK from the env.
     anthropic_model: str = "claude-opus-4-7"
-    anthropic_effort: str = "high"
-    anthropic_max_tokens: int = 16000
+    anthropic_effort: str = "medium"
+    anthropic_max_tokens: int = 6000
 
     # ── Storage ──────────────────────────────────────────────────────────────
     storage_backend: Literal["local", "s3"] = "local"

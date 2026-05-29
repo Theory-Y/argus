@@ -5,8 +5,12 @@ Sources:
   1. Google Trends (pytrends)  — search-interest velocity as demand proxy
   2. FRED API (requests)       — commercial construction macro indicator
   3. SEC EDGAR API (requests)  — most-recent 10-K + Item 1A risk snippet
-  4. Apify (stub)              — job-listing scraper (activate with API key)
-  5. Reddit public JSON API    — consumer & investor sentiment (no auth)
+  4. Apify REST API (requests) — job-listing scraper (live when APIFY_API_KEY set)
+  5. Consumer sentiment        — blended across three key-free public sources,
+       uniformly for any ticker (MultiSourceSentimentAggregator):
+         • Stocktwits  — per-ticker investors, native Bull/Bear labels (primary)
+         • HackerNews  — tech / B2B discussion via the Algolia search API
+         • Reddit      — investing subreddits, public JSON (best-effort)
 
 Architecture (Clean Architecture + SOLID):
   Each data source has a dedicated Fetcher (I/O) and Processor (pure logic).
@@ -22,7 +26,7 @@ import time
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from datetime import datetime, timezone, timedelta
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import requests
 from bs4 import BeautifulSoup
@@ -197,16 +201,34 @@ class LitigationSignal:
 
 
 @dataclass
+class SourceSentiment:
+    """Per-source contribution to the blended consumer-sentiment signal."""
+    source:          str              # "stocktwits", "hackernews", "reddit"
+    available:       bool             # True if the source returned any messages
+    message_count:   int              # messages/posts that fed the score
+    sentiment_score: Optional[float]  # -1.0 … 1.0 for this source alone
+    weight:          float            # contribution weight in the blend (0 if unused)
+    error:           Optional[str] = None
+
+
+@dataclass
 class ConsumerSentimentSignal:
-    """Consumer and public opinion signal derived from Reddit discussions."""
+    """
+    Consumer & investor sentiment blended across multiple public sources.
+
+    Computed uniformly for *any* ticker (no per-sector configuration) by
+    MultiSourceSentimentAggregator. `sources` carries the per-source breakdown
+    so the LLM can judge data quality; the top-level score is the weighted blend.
+    """
     ticker:          str
     company_name:    str
-    post_count:      int
-    sentiment:       Optional[str]    # "positive", "mixed", "negative", or None
-    sentiment_score: Optional[float]  # -1.0 (very negative) to 1.0 (very positive)
-    top_themes:      List[str]        # recurring topics from post titles
-    source:          str              # always "reddit"
-    subreddits:      List[str]        # subreddits that were searched
+    post_count:      int               # total messages across all sources
+    sentiment:       Optional[str]      # "positive", "mixed", "negative", or None
+    sentiment_score: Optional[float]    # -1.0 (very negative) to 1.0 (very positive)
+    top_themes:      List[str]          # recurring topics across all sources
+    source:          str               # "multi_source" (or single source if only one)
+    subreddits:      List[str]          # Reddit subreddits that were searched
+    sources:         List[SourceSentiment] = field(default_factory=list)
     error:           Optional[str] = None
 
 
@@ -514,54 +536,129 @@ class SecRiskFactorExtractor:
 # Apify Stub — activate by injecting APIFY_API_KEY
 # ──────────────────────────────────────────────────────────────────────────────
 
+# Corporate-suffix tokens stripped so the same query shape is sent for every
+# company regardless of how yfinance spells its long name.
+_COMPANY_SUFFIX_RE = re.compile(
+    r"[,\.]?\s*\b("
+    r"inc|incorporated|corp|corporation|co|company|ltd|limited|plc|llc|lp|"
+    r"holdings|group|sa|nv|ag|the"
+    r")\b\.?",
+    re.IGNORECASE,
+)
+
+# Job titles counted as "engineering" roles — keeps the metric comparable
+# across companies that label postings differently.
+_ENGINEERING_TITLE_RE = re.compile(
+    r"\b(engineer|developer|software|sde|programmer|devops|sre|"
+    r"data scientist|machine learning|ml engineer|architect)\b",
+    re.IGNORECASE,
+)
+
+
+def normalize_company_name(company_name: str) -> str:
+    """Strip corporate suffixes/punctuation so Apify queries are uniform."""
+    cleaned = _COMPANY_SUFFIX_RE.sub(" ", company_name or "")
+    return re.sub(r"\s+", " ", cleaned).strip() or company_name
+
+
 class ApifyJobScraper:
     """
-    STUB implementation for Apify-powered job-listing scraper.
+    Apify-powered job-listing scraper.
 
-    To activate:
-      1. Register at https://apify.com and create an API token.
-      2. Set env var APIFY_API_KEY=<your_token>.
-      3. Choose an actor (e.g. "apify/indeed-scraper" or a LinkedIn Jobs actor).
-         Set _ACTOR_ID below to the actor's full ID.
-      4. Replace the body of get_open_engineering_roles() with the live call
-         pattern shown in the docstring.
+    Runs synchronously and returns a *consistent* result schema for every
+    company. Activates automatically when both env vars are present:
+      • APIFY_API_KEY  — your Apify API token
+      • APIFY_ACTOR_ID — actor to run (e.g. a LinkedIn/Indeed jobs scraper)
+    Without them it degrades to a clearly-marked stub (is_stub=True) so the
+    pipeline never blocks on a missing key.
 
+    The run-sync-get-dataset-items endpoint blocks until the run finishes and
+    returns the dataset in one call, so no manual polling loop is needed.
     Apify REST docs: https://docs.apify.com/api/v2
     """
 
-    _APIFY_API_KEY: str = os.getenv("APIFY_API_KEY", "YOUR_APIFY_API_KEY_HERE")
-    _ACTOR_ID:      str = "REPLACE_WITH_ACTOR_ID"      # e.g. "nFJndFXA5zjCTuudP"
-    _BASE_URL:      str = "https://api.apify.com/v2/acts/{actor_id}/runs"
+    _RUN_SYNC_URL = "https://api.apify.com/v2/acts/{actor_id}/run-sync-get-dataset-items"
+    _RUN_TIMEOUT  = 90  # seconds; Apify run-sync caps server-side too
+
+    def __init__(
+        self,
+        api_key:  Optional[str] = None,
+        actor_id: Optional[str] = None,
+    ) -> None:
+        self._api_key  = api_key  or os.getenv("APIFY_API_KEY", "")
+        self._actor_id = actor_id or os.getenv("APIFY_ACTOR_ID", "")
+        self._session  = requests.Session()
+
+    @property
+    def is_configured(self) -> bool:
+        return bool(self._api_key) and bool(self._actor_id)
 
     def get_open_engineering_roles(self, company_name: str) -> ApifyJobsResult:
         """
-        STUB — returns zeroed mock data.
-
-        Live call pattern (replace this body):
-        ─────────────────────────────────────
-        run_url  = self._BASE_URL.format(actor_id=self._ACTOR_ID)
-        headers  = {"Authorization": f"Bearer {self._APIFY_API_KEY}"}
-        payload  = {"company": company_name, "keywords": ["engineer", "software"]}
-
-        run_resp = requests.post(run_url, json=payload, headers=headers)
-        run_id   = run_resp.json()["data"]["id"]
-
-        # Poll until the run finishes
-        status_url = f"https://api.apify.com/v2/acts/{self._ACTOR_ID}/runs/{run_id}"
-        while True:
-            status = requests.get(status_url, headers=headers).json()["data"]["status"]
-            if status == "SUCCEEDED":
-                break
-            time.sleep(5)
-
-        items_url = f"{status_url}/dataset/items"
-        items     = requests.get(items_url, headers=headers).json()
-        return ApifyJobsResult(company_name=company_name,
-                               total_open_roles=len(items),
-                               engineering_roles=items,
-                               is_stub=False)
+        Fetch open roles for *company_name* and return a normalized result.
+        Returns an is_stub=True result when Apify is not configured or errors,
+        so every company yields the same shape regardless of data availability.
         """
-        logger.info("[STUB] Apify job scraper called for '%s' — no live data", company_name)
+        if not self.is_configured:
+            logger.info(
+                "Apify not configured (set APIFY_API_KEY + APIFY_ACTOR_ID) — "
+                "returning stub for '%s'", company_name,
+            )
+            return self._stub(company_name)
+
+        query = normalize_company_name(company_name)
+        url = self._RUN_SYNC_URL.format(actor_id=self._actor_id)
+        payload = {
+            # Common input keys across job-scraper actors; extra keys are ignored
+            # by actors that don't use them, keeping one payload usable broadly.
+            "company":  query,
+            "keywords": ["engineer", "software", "developer"],
+            "maxItems": 100,
+        }
+        try:
+            resp = self._session.post(
+                url,
+                params={"token": self._api_key},
+                json=payload,
+                timeout=self._RUN_TIMEOUT,
+            )
+            resp.raise_for_status()
+            items = resp.json()
+        except requests.RequestException as exc:
+            logger.error("Apify run failed for '%s': %s", company_name, exc)
+            return self._stub(company_name)
+        except ValueError as exc:
+            logger.error("Apify returned non-JSON for '%s': %s", company_name, exc)
+            return self._stub(company_name)
+
+        if not isinstance(items, list):
+            logger.warning("Apify returned unexpected payload type for '%s'", company_name)
+            return self._stub(company_name)
+
+        return self._normalize(company_name, items)
+
+    def _normalize(self, company_name: str, items: List[Dict]) -> ApifyJobsResult:
+        """Coerce heterogeneous actor output into the fixed ApifyJobsResult schema."""
+        engineering: List[Dict] = []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            title = str(item.get("title") or item.get("positionName") or item.get("jobTitle") or "")
+            if _ENGINEERING_TITLE_RE.search(title):
+                engineering.append({
+                    "title":    title,
+                    "location": item.get("location") or item.get("jobLocation"),
+                    "url":      item.get("url") or item.get("jobUrl") or item.get("link"),
+                })
+        return ApifyJobsResult(
+            company_name=company_name,
+            total_open_roles=len(items),
+            engineering_roles=engineering,
+            is_stub=False,
+        )
+
+    @staticmethod
+    def _stub(company_name: str) -> ApifyJobsResult:
         return ApifyJobsResult(
             company_name=company_name,
             total_open_roles=0,
@@ -571,11 +668,11 @@ class ApifyJobScraper:
 
     def get_headcount_proxy(self, company_name: str) -> Dict:
         """
-        STUB: LinkedIn / Glassdoor employee count via an Apify LinkedIn actor.
-        Useful as a growth/contraction signal alongside job postings.
-        Replace body with live Apify call once actor ID is configured.
+        Optional LinkedIn/Glassdoor employee-count proxy via an Apify actor.
+        No reliable key-free source exists, so this returns a stub unless a
+        dedicated headcount actor is wired in. Kept for API stability.
         """
-        logger.info("[STUB] Headcount proxy called for '%s'", company_name)
+        logger.info("Headcount proxy called for '%s' (stub)", company_name)
         return {"company": company_name, "employee_estimate": None, "is_stub": True}
 
 
@@ -858,7 +955,14 @@ class LitigationFetcher:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Reddit Public Sentiment — no API key required
+# Consumer Sentiment — blended across Stocktwits + HackerNews + Reddit
+#
+# Design goal: produce a *consistent* sentiment signal for ANY ticker, with no
+# per-sector configuration required. Stocktwits and HackerNews are queried purely
+# by ticker/company name (works identically for AAPL, INTC, PCOR, …); Reddit uses
+# one uniform finance-subreddit set rather than a sparse hand-maintained map.
+# All three are key-free; each degrades gracefully so one source failing (e.g.
+# Reddit 403) never blanks the signal.
 # ──────────────────────────────────────────────────────────────────────────────
 
 _POSITIVE_WORDS = frozenset({
@@ -881,35 +985,185 @@ _STOPWORDS = frozenset({
     "it", "its", "my", "your", "their", "our", "you", "we", "they",
     "about", "how", "why", "what", "when", "where", "who", "which", "just",
     "anyone", "any", "some", "more", "less", "very", "really", "still",
+    # Generic comparison/temporal fillers that otherwise crowd out real themes
+    "over", "than", "then", "into", "also", "even", "only", "much", "many",
+    "like", "going", "make", "made", "well", "year", "years", "today", "now",
+    "out", "get", "got", "one", "two", "new", "see", "say", "said",
 })
 
-# Base subreddits searched for every ticker
-_BASE_SUBREDDITS: List[str] = ["investing", "stocks"]
+# One uniform finance-discussion subreddit set, searched identically for every
+# ticker. Replaces the old sparse per-sector map so a tech ticker (AAPL) and a
+# PropTech ticker (PCOR) are treated the same way → consistent Reddit coverage.
+_BASE_SUBREDDITS: List[str] = [
+    "investing", "stocks", "StockMarket", "wallstreetbets",
+    "ValueInvesting", "SecurityAnalysis",
+]
 
-# Additional sector-specific subreddits per ticker
-_TICKER_SUBREDDITS: Dict[str, List[str]] = {
-    "PCOR": ["ConstructionManagers", "projectmanagement"],
-    "APPF": ["PropertyManagement", "realestateinvesting"],
-    "Z":    ["RealEstate", "FirstTimeHomeBuyer"],
-    "CSGP": ["CommercialRealEstate", "realestate"],
-    "CBRE": ["CommercialRealEstate", "realestate"],
-    "ADT":  ["homeautomation", "homesecurity"],
-    "HON":  ["buildingautomation", "HVAC"],
-    "CARR": ["HVAC"],
-    "TT":   ["HVAC"],
-    "LII":  ["HVAC"],
-    "CTAS": ["facilitymanagement"],
-    "ABM":  ["facilitymanagement"],
+_REDDIT_HEADERS = {"User-Agent": "TheoryY-ResearchAgent/1.0 (research)"}
+
+# Source credibility weights for the blended score. Stocktwits carries native
+# per-ticker investor Bull/Bear labels, so it is the most trustworthy; Reddit and
+# HackerNews are lexicon-scored from free text and weighted lower.
+_SOURCE_WEIGHTS: Dict[str, float] = {
+    "stocktwits": 1.0,
+    "reddit":     0.7,
+    "hackernews": 0.6,
 }
+# Message count at which a source reaches its full credibility weight. Fewer
+# messages scale the weight down linearly so thin samples can't dominate.
+_FULL_WEIGHT_AT: int = 10
 
-_REDDIT_SEARCH_URL = "https://www.reddit.com/search.json"
-_REDDIT_HEADERS    = {"User-Agent": "TheoryY-ResearchAgent/1.0 (research)"}
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Shared lexicon scorer — pure logic, reused by every free-text source
+# ──────────────────────────────────────────────────────────────────────────────
+
+_URL_RE = re.compile(r"https?://\S+|www\.\S+")
+# Web/markup tokens that survive URL stripping and add no thematic signal.
+_WEB_NOISE = frozenset({"https", "http", "www", "com", "amp", "href"})
+
+
+def _score_texts(texts: List[str]) -> Tuple[Optional[float], Dict[str, int]]:
+    """
+    Lexicon-score a list of short texts (post titles, message bodies).
+    Returns (sentiment_score in [-1, 1] or None, token-frequency map for themes).
+    """
+    pos = neg = 0
+    word_freq: Dict[str, int] = {}
+    for text in texts:
+        clean = _URL_RE.sub(" ", text or "").lower()
+        for tok in re.findall(r"[a-z]{3,}", clean):
+            if tok in _WEB_NOISE:
+                continue
+            if tok in _POSITIVE_WORDS:
+                pos += 1
+            if tok in _NEGATIVE_WORDS:
+                neg += 1
+            if tok not in _STOPWORDS and len(tok) > 3:
+                word_freq[tok] = word_freq.get(tok, 0) + 1
+    total = pos + neg
+    score = round((pos - neg) / total, 2) if total > 0 else None
+    return score, word_freq
+
+
+@dataclass
+class _RawSourceResult:
+    """Internal: one source's raw contribution before blending."""
+    source:        str
+    texts:         List[str]            # free text used for theme extraction
+    message_count: int
+    native_score:  Optional[float] = None  # explicit-label score (Stocktwits); else None
+    error:         Optional[str]   = None
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Stocktwits — per-ticker investor sentiment with native Bull/Bear labels
+# ──────────────────────────────────────────────────────────────────────────────
+
+class StocktwitsSentimentFetcher:
+    """
+    Infrastructure: queries Stocktwits' public symbol stream (no API key).
+    Each message may carry an explicit Bullish/Bearish label, giving a native
+    sentiment score independent of the lexicon. Works for any US ticker.
+    """
+    _URL = "https://api.stocktwits.com/api/2/streams/symbol/{symbol}.json"
+
+    def __init__(self) -> None:
+        self._session = requests.Session()
+        self._session.headers.update({"User-Agent": _REDDIT_HEADERS["User-Agent"]})
+
+    def fetch(self, ticker: str) -> _RawSourceResult:
+        url = self._URL.format(symbol=ticker.upper())
+        try:
+            resp = self._session.get(url, timeout=_HTTP_TIMEOUT)
+            resp.raise_for_status()
+            messages = resp.json().get("messages", [])
+        except requests.RequestException as exc:
+            logger.warning("Stocktwits fetch failed for %s: %s", ticker, exc)
+            return _RawSourceResult("stocktwits", [], 0, error=str(exc))
+        except ValueError as exc:  # non-JSON body
+            logger.warning("Stocktwits returned non-JSON for %s: %s", ticker, exc)
+            return _RawSourceResult("stocktwits", [], 0, error="invalid response")
+
+        texts: List[str] = []
+        bull = bear = 0
+        for msg in messages:
+            body = msg.get("body") or ""
+            if body:
+                texts.append(body)
+            basic = (((msg.get("entities") or {}).get("sentiment") or {}).get("basic"))
+            if basic == "Bullish":
+                bull += 1
+            elif basic == "Bearish":
+                bear += 1
+
+        labeled = bull + bear
+        native = round((bull - bear) / labeled, 2) if labeled > 0 else None
+        return _RawSourceResult(
+            source="stocktwits",
+            texts=texts,
+            message_count=len(messages),
+            native_score=native,
+        )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# HackerNews — tech / B2B discussion via the Algolia search API (no API key)
+# ──────────────────────────────────────────────────────────────────────────────
+
+class HackerNewsSentimentFetcher:
+    """
+    Infrastructure: full-text search of HackerNews stories + comments via the
+    public Algolia API. Scored from the lexicon (no native sentiment). Surfaces
+    enterprise/tech sentiment that finance forums miss; works for any company.
+    """
+    _URL       = "https://hn.algolia.com/api/v1/search"
+    _MAX_HITS  = 25
+
+    def __init__(self) -> None:
+        self._session = requests.Session()
+        self._session.headers.update({"User-Agent": _REDDIT_HEADERS["User-Agent"]})
+
+    def fetch(self, company_name: str) -> _RawSourceResult:
+        params = {
+            "query":       company_name,
+            "tags":        "(story,comment)",
+            "hitsPerPage": self._MAX_HITS,
+        }
+        try:
+            resp = self._session.get(self._URL, params=params, timeout=_HTTP_TIMEOUT)
+            resp.raise_for_status()
+            hits = resp.json().get("hits", [])
+        except requests.RequestException as exc:
+            logger.warning("HackerNews fetch failed for '%s': %s", company_name, exc)
+            return _RawSourceResult("hackernews", [], 0, error=str(exc))
+        except ValueError as exc:
+            logger.warning("HackerNews returned non-JSON for '%s': %s", company_name, exc)
+            return _RawSourceResult("hackernews", [], 0, error="invalid response")
+
+        # Algolia returns story titles and comment text in different fields.
+        texts = [
+            (h.get("title") or h.get("story_title") or h.get("comment_text") or "")
+            for h in hits
+        ]
+        texts = [t for t in texts if t]
+        return _RawSourceResult(
+            source="hackernews",
+            texts=texts,
+            message_count=len(texts),
+        )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Reddit — investing subreddits via public JSON (best-effort, no auth)
+# ──────────────────────────────────────────────────────────────────────────────
 
 class RedditSentimentFetcher:
     """
     Infrastructure: queries Reddit's public JSON search API (no auth required).
-    Searches investment and sector-specific subreddits for company mentions.
+    Searches one uniform set of finance subreddits for every ticker. Best-effort:
+    Reddit increasingly returns 403 to unauthenticated clients, which is handled
+    gracefully (empty result, error recorded) rather than failing the blend.
     """
     _MAX_POSTS = 25
     _LOOKBACK  = "year"   # Reddit time filter: hour, day, week, month, year, all
@@ -918,12 +1172,10 @@ class RedditSentimentFetcher:
         self._session = requests.Session()
         self._session.headers.update(_REDDIT_HEADERS)
 
-    def fetch_posts(self, query: str, subreddits: List[str]) -> List[Dict]:
-        """
-        Search the given subreddits for *query*.
-        Returns a list of raw post data dicts; empty list on any error.
-        """
-        sr_param = "+".join(subreddits)
+    def fetch(self, ticker: str, company_name: str) -> _RawSourceResult:
+        sr_param = "+".join(_BASE_SUBREDDITS)
+        # Cashtag + name keeps the query identical in shape for every ticker.
+        query = f"${ticker.upper()} OR \"{company_name}\""
         params: Dict = {
             "q":           query,
             "sort":        "relevance",
@@ -937,69 +1189,124 @@ class RedditSentimentFetcher:
             resp = self._session.get(url, params=params, timeout=_HTTP_TIMEOUT)
             resp.raise_for_status()
             children = resp.json().get("data", {}).get("children", [])
-            return [c["data"] for c in children if "data" in c]
         except requests.RequestException as exc:
-            logger.error("Reddit fetch failed (query='%s'): %s", query, exc)
-            return []
+            logger.warning("Reddit fetch failed (query='%s'): %s", query, exc)
+            return _RawSourceResult("reddit", [], 0, error=str(exc))
+        except ValueError as exc:
+            logger.warning("Reddit returned non-JSON (query='%s'): %s", query, exc)
+            return _RawSourceResult("reddit", [], 0, error="invalid response")
+
+        titles = [c["data"].get("title") or "" for c in children if "data" in c]
+        titles = [t for t in titles if t]
+        return _RawSourceResult(
+            source="reddit",
+            texts=titles,
+            message_count=len(titles),
+        )
 
 
-class ConsumerSentimentProcessor:
+# ──────────────────────────────────────────────────────────────────────────────
+# Multi-source aggregator — blends the three sources into one signal
+# ──────────────────────────────────────────────────────────────────────────────
+
+class MultiSourceSentimentAggregator:
     """
-    Domain: derives a sentiment score and top themes from raw Reddit post data.
-    Single responsibility: signal computation; no I/O.
+    Domain + orchestration: fetches all three sources for a ticker and blends them
+    into a single ConsumerSentimentSignal. The blend is a weighted mean of each
+    source's score (native where available, else lexicon), weighted by source
+    credibility scaled by sample size. Themes are pooled across all sources.
     """
 
-    def compute_signal(
+    def __init__(
         self,
-        ticker:       str,
-        company_name: str,
-        posts:        List[Dict],
-        subreddits:   List[str],
+        stocktwits: Optional[StocktwitsSentimentFetcher] = None,
+        hackernews: Optional[HackerNewsSentimentFetcher] = None,
+        reddit:     Optional[RedditSentimentFetcher]     = None,
+    ) -> None:
+        self._stocktwits = stocktwits or StocktwitsSentimentFetcher()
+        self._hackernews = hackernews or HackerNewsSentimentFetcher()
+        self._reddit     = reddit     or RedditSentimentFetcher()
+
+    def get_signal(self, ticker: str, company_name: str) -> ConsumerSentimentSignal:
+        raws = [
+            self._stocktwits.fetch(ticker),
+            self._hackernews.fetch(company_name),
+            self._reddit.fetch(ticker, company_name),
+        ]
+        return self._blend(ticker, company_name, raws)
+
+    # ── private logic ───────────────────────────────────────────────────────────
+
+    def _blend(
+        self, ticker: str, company_name: str, raws: List[_RawSourceResult]
     ) -> ConsumerSentimentSignal:
-        if not posts:
-            return ConsumerSentimentSignal(
-                ticker=ticker, company_name=company_name, post_count=0,
-                sentiment=None, sentiment_score=None, top_themes=[],
-                source="reddit", subreddits=subreddits,
-            )
+        sources: List[SourceSentiment] = []
+        pooled_freq: Dict[str, int] = {}
+        weighted_sum = weight_total = 0.0
+        total_messages = 0
 
-        pos = neg = 0
-        word_freq: Dict[str, int] = {}
-        for post in posts:
-            title = (post.get("title") or "").lower()
-            tokens = re.findall(r"[a-z]{3,}", title)
-            for tok in tokens:
-                if tok in _POSITIVE_WORDS:
-                    pos += 1
-                if tok in _NEGATIVE_WORDS:
-                    neg += 1
-                if tok not in _STOPWORDS and len(tok) > 3:
-                    word_freq[tok] = word_freq.get(tok, 0) + 1
+        for raw in raws:
+            score = raw.native_score
+            if score is None:
+                score, freq = _score_texts(raw.texts)
+            else:
+                _, freq = _score_texts(raw.texts)  # still pool themes from text
 
-        total = pos + neg
-        score: Optional[float] = None
-        label: Optional[str]   = None
-        if total > 0:
-            score = round((pos - neg) / total, 2)
-            label = "positive" if score > 0.2 else "negative" if score < -0.2 else "mixed"
+            for tok, n in freq.items():
+                pooled_freq[tok] = pooled_freq.get(tok, 0) + n
+            total_messages += raw.message_count
 
-        # Top 5 themes: most frequent tokens, excluding the ticker/company name itself
-        ticker_tokens = set(re.findall(r"[a-z]{3,}", company_name.lower()))
-        ticker_tokens.add(ticker.lower())
+            # Sample-scaled credibility weight; only counts if we have a score.
+            weight = 0.0
+            if score is not None and raw.message_count > 0:
+                sample_factor = min(raw.message_count, _FULL_WEIGHT_AT) / _FULL_WEIGHT_AT
+                weight = _SOURCE_WEIGHTS.get(raw.source, 0.5) * sample_factor
+                weighted_sum += score * weight
+                weight_total += weight
+
+            sources.append(SourceSentiment(
+                source=raw.source,
+                available=raw.message_count > 0,
+                message_count=raw.message_count,
+                sentiment_score=score,
+                weight=round(weight, 3),
+                error=raw.error,
+            ))
+
+        blended: Optional[float] = None
+        label:   Optional[str]   = None
+        if weight_total > 0:
+            blended = round(weighted_sum / weight_total, 2)
+            label = "positive" if blended > 0.2 else "negative" if blended < -0.2 else "mixed"
+
+        # Pooled top-5 themes, excluding the ticker/company name tokens.
+        name_tokens = set(re.findall(r"[a-z]{3,}", company_name.lower()))
+        name_tokens.add(ticker.lower())
         themes = [
-            w for w, _ in sorted(word_freq.items(), key=lambda x: -x[1])
-            if w not in ticker_tokens
+            w for w, _ in sorted(pooled_freq.items(), key=lambda x: -x[1])
+            if w not in name_tokens
         ][:5]
 
+        # Surface a data-gap note only when every source came back empty.
+        error: Optional[str] = None
+        if total_messages == 0:
+            reasons = "; ".join(
+                f"{s.source}: {s.error}" for s in sources if s.error
+            ) or "no messages returned by any source"
+            error = f"no sentiment data available ({reasons})"
+
+        active = [s.source for s in sources if s.available]
         return ConsumerSentimentSignal(
             ticker=ticker,
             company_name=company_name,
-            post_count=len(posts),
+            post_count=total_messages,
             sentiment=label,
-            sentiment_score=score,
+            sentiment_score=blended,
             top_themes=themes,
-            source="reddit",
-            subreddits=subreddits,
+            source="multi_source" if len(active) != 1 else active[0],
+            subreddits=_BASE_SUBREDDITS,
+            sources=sources,
+            error=error,
         )
 
 
@@ -1027,8 +1334,7 @@ class AltDataService:
         sec_8k_fetcher:      Optional[Sec8KFetcher]            = None,
         pr_fetcher:          Optional[PressReleaseFetcher]     = None,
         lit_fetcher:         Optional[LitigationFetcher]       = None,
-        sentiment_fetcher:   Optional[RedditSentimentFetcher]  = None,
-        sentiment_processor: Optional[ConsumerSentimentProcessor] = None,
+        sentiment_aggregator: Optional[MultiSourceSentimentAggregator] = None,
     ) -> None:
         self._trends_fetcher      = trends_fetcher      or GoogleTrendsFetcher()
         self._trends_processor    = trends_processor    or GoogleTrendsProcessor()
@@ -1042,8 +1348,7 @@ class AltDataService:
         self._sec_8k_fetcher      = sec_8k_fetcher      or Sec8KFetcher(cik_resolver=self._cik_resolver)
         self._pr_fetcher          = pr_fetcher          or PressReleaseFetcher(cik_resolver=self._cik_resolver)
         self._lit_fetcher         = lit_fetcher         or LitigationFetcher(cik_resolver=self._cik_resolver)
-        self._sentiment_fetcher   = sentiment_fetcher   or RedditSentimentFetcher()
-        self._sentiment_processor = sentiment_processor or ConsumerSentimentProcessor()
+        self._sentiment_aggregator = sentiment_aggregator or MultiSourceSentimentAggregator()
 
     # ── public API ────────────────────────────────────────────────────────────
 
@@ -1094,7 +1399,4 @@ class AltDataService:
         return self._lit_fetcher.fetch(company_name, ticker=ticker)
 
     def get_consumer_sentiment(self, ticker: str, company_name: str) -> ConsumerSentimentSignal:
-        subreddits = _BASE_SUBREDDITS + _TICKER_SUBREDDITS.get(ticker.upper(), [])
-        query = f"{ticker} {company_name}"
-        posts = self._sentiment_fetcher.fetch_posts(query, subreddits)
-        return self._sentiment_processor.compute_signal(ticker, company_name, posts, subreddits)
+        return self._sentiment_aggregator.get_signal(ticker, company_name)

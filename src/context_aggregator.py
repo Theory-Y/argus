@@ -82,7 +82,7 @@ COMPETITOR_MAP: Dict[str, List[str]] = {
 # FRED macro indicator used as the sector-wide CRE backdrop
 _FRED_SERIES_ID:  str = "TLNRESCONS"
 _FRED_SERIES_LABEL: str = "Commercial Construction Spending (TLNRESCONS, $MM, SA)"
-_SCHEMA_VERSION:  str = "1.3"
+_SCHEMA_VERSION:  str = "1.4"
 _OUTPUT_DIR:      Path = Path("output") / "context"
 
 
