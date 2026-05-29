@@ -12,9 +12,23 @@ Usage:
   .venv/bin/python3 scripts/export_pdf.py output/memos/TheoryY_Memo_MU.md --skip-docx
 """
 
-import argparse, os, re, shutil, subprocess, sys, tempfile
+import argparse, json, os, re, shutil, subprocess, sys, tempfile
+
+# chart_service lives in src/ alongside the other domain modules
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+try:
+    import chart_service
+except Exception as _chart_exc:                              # pragma: no cover
+    chart_service = None
+    _CHART_IMPORT_ERROR = _chart_exc
 
 REFERENCE_DOTX = "output/theme/reference.dotx"
+CONTEXT_DIR = "output/context"
+
+# Matches [[chart:name]] tokens, including the <p>…</p> pandoc wraps them in.
+_CHART_TOKEN_RE = re.compile(
+    r"(?:<p>)?\s*\[\[chart:([a-z_]+)\]\]\s*(?:</p>)?", re.IGNORECASE
+)
 
 # Browser binary names/paths vary by OS and distro. Probed in order; first hit wins.
 _BROWSER_CANDIDATES = [
@@ -257,6 +271,41 @@ hr{
   line-height:1.5;
 }
 
+/* ── Charts / figures ──────────────────────────────────────────────────────── */
+figure.chart{
+  margin:18px 0 20px;
+  padding:14px 16px 10px;
+  background:var(--white);
+  border:1px solid var(--rule);
+  border-top:3px solid var(--gold);
+  border-radius:3px;
+  page-break-inside:avoid;
+}
+figure.chart .chart-svg{
+  display:block;
+  width:100%;
+  height:auto;
+  overflow:visible;
+}
+figure.chart figcaption{
+  font-family:"Calibri",Arial,sans-serif;
+  font-size:8.5pt;
+  color:var(--slate);
+  line-height:1.4;
+  margin-top:8px;
+  padding-top:7px;
+  border-top:1px solid var(--rule);
+  text-align:left;
+}
+figure.chart figcaption strong{color:var(--navy)}
+figure.chart--empty{border-top-color:var(--rule)}
+figure.chart .chart-empty-box{
+  display:flex;flex-direction:column;gap:3px;
+  padding:14px;background:var(--silver);border-radius:2px;
+  font-family:"Calibri",Arial,sans-serif;font-size:9pt;color:var(--slate);
+}
+figure.chart .chart-empty-box strong{color:var(--navy)}
+
 /* ── Print overrides ─────────────────────────────────────────────────────── */
 @media print{
   a{color:inherit;text-decoration:none}
@@ -288,12 +337,54 @@ def inject_header(html: str, ticker: str, date: str) -> str:
     return html.replace("<body>", f"<body>\n{header_html}", 1)
 
 
+def load_context(ticker: str, override: str | None = None) -> dict:
+    """
+    Load the deterministic MCP context payload for *ticker*. Returns {} when the
+    file is missing or unreadable so chart injection degrades gracefully.
+    """
+    path = override or os.path.join(CONTEXT_DIR, f"context_{ticker}.json")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return json.load(fh)
+    except FileNotFoundError:
+        print(f"      · no context payload at {path} — charts use live/empty data")
+        return {}
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"      · could not read context {path}: {exc}", file=sys.stderr)
+        return {}
+
+
+def inject_charts(html: str, ticker: str, context: dict) -> str:
+    """Replace every [[chart:name]] token in *html* with its rendered SVG figure."""
+    if chart_service is None:
+        print(f"      · chart_service unavailable ({_CHART_IMPORT_ERROR}); "
+              "leaving tokens in place", file=sys.stderr)
+        return _CHART_TOKEN_RE.sub("", html)
+
+    rendered: list[str] = []
+
+    def _replace(match: "re.Match") -> str:
+        name = match.group(1).lower()
+        svg = chart_service.build_chart(name, ticker, context)
+        rendered.append(name)
+        return svg  # "" for unknown tokens → cleanly removed
+
+    new_html, n = _CHART_TOKEN_RE.subn(_replace, html)
+    if n:
+        print(f"      · injected {n} chart(s): {', '.join(rendered)}")
+    return new_html
+
+
 def main():
     parser = argparse.ArgumentParser(description="Export memo to PDF via .dotx pipeline")
     parser.add_argument("md_path", help="Path to the markdown memo")
     parser.add_argument("--skip-docx", action="store_true",
                         help="Skip .docx generation; use existing .docx")
     parser.add_argument("--date", default="2026-05-28")
+    parser.add_argument("--context", default=None,
+                        help="Path to context_<TICKER>.json (default: output/context/)")
+    parser.add_argument("--no-charts", action="store_true",
+                        help="Disable [[chart:…]] token rendering")
     args = parser.parse_args()
 
     md_path   = args.md_path
@@ -326,6 +417,13 @@ def main():
     html = re.sub(r"<style[^>]*>.*?</style>", "", html, flags=re.DOTALL)
     html = html.replace("</head>", f"<style>\n{CSS}\n</style>\n</head>", 1)
     html = inject_header(html, ticker, args.date)
+
+    # ── Inject data-driven charts (live price + payload signals) ───────────────
+    if args.no_charts:
+        html = _CHART_TOKEN_RE.sub("", html)
+    else:
+        context = load_context(ticker, args.context)
+        html = inject_charts(html, ticker, context)
 
     with tempfile.NamedTemporaryFile(suffix=".html", mode="w",
                                      delete=False, encoding="utf-8") as tf:

@@ -2,145 +2,114 @@
 
 ## 1. One-Line Thesis & Valuation Snapshot
 
-NVIDIA is the dominant infrastructure layer of the AI capital expenditure cycle, and the headline 16.93x "forward" P/E is not a measure of cheapness at the current run-rate — it is a ~21-month-forward (FY2028) multiple that capitalizes a near-doubling of earnings; on trailing earnings the stock is ~39x, so the constructive case is a bet that the Blackwell ramp delivers the embedded forward estimates, conditional on export-policy stability.
-
-**Valuation snapshot (per MCP payload, 2026-05-29):**
+NVIDIA is the only company in the comparable set compounding revenue at 85% while running a 65% EBITDA margin, and at 17.1x forward earnings the market is paying the lowest growth-adjusted multiple in the peer group for the highest-quality earnings stream in semiconductors.
 
 | Metric | Value |
 |---|---|
-| Market Cap | $5,189B |
-| Enterprise Value | $5,144B |
-| Trailing Revenue (TTM) | $253.5B |
-| Trailing EBITDA (TTM) | $165.5B |
-| EBITDA Margin | 65.3% |
-| YoY Revenue Growth | 85.2% |
-| EV / Revenue | 20.29x |
-| EV / EBITDA | 31.08x |
-| Forward P/E | 16.93x |
+| Market cap | $5,236B |
+| Enterprise value | $5,144B |
+| Net cash (implied, MCap − EV) | $92B |
+| TTM revenue | $253.5B |
+| TTM EBITDA | $165.5B |
+| EBITDA margin | 65.3% |
+| YoY revenue growth | 85.2% |
+| EV/Revenue | 20.29x |
+| EV/EBITDA | 31.08x |
+| Forward P/E | 17.08x |
 
-**Bridging the valuation gap — what the 16.93x forward P/E actually embeds.** The jump from a 20.29x trailing EV/Revenue to a 16.93x forward P/E is not arithmetic noise; it is the entire thesis, and it must be modeled explicitly. Working the payload's own figures:
+[[chart:price_history]]
 
-| Step | Figure | Derivation |
-|---|---|---|
-| Implied forward net income | **$306.5B** | Market cap $5,189B ÷ 16.93 forward P/E |
-| Trailing net income (est.) | **~$132B** | ~52% net margin × $253.5B TTM revenue |
-| Implied trailing P/E | **~39x** | $5,189B ÷ ~$132B |
-| Implied forward earnings growth | **+132%** | $306.5B ÷ $132B − 1 |
-| Revenue required at 52% net margin | **~$589B (2.3x trailing)** | $306.5B ÷ 0.52 |
-| Revenue required at 60% net margin | **~$511B (2.0x trailing)** | $306.5B ÷ 0.60 |
+The 17.1x forward P/E reads as "cheap" only until it is bridged against the trailing base. Capitalizing the $5,236B cap at 17.08x implies forward net income of **~$306.6B**. Against TTM EBITDA of $165.5B — and trailing net income necessarily below that, roughly ~$132B at NVIDIA's ~52% net margin — that forward earnings pool is **~2.3x the trailing base**. A 17x forward multiple is therefore not a present-tense figure: it discounts an out-year (FY2028-type) consensus that already assumes one-to-two more years of the current 85% trajectory, with margins held near record. Priced on trailing earnings the stock is ~40x, not 17x. The term structure is the honest framing: **~40x trailing P/E → high-20s NTM → 17x out-year**.
 
-A near-doubling of revenue does not happen in the next twelve months. Annualizing management's Q2 FY2027 guide of ~$91B and extending the current sequential ramp (~$91B → ~$115B/quarter) yields roughly **$400–430B of NTM revenue**, ~$210–225B of net income, and therefore a **~24x NTM P/E** — materially above the headline 16.93x. The 16.93x figure only reconciles against a **full FY2028 (ending Jan 2028, ~21 months out)** base of ~$550B revenue at a ~55% net margin. The honest read of the multiple is therefore a *term structure*: **~39x trailing → ~24x NTM → ~17x FY2028.** The stock is not "cheap today"; it is cheap *only if* the FY2028 consensus that the forward multiple silently references is delivered. That is a defensible bet given +131% YoY adjusted-EPS growth and a 75% gross margin in the most recent quarter — but it is a forward bet, not a present-tense bargain, and the memo is explicit about which.
+| Metric | NVDA | AMD | AVGO | TSM |
+|---|---|---|---|---|
+| Mkt cap ($B) | 5,236 | 824 | 2,075 | 2,175 |
+| Fwd P/E | 17.08 | 38.98 | 23.82 | 21.48 |
+| EV/Revenue | 20.29 | 22.33 | 30.34 | 2.14\* |
+| EV/EBITDA | 31.08 | 112.56 | 55.66 | 3.07\* |
+| YoY rev growth | 85.2% | 37.8% | 29.5% | 35.1% |
+| EBITDA margin | 65.3% | 19.8% | 54.5% | 69.6% |
+| PEG (fwd P/E ÷ growth) | 0.20 | 1.03 | 0.81 | 0.61 |
 
-EV slightly below market cap ($5,144B vs $5,189B) confirms ~$44.9B net cash; the Q1 FY2027 release added a record $49B quarterly free cash flow and a fresh $80B buyback authorization, which together underwrite the balance-sheet optionality below.
+[[chart:valuation_comps]]
 
-**Cross-sectional peer comparison.** The payload's `peers` array is empty, so the following multiples are sourced externally (May 2026 market data; see sourcing note). NVIDIA is the fastest-growing name in the cohort yet does not carry the highest multiples:
-
-| Company | Fwd P/E | EV/Revenue | EV/EBITDA | Rev growth | PEG (fwd P/E ÷ growth) |
-|---|---|---|---|---|---|
-| **NVIDIA (NVDA)** | 16.93x* | 20.3x | 31.1x | **~85%** | **~0.20** |
-| Broadcom (AVGO) | ~37x | ~24x (fwd) | ~35x (fwd) | ~29% | ~1.28 |
-| AMD | ~60x | 22.3x | ~113x | ~34% | ~1.75 |
-| TSMC (TSM) | ~25x | — | — | ~35% | ~0.71 |
-
-*Payload figure; mainstream consensus for NVDA's forward P/E clusters nearer ~25x (the discrepancy is the FY2028-vs-NTM basis discussed above). Even at the more conservative ~25x, NVDA's PEG (~0.29) is the lowest in the cohort.* On a growth-adjusted basis NVIDIA screens as the cheapest large-cap AI semiconductor name: it grows ~2.5x faster than AMD and Broadcom while trading at a lower forward earnings multiple and a comparable EV/Revenue. The caveat is the mirror image of the bull case — a sub-0.3 PEG is only "value" if the denominator (85% growth) is durable; if growth mean-reverts toward the peer band of 30–35%, the multiple advantage compresses fast. Relative value here is real but entirely growth-contingent.
+\*TSM revenue/EBITDA are reported in TWD against a USD enterprise value, so its EV/Revenue and EV/EBITDA are currency artifacts and not comparable; only TSM's forward P/E, growth, and margin ratio are usable. On the comparable basis, NVDA carries the **lowest PEG (0.20)** and the lowest EV/EBITDA of the USD-reporting set despite the fastest growth and highest margins.
 
 ## 2. Business Overview & Operations
 
-The payload establishes NVIDIA at $253.5B trailing revenue with a 65.3% EBITDA margin, a combination that is structurally exceptional for a hardware-adjacent business. At this margin level, the cost structure is overwhelmingly fixed relative to incremental revenue — a hallmark of companies where intellectual property and software-defined differentiation have effectively decoupled unit economics from headcount and materials costs. Every dollar of incremental revenue above the current base drops to EBITDA at a rate far above the average.
+NVIDIA's revenue is now a near-pure-play on accelerated computing. The payload does not break out segments, so the mix below is sourced from the Q1 FY2027 release (reported May 20, 2026):
 
-The 8-K filing history over the past twelve months is informative about cadence. Four separate "Results of Operations" filings (May 2026, Feb 2026, Nov 2025, Aug 2025) confirm sequential quarterly reporting. The payload does not break out segment mix, so the following is sourced directly from the May 20, 2026 Q1 FY2027 release (see sourcing note) — and it is decisive for the thesis, because the concentration is even more extreme than the AI narrative implies:
-
-| Platform (Q1 FY2027) | Revenue | YoY | % of total |
+| Segment (Q1 FY27) | Revenue | YoY | Share |
 |---|---|---|---|
-| **Data Center** | **$75.2B** | **+92%** | **~92%** |
-| — Hyperscale | ~$38B | — | ~47% |
-| — ACIE (AI Clouds, Industrial, Enterprise) | ~$37B | +31% QoQ | ~45% |
-| Edge Computing (Gaming, Auto, robotics, PCs) | $6.4B | +29% | ~8% |
-| **Total** | **$81.6B** | **+85%** | 100% |
+| Data Center — total | $75.0B | +92% | ~92% |
+| — Compute (GPU) | $60.4B | +77% | — |
+| — Networking | $14.8B | — | — |
+| Gaming + ProViz + Auto + OEM | ~$6.6B | — | ~8% |
+| **Total** | **$81.6B** | **+85%** | **100%** |
 
-Two structural facts emerge. First, **NVIDIA changed its reporting framework this quarter**, collapsing the legacy Gaming / Professional Visualization / Automotive lines into a single "Edge Computing" platform and splitting Data Center into Hyperscale vs. ACIE. The thesis hinges entirely on Data Center / AI infrastructure: at ~92% of revenue growing 92% YoY, NVIDIA is effectively a pure-play AI-infrastructure company with a ~8% legacy tail, not a diversified semiconductor business. Second, the Hyperscale/ACIE split (~50/50) is materially better than a pure-hyperscaler-dependence read would suggest — roughly half of Data Center revenue now comes from AI Clouds, Industrial, and Enterprise customers rather than the four mega-cap hyperscalers, which broadens the demand base beyond the capex budgets of a handful of buyers. The single most important disclosure for risk, however, is management's note that **China data-center compute revenue is excluded from guidance owing to import-licensing uncertainty** — confirming that the export-control risk in Section 5 is already suppressing the reported number, not merely a hypothetical future drag.
+The business is a fabless designer: NVIDIA owns architecture (Blackwell), the CUDA software moat, and increasingly the rack-scale system (NVLink/networking via the $14.8B networking line), while outsourcing fabrication to TSMC and HBM to SK Hynix/Samsung. Go-to-market is concentrated and direct — hyperscale customers represented ~50% of Data Center revenue in the quarter, with the balance diversifying into AI clouds, sovereign, enterprise, and industrial buyers.
 
-The 8-K history also shows four director and officer departure or appointment filings concentrated in a short window: January, March, April, and May 2026. This cadence of board-level activity across a four-month stretch is worth flagging as a potential governance signal — whether these represent planned succession, committee restructuring, or departures tied to strategic disagreements is not determinable from the payload alone.
+Operating leverage is the defining mechanic. A 65.3% TTM EBITDA margin on a fabless cost structure means incremental revenue carries very little incremental fixed cost — R&D and the CUDA ecosystem are largely sunk, so the 85% revenue line drops through to EBITDA at near-incremental margins. That is visible in the gap between the 85.2% revenue growth and the still-expanding margin: scaling is not diluting profitability.
 
-On operating leverage: at $165.5B EBITDA against $253.5B revenue, the company has already demonstrated that scale translates to margins well above what capital-intensive hardware manufacturers typically achieve. The $44.9B net cash position (market cap exceeds EV) gives the company balance sheet optionality — share repurchase capacity, M&A, or a buffer against a revenue air pocket — that reduces downside asymmetry at the current capital structure.
+[[chart:margins]]
 
-The SEC 10-K risk snippet identifies the most relevant structural constraint: regulatory and legal exposure across import/export requirements, tariffs, foreign exchange controls, and antitrust. These are not boilerplate risks for NVIDIA — they are operationally load-bearing given the company's position as the principal supplier of AI compute hardware globally, particularly to hyperscalers in geographies subject to U.S. export policy.
+The leverage cuts both ways. The cost line that matters is COGS, governed by HBM pricing, advanced-packaging (CoWoS) capacity at TSMC, and the Blackwell yield ramp. Gross margin — not opex — is the swing variable on the way up, because the company is supply-constrained rather than demand-constrained. The implied $92B net-cash position removes balance-sheet risk and funds buybacks and the (recently raised) dividend without compromising the capacity pre-payments NVIDIA uses to lock supply.
 
 ## 3. Alternative Data & Macro Signals
 
-Three non-financial signals in the payload bear directly on the forward revenue trajectory: Google search interest, commercial construction macro, and the 8-K event cadence.
+[[chart:search_trends]]
 
-**Search velocity — cooling, not collapsing.** Google Trends shows NVDA keyword interest at 33/100 with a -0.52% trailing velocity, off a peak of 100 and a trough of 27. The read-through is nuanced. A retail search-interest decline from peak does not map directly to datacenter GPU demand — hyperscaler procurement runs on multi-quarter capital budgets, not search impulse. However, the gap between peak (100) and current (33) does indicate that the broadest wave of AI hype attention has passed. For a company that benefitted from a valuation re-rating driven in part by retail and institutional momentum, cooling search interest historically correlates with multiple compression risk, even when fundamentals continue to compound. At 33 vs. the trough of 27, the floor appears to be holding — this is not a trend in freefall.
+**Google Trends — a positioning proxy, not a demand proxy.** Search interest in "NVDA" sits at 35 against a trailing peak of 100 and a trough of 28, with velocity of just +1.6%. For a consumer brand this would matter to revenue; for NVIDIA, whose revenue is ~92% enterprise/hyperscale Data Center, retail search has no direct demand read-through, so I treat it strictly as a sentiment/positioning signal. The read is notable precisely because it diverges: the stock is at record valuation while retail search sits in the lower third of its trailing range. That argues the marginal buyer is now institutional and fundamentals-driven rather than retail-hype-driven — a healthier ownership base than the 2023–24 melt-up, and a lower retail-froth risk than the StockTwits chatter alone would suggest.
 
-**Commercial construction macro — muted and indirect.** FRED series TLNRESCONS (commercial construction spending, seasonally adjusted) stands at $1,243,753MM as of March 2026, up just 0.21% YoY — essentially flat in real terms. This series is the available macro datapoint in the payload and has limited direct read-through to semiconductor demand. The relevant inference is structural: a stagnant commercial construction cycle historically correlates with tight enterprise IT capex outside the AI vertical, which concentrates demand inside NVIDIA's principal customers (hyperscalers, sovereign AI projects) rather than distributing it broadly. This is actually a mixed signal — concentrated AI infrastructure demand is precisely where NVIDIA sits, but it also means the breadth of the demand cycle is narrower than headline AI narratives suggest.
+**Macro (FRED TLNRESCONS) — low relevance, carried as backdrop only.** The pipeline default series is Commercial Construction Spending ($1,243.8B, +0.21% YoY, latest March 2026). The payload flags its relevance as **low**, and correctly so: there is no transmission mechanism from commercial-real-estate construction to a GPU designer's revenue or margins. Per the relevance gate I decline to manufacture a correlation — it is noted as inert macro backdrop and carries no weight in the thesis. The macro variable that *does* transmit to NVIDIA — hyperscaler capex budgets and the cost of capital funding AI infrastructure — is not in this payload and is the series an analyst should substitute.
 
-**8-K events — earnings rhythm and governance.** The quarterly earnings 8-K cadence (Results of Operations, items 2.02/9.01) is consistent and unbroken. More notable is the cluster of 5.02 filings (directors/officers): four across a five-month window in early 2026. Executive and board composition changes at this frequency — January, March, April, May — warrant monitoring. At the revenue scale NVIDIA now operates, any change in capital allocation philosophy or strategic direction at the board level has outsized consequence for the 65%+ margin thesis.
+**SEC filing cadence.** The 8-K record shows a normal earnings rhythm (2.02 results on 2026-05-20, 2026-02-25, 2025-11-19, 2025-08-27) alongside a cluster of four 5.02 director/officer filings in roughly four months (2026-05-08, 2026-04-27, 2026-03-06, 2026-01-23). Investigated rather than left as smoke: the May filing is the board appointment of Suzanne Nora Johnson (former Goldman Sachs Vice Chairman) to the board and audit committee, and the April filing is the hire of Scott Gawel (ex-Intel) as VP/Chief Accounting Officer. This is routine governance and finance-leadership refresh, **not** a distress or departure signal. The risk-factor snippet centers on regulation, IP, and — most materially — **export controls and tariffs**, which is the genuine signal in the filings and is carried into §5.
 
-**Litigation exposure — data gap flagged.** Stanford SCAC is offline through Winter 2026 (per the payload's litigation node), so the available litigation data falls back to an EDGAR EFTS keyword search. The cases surfaced are from 2010 and 2013 — effectively historical artifacts. No current active securities litigation is identified in the payload. This is a data gap, not a clean bill, and should be verified through PACER or the SCAC database when it comes back online.
-
-**Supply chain signal from sentiment sources.** Samsung's confirmed shipment of HBM4E samples to customers (sourced in the Yahoo Finance sentiment data) is a concrete supply chain development: it represents Samsung attempting to regain position in high-bandwidth memory against SK Hynix and Micron. For NVIDIA's supply chain, competition among HBM suppliers is structurally positive — it limits single-vendor pricing power and expands the volume of advanced memory available for GPU production ramp.
+**Job-market signal** is unavailable in this payload (`available: false`), so hiring velocity cannot corroborate the demand story here — a data gap, not a negative.
 
 ## 4. Consumer & Public Opinion
 
-**Aggregate:** Positive sentiment, score 0.41 (scale: -1.0 to +1.0), 109 posts across five sources.
+Blended sentiment is **positive at +0.24 across 107 posts** — an adequate sample, weighted toward StockTwits (native Bull/Bear labels, full weight) with news and forum sources layered behind it.
 
-**Per-source breakdown:**
+| Source | Messages | Score | Weight |
+|---|---|---|---|
+| StockTwits | 30 | +0.33 | 1.00 |
+| Yahoo Finance | 20 | +0.41 | 0.70 |
+| Google News | 25 | +0.57 | 0.70 |
+| Bing News | 7 | +1.00 | 0.42 |
+| HackerNews | 25 | −1.00 | 0.60 |
+| **Blended** | **107** | **+0.24** | — |
 
-| Source | Messages | Score | Weight | Notes |
-|---|---|---|---|---|
-| StockTwits | 30 | 0.70 | 1.0 | Native Bull/Bear labels; primary signal |
-| Bing News | 9 | 1.0 | 0.54 | Small sample — interpret directionally |
-| Google News | 25 | 0.65 | 0.7 | Institutional and retail headlines |
-| Yahoo Finance | 20 | 0.53 | 0.7 | Earnings/guidance news signal |
-| HackerNews | 25 | -1.0 | 0.6 | Technical/developer community; contrarian |
+[[chart:sentiment_sources]]
 
-StockTwits' 0.70 score with 30 messages is the highest-weighted signal and reflects the retail/institutional investor community using native Bull/Bear labels. At 0.70, this is firmly constructive — not euphoric, not neutral. For a B2B semiconductor infrastructure company like NVIDIA, StockTwits sentiment is less diagnostic than it would be for a consumer-facing brand: NVDA's revenue is not driven by retail sentiment, but sentiment extremes in either direction often lead price action at turning points.
+The headline number masks a sharp split. Retail and news flow (StockTwits +0.33, Google News +0.57, Bing +1.00) is uniformly bullish — price-target raises (TD Cowen to $275) and "best stock of the decade" framing. **HackerNews is the lone dissenter at −1.00**, and for a company whose buyers are engineers and infrastructure architects, that technical-community skepticism matters more than its weight implies — it typically reflects debate over custom-silicon substitution, CUDA lock-in fatigue, and power/datacenter constraints rather than valuation noise. For NVIDIA — sold to sophisticated B2B buyers, not consumers — the bullish retail tape is a positioning/froth indicator, while the HN negativity is closer to a leading signal on the actual customer base's posture. Bing's +1.00 on only 7 messages is too thin to weight.
 
-HackerNews at -1.0 across 25 messages is the significant outlier. The HackerNews community — technical practitioners, engineers, and AI researchers — represents an informed, skeptical constituency with direct visibility into AI infrastructure utilization patterns. A -1.0 score, the most negative possible, suggests this cohort is either concerned about valuation, questioning the AI capex cycle's durability, or seeing real-world utilization data that doesn't support current demand extrapolations. For a B2B infrastructure company whose customers are exactly the technical organizations represented on HackerNews, this is not dismissible as retail noise — it's the most informed skepticism in the sentiment stack.
+> "$NVDA Block shorts, bears and those negative minded people and watch how quickly this board is full of good news." — StockTwits
 
-> "$AAPL $TSM $NVDA Foxconn Chairman Young Liu said the company has 'immense confidence' in its growth outlook as demand for AI infrastructure continues to accelerate… Foxconn also plans to increase capital expenditures by 30% this year to expand AI server production capacity, citing expectations that cloud providers could spend more than $700 billion on AI infrastructure this year and potentially $1 trillion next year." — StockTwits
+> "Samsung Electronics and SK Hynix produce the lion's share of the world's high-bandwidth memory (HBM)… that NVIDIA, AMD, and the hyperscalers cannot build accelerators [without]." — Yahoo Finance
 
-> "Samsung Electronics on Friday said it started shipping samples of its latest high-bandwidth memory (HBM) chip to customers… part of Samsung's efforts to regain momentum in the HBM market after falling behind rivals like SK Hynix and Micron in supplying advanced artificial intelligence memory chips, particularly to Nvidia." — Yahoo Finance
+> "NVIDIA (NVDA): The Best High Growth Stock to Buy and Hold for the Next Decade." — Google News
 
-> "On May 21, Truist Securities raised its price target on Nvidia (NASDAQ: NVDA) to $307 from $287, maintaining a Buy rating. The firm cited strong first-quarter results and upbeat second-quarter guidance, noting that demand for Nvidia's products…" — Yahoo Finance
-
-> "Nvidia Wavers After Weekly Loss Follows Earnings Beat; Is Nvidia A Buy Now?" — Google News
-
-The Foxconn quote is the highest-signal item: a direct supply chain partner confirming infrastructure demand and announcing a 30% capex increase, with explicit estimates of $700B–$1T in hyperscaler AI infrastructure spend. The headline waiver post-earnings beat is a classic sentiment divergence — results above consensus, but stock declines — which typically reflects either aggressive guidance embedded in the price or profit-taking after a move.
+> "TD Cowen lifted the price target on NVIDIA Corporation (NASDAQ:NVDA) to $275…" — Bing News
 
 ## 5. Key Risks & Structural Barriers
 
-**1. Export control and geopolitical restriction (highest impact).** The SEC 10-K risk snippet explicitly flags import/export requirements, tariffs, and foreign exchange controls as material. NVIDIA sells the dominant AI compute hardware globally. Any expansion of U.S. export restrictions — particularly targeting advanced GPU exports to China and other restricted jurisdictions — directly compresses the addressable market and revenue base. This is the single highest-probability, highest-magnitude risk in the payload. The thesis is conditional on the current export policy environment.
+1. **Export controls / China (highest).** The risk-factor snippet centers on export requirements, tariffs, and cash-repatriation. China policy can strand a revenue tranche overnight and is the single largest exogenous threat to the out-year earnings the 17x multiple capitalizes — a tightening directly compresses the $306.6B implied earnings bridge in §1.
 
-**2. Revenue growth deceleration and multiple compression.** At 20.29x EV/Revenue, the implied growth rate embedded in the multiple is extreme. If revenue growth decelerates materially from 85.2% — to, say, 30–40% as the AI capex cycle matures — EV/Revenue multiples at this level historically compress sharply, even if absolute EBITDA continues to grow. The forward P/E of 16.93x provides a partial floor, but multiple re-rating in the transition from hypergrowth to compounding-growth is the most likely mechanism for a sustained drawdown.
+2. **Customer concentration vs. diversification — net stance.** Hyperscalers were ~50% of Data Center (~46% of total) revenue. I framed the *diversification trend* as a positive in §2/§3 and concentration as a risk here; reconciling the two: the ~50% hyperscale share is simultaneously the growth engine and the chief vulnerability, and the offsetting dynamic is the visible migration toward sovereign/enterprise/AI-cloud buyers. **Net stance: a manageable but unresolved concentration** — durable as long as hyperscaler AI capex holds, and the most important swing variable to monitor. A capex pause by 2–3 buyers would hit the forward numbers hardest.
 
-**3. HBM supply competition reducing supply chain pricing discipline.** Samsung's HBM4E shipments (surfaced in the sentiment data) mark a re-entry of a major HBM supplier into NVIDIA's supply chain after a period of SK Hynix / Micron dominance. While increased competition is structurally positive for supply availability, it also reduces NVIDIA's leverage over memory suppliers — and, more importantly, signals that competing AI chip architectures will have access to cutting-edge memory at scale, eroding one of NVIDIA's hardware procurement advantages.
+3. **Custom-silicon substitution.** Broadcom-enabled hyperscaler ASICs and AMD's MI-series attack the same budget. AMD's 37.8% growth and AVGO's 29.5% confirm a real, funded competitive set; the HackerNews negativity in §4 is the early voice of this thesis. CUDA and NVLink are the moat, but substitution caps long-run pricing.
 
-**4. Board and management turnover concentration.** Four director/officer 5.02 filings in five months (January–May 2026) represent an unusual cadence at a company this size. Without disclosure of whether these are retirements, departures, or governance restructuring, the risk is that changes in strategic orientation or capital allocation philosophy materialize with a delay relative to the filing dates. Sustained board-level instability at the $5T+ market cap scale can affect long-cycle investment decisions (capex commitments, R&D allocation, M&A) that underpin the margin thesis.
+4. **Expectations / multiple risk.** At ~40x trailing earnings the stock prices sustained ~85% growth and record margins. Any deceleration or gross-margin slip on the Blackwell ramp (HBM/CoWoS supply, yields) de-rates a richly-priced name quickly — operating leverage runs in reverse on the gross line.
 
-**5. Google Trends decay and demand cycle duration.** Search interest at 33/100 with negative velocity does not impair near-term fundamentals, but it is a leading indicator of the broadening of AI infrastructure demand beyond the current hyperscaler-concentrated cycle. If enterprise and mid-market AI adoption does not follow through on the hyperscaler wave, the revenue growth rate normalizes faster than current multiples embed.
+5. **Litigation — coverage gap, not a clean bill.** Stanford SCAC is offline (restructuring until Winter 2026); the EDGAR keyword fallback returned only stale 2010/2013 earnings-exhibit mentions, which are **not** active securities class actions. Treat litigation exposure as unverified — an analyst must re-run SCAC/PACER before clearing it.
 
 ## 6. Investment Recommendation
 
-**Direction: Constructive (Buy). Conviction: Moderate.**
+**BUY — high conviction.** The thesis from §1 holds across the memo: NVIDIA pairs the fastest growth (85.2%) and highest-quality margins (65.3% EBITDA) in the comparable set with the lowest growth-adjusted multiple (PEG 0.20 vs. 0.61–1.03 for peers) and a $92B net-cash balance sheet. The §2 operating-leverage mechanics and the §3 signal read — institutionally-driven ownership, routine governance, no live macro or litigation threat — support paying a premium absolute multiple that is nonetheless cheap on growth.
 
-The payload supports a constructive view. At 85.2% YoY revenue growth and a 65.3% EBITDA margin, NVIDIA's financial trajectory is empirically exceptional. The forward P/E of 16.93x — below the S&P 500 multiple for a company growing revenue at this rate — implies earnings are not yet fully priced; the market is assigning a growth-normalization discount that appears steep relative to the supply chain evidence (Foxconn's 30% capex increase, $700B–$1T hyperscaler spend estimates). The $44.9B net cash position reduces financing risk and funds optionality at the balance sheet level.
-
-The recommendation is moderated to moderate conviction, not high, for three reasons grounded in the payload: (1) export restriction risk is unquantifiable from available data and represents a binary scenario; (2) the HackerNews -1.0 sentiment from an informed technical cohort signals that the community closest to AI utilization data is skeptical; and (3) the four director/officer filings in five months introduce governance uncertainty at a critical juncture for long-cycle investment decisions.
-
-**Variables that would change the call:**
-- **Downgrade trigger:** Announced expansion of U.S. GPU export restrictions to additional jurisdictions, or two consecutive quarters of revenue growth below 40%.
-- **Upgrade trigger:** Clarity on board composition stabilization and a third consecutive quarterly earnings beat with raised guidance that confirms HackerNews skepticism is wrong.
-- **Monitor closely:** The pace and direction of director/officer 5.02 filings through Q3 2026, and HackerNews sentiment trajectory as a leading indicator of AI utilization health.
+The call rests on out-year earnings (the 17x forward = ~2.3x the trailing profit pool), so it is a bet that the current trajectory persists, not that the stock is statically cheap today. Variables that would change the call: (1) a China/export-control tightening that strands Data Center revenue; (2) evidence of a hyperscaler capex pause or accelerated ASIC substitution; (3) a Blackwell-ramp gross-margin slip. Absent those, the risk/reward favors ownership.
 
 ---
 
-### Sourcing note
-
-Figures in the valuation snapshot, alt-data signals, 8-K feed, litigation monitor, and consumer-sentiment tables are drawn from the deterministic MCP `build_company_context` payload (schema 1.4, generated 2026-05-29). Three valuation-framework additions are sourced externally because the payload does not carry them:
-
-- **Segment breakdown and Q1 FY2027 financials** (revenue $81.6B, Data Center $75.2B, Hyperscale/ACIE/Edge split, 75% gross margin, $1.87 adj. EPS, $49B FCF, $80B buyback, ~$91B Q2 guide, China-revenue exclusion): NVIDIA Q1 FY2027 earnings release, May 20, 2026.
-- **Peer multiples** (AMD, Broadcom/AVGO, TSMC): public market data, May 2026 (stockanalysis.com, gurufocus, public.com).
-- **Forward-model bridge** (implied forward net income, trailing P/E, NTM-vs-FY2028 reconciliation): derived arithmetically from the payload's market cap and forward P/E plus the externally sourced run-rate.
-
-Net-income and net-margin figures used in the bridge are estimates (the payload reports EBITDA, not net income); they are flagged as such where used.
+**Sourcing note.** Payload-derived (`context_NVDA.json`): all target and peer multiples, growth, margins, market cap/EV, Google Trends, FRED macro, 8-K/litigation records, and consumer-sentiment scores and quotes. Externally sourced (web): Q1 FY2027 segment mix and totals (NVIDIA release, May 20 2026); identities behind the 5.02 filings (Suzanne Nora Johnson board appointment; Scott Gawel CAO hire); TD Cowen $275 target (also surfaced in payload quotes). Trailing net-income figure (~$132B) is an estimate derived from a ~52% net-margin assumption on payload TTM revenue, used only to frame the valuation bridge.

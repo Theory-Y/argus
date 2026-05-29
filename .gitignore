@@ -1,6 +1,5 @@
-graphify-out/manifest.json    # mtime-based, breaks after git clone
-graphify-out/cost.json        # local only
-# graphify-out/cache/         # optional: commit for speed, skip to keep repo small
+# Knowledge graph artifacts — local tooling only, regenerated via `graphify update .`
+graphify-out/
 
 .env
 node_modules/
@@ -13,3 +12,6 @@ output/service/
 __pycache__/
 *.pyc
 .venv/
+
+# Claude Code local machine settings (personal permissions/state)
+.claude/settings.local.json

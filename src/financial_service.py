@@ -61,6 +61,14 @@ class CompanyFinancials:
     ev_ebitda: Union[float, str]            # Calculated EV/EBITDA or "N/M"
 
 
+@dataclass
+class PricePoint:
+    """One day of price history (adjusted close)."""
+
+    date: str                               # ISO date, "YYYY-MM-DD"
+    close: float                            # Adjusted closing price, USD
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Layer 1 — Infrastructure: raw data fetcher
 # ──────────────────────────────────────────────────────────────────────────────
@@ -86,6 +94,43 @@ class FinancialDataFetcher:
         except Exception as exc:                                # pragma: no cover
             logger.error("yfinance fetch failed for %s: %s", ticker, exc)
             return {}
+
+    def fetch_price_history(
+        self, ticker: str, period: str = "1y", retries: int = 3
+    ) -> List["PricePoint"]:
+        """
+        Return the daily closing-price series for *ticker* over *period*.
+
+        Single responsibility: raw yfinance I/O only. Yahoo intermittently
+        rate-limits a fresh session, so we retry with a short backoff. Returns an
+        empty list on persistent failure (network, unknown ticker) so callers
+        never receive an exception — the chart layer renders an "unavailable" note.
+        """
+        for attempt in range(1, retries + 1):
+            try:
+                hist = yf.Ticker(ticker).history(
+                    period=period, interval="1d", auto_adjust=True
+                )
+                if hist is not None and not hist.empty and "Close" in hist:
+                    closes = hist["Close"].dropna()
+                    return [
+                        PricePoint(date=idx.strftime("%Y-%m-%d"), close=round(float(val), 4))
+                        for idx, val in closes.items()
+                    ]
+                logger.warning(
+                    "yfinance returned no price history for %s (attempt %d/%d)",
+                    ticker, attempt, retries,
+                )
+            except Exception as exc:                            # pragma: no cover
+                logger.warning(
+                    "yfinance price-history fetch failed for %s (attempt %d/%d): %s",
+                    ticker, attempt, retries, exc,
+                )
+            if attempt < retries:
+                time.sleep(_FETCH_DELAY * attempt)
+        logger.error("yfinance price history unavailable for %s after %d attempts",
+                     ticker, retries)
+        return []
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -249,6 +294,10 @@ class FinancialService:
         """Fetch and transform a single ticker synchronously."""
         raw = self._fetcher.fetch_ticker_info(ticker)
         return self._transformer.transform(ticker, raw)
+
+    def get_price_history(self, ticker: str, period: str = "1y") -> List[PricePoint]:
+        """Fetch the daily adjusted-close series for *ticker* over *period*."""
+        return self._fetcher.fetch_price_history(ticker, period=period)
 
     def get_sector_financials(
         self, tickers: List[str] = SECTOR_TICKERS
