@@ -46,7 +46,15 @@
       "Bash(mv output/context_*.json output/context/)",
       "Bash(mv output/TheoryY_Memo_* output/memos/)",
       "Bash(bash -n setup.sh)",
-      "Bash(graphify benchmark *)"
+      "Bash(graphify benchmark *)",
+      "Bash(claude mcp *)",
+      "Read(//home/lunear/theoryy/middlemarket-research-agent/.venv/bin/**)",
+      "Read(//home/lunear/theoryy/middlemarket-research-agent/src/**)",
+      "Bash(git check-ignore *)",
+      "Bash(graphify update *)",
+      "WebSearch",
+      "WebFetch(domain:stockanalysis.com)",
+      "WebFetch(domain:www.tikr.com)"
     ]
   },
   "enabledMcpjsonServers": [

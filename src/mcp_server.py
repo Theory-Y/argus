@@ -1,12 +1,20 @@
 import logging
 import os
+from pathlib import Path
 from typing import Any
 
-from mcp.server.fastmcp import FastMCP
+from dotenv import load_dotenv
 
-from alt_data_service import AltDataService
-from context_aggregator import COMPETITOR_MAP, ContextAggregator
-from financial_service import SECTOR_TICKERS, FinancialService
+# Load .env from the project root before importing the data services, which read
+# FRED_API_KEY / SEC_USER_AGENT / APIFY_API_KEY at import time. Real env vars win
+# (override=False); a missing .env is a no-op.
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+
+from mcp.server.fastmcp import FastMCP  # noqa: E402
+
+from alt_data_service import AltDataService  # noqa: E402
+from context_aggregator import COMPETITOR_MAP, ContextAggregator  # noqa: E402
+from financial_service import SECTOR_TICKERS, FinancialService  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,

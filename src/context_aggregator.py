@@ -62,7 +62,14 @@ logger = logging.getLogger(__name__)
 
 # For each target ticker, list the 3 closest public-market comparables
 # drawn from the same sector universe where possible.
+#
+# NOTE: A ticker absent from this map yields an empty `peers` list. That is a
+# coverage gap, not "no comparables exist" — the memo writer must source comps
+# externally in that case rather than declaring relative valuation impossible
+# (see the peer-comparison rule in theory-y-memo/SKILL.md). Add new clusters
+# here so the gap closes at the source.
 COMPETITOR_MAP: Dict[str, List[str]] = {
+    # ── PropTech & Facilities (original universe) ──
     "CSGP": ["CBRE", "PCOR",  "Z"   ],
     "CBRE": ["CSGP", "HON",   "ABM" ],
     "CARR": ["TT",   "JCI",   "LII" ],
@@ -77,13 +84,57 @@ COMPETITOR_MAP: Dict[str, List[str]] = {
     "PCOR": ["CSGP", "APPF",  "Z"   ],
     "APPF": ["PCOR", "CSGP",  "Z"   ],
     "Z":    ["CSGP", "APPF",  "PCOR"],
+    # ── Semiconductors & AI infrastructure ──
+    "NVDA": ["AMD",  "AVGO",  "TSM" ],
+    "AMD":  ["NVDA", "AVGO",  "INTC"],
+    "AVGO": ["NVDA", "AMD",   "QCOM"],
+    "TSM":  ["NVDA", "AVGO",  "INTC"],
+    "INTC": ["AMD",  "NVDA",  "TSM" ],
+    "MU":   ["NVDA", "AMD",   "TSM" ],
+    "QCOM": ["AVGO", "NVDA",  "AMD" ],
+    # ── Hyperscalers / mega-cap tech ──
+    "META": ["GOOGL","MSFT",  "AMZN"],
 }
+
+# CRE-linked universe for which the default FRED macro series (commercial
+# construction spend) is a genuine demand proxy. Outside this set the series is
+# carried only as a generic backdrop and is flagged low-relevance so the memo
+# does not manufacture a spurious correlation (see macro-relevance rule in SKILL.md).
+_CRE_LINKED_TICKERS: set = set(SECTOR_TICKERS)
 
 # FRED macro indicator used as the sector-wide CRE backdrop
 _FRED_SERIES_ID:  str = "TLNRESCONS"
 _FRED_SERIES_LABEL: str = "Commercial Construction Spending (TLNRESCONS, $MM, SA)"
-_SCHEMA_VERSION:  str = "1.4"
+_SCHEMA_VERSION:  str = "1.5"
 _OUTPUT_DIR:      Path = Path("output") / "context"
+
+
+def _macro_relevance(ticker: str) -> Dict[str, str]:
+    """
+    Classify how directly the default FRED series reads through to *ticker*.
+
+    The pipeline was built for a CRE-linked PropTech/Facilities universe, so the
+    commercial-construction series is only a real demand driver for that cohort.
+    For any other issuer we say so explicitly, so the memo treats the datapoint
+    as backdrop (or omits it) instead of inventing a correlation.
+    """
+    if ticker.upper() in _CRE_LINKED_TICKERS:
+        return {
+            "relevance": "high",
+            "relevance_note": (
+                "Commercial construction spend is a direct demand proxy for this "
+                "PropTech/Facilities issuer."
+            ),
+        }
+    return {
+        "relevance": "low",
+        "relevance_note": (
+            "TLNRESCONS is a commercial-real-estate proxy carried as the pipeline's "
+            "sector default; it has limited direct read-through to this issuer. Treat "
+            "as macro backdrop only — do not assert a demand correlation unless a "
+            "transmission mechanism can be stated, otherwise omit it."
+        ),
+    }
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -201,7 +252,7 @@ class ContextAggregator:
     def _fetch_alt_signals(self, ticker: str) -> Dict:
         return {
             "google_trends":      self._fetch_trends(ticker),
-            "macro_fred":         self._fetch_fred(),
+            "macro_fred":         self._fetch_fred(ticker),
             "sec_risk_snippet":   self._fetch_sec(ticker),
             "job_market":         self._fetch_jobs(ticker),
             "sec_8k_events":      self._fetch_8k_events(ticker),
@@ -216,16 +267,20 @@ class ContextAggregator:
             logger.error("Trends signal failed for %s: %s", ticker, exc)
             return _error_node(ticker, exc)
 
-    def _fetch_fred(self) -> Dict:
+    def _fetch_fred(self, ticker: str) -> Dict:
+        relevance = _macro_relevance(ticker)
         try:
             series = self._alt.get_fred_macro(_FRED_SERIES_ID, _FRED_SERIES_LABEL)
             d = _to_dict(series)
             if d.get("latest_value") is None:
-                return {"series_id": _FRED_SERIES_ID, "available": False, "reason": "no_data"}
+                return {"series_id": _FRED_SERIES_ID, "available": False,
+                        "reason": "no_data", **relevance}
+            d.update(relevance)
             return d
         except Exception as exc:
             logger.error("FRED fetch failed: %s", exc)
-            return {"series_id": _FRED_SERIES_ID, "available": False, "reason": str(exc)}
+            return {"series_id": _FRED_SERIES_ID, "available": False,
+                    "reason": str(exc), **relevance}
 
     def _fetch_sec(self, ticker: str) -> Dict:
         try:

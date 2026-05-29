@@ -6,11 +6,12 @@ Sources:
   2. FRED API (requests)       — commercial construction macro indicator
   3. SEC EDGAR API (requests)  — most-recent 10-K + Item 1A risk snippet
   4. Apify REST API (requests) — job-listing scraper (live when APIFY_API_KEY set)
-  5. Consumer sentiment        — blended across three key-free public sources,
+  5. Consumer sentiment        — blended across four key-free public sources,
        uniformly for any ticker (MultiSourceSentimentAggregator):
-         • Stocktwits  — per-ticker investors, native Bull/Bear labels (primary)
-         • HackerNews  — tech / B2B discussion via the Algolia search API
-         • Reddit      — investing subreddits, public JSON (best-effort)
+         • Stocktwits      — per-ticker investors, native Bull/Bear labels (primary)
+         • Yahoo Finance   — RSS news headlines; factual demand/earnings signal
+         • HackerNews      — tech / B2B discussion via the Algolia search API
+         • Reddit          — investing subreddits, public JSON (fallback only)
 
 Architecture (Clean Architecture + SOLID):
   Each data source has a dedicated Fetcher (I/O) and Processor (pure logic).
@@ -19,11 +20,13 @@ Architecture (Clean Architecture + SOLID):
 
 from __future__ import annotations
 
+import html
 import logging
 import os
 import re
 import time
-import xml.etree.ElementTree as ET
+from concurrent.futures import ThreadPoolExecutor
+import defusedxml.ElementTree as ET
 from dataclasses import dataclass, field
 from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional, Tuple
@@ -32,6 +35,15 @@ import requests
 from bs4 import BeautifulSoup
 from pytrends.request import TrendReq
 import pandas as pd
+
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load credentials from the project-root .env before reading any env vars below.
+# This is the canonical load point: every key (FRED_API_KEY, SEC_USER_AGENT,
+# APIFY_API_KEY, …) is consumed from this module, so any importer is covered.
+# Real environment variables take precedence (override=False); a missing .env is a no-op.
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 logger = logging.getLogger(__name__)
 
@@ -229,6 +241,7 @@ class ConsumerSentimentSignal:
     source:          str               # "multi_source" (or single source if only one)
     subreddits:      List[str]          # Reddit subreddits that were searched
     sources:         List[SourceSentiment] = field(default_factory=list)
+    top_quotes:      List[Dict[str, str]] = field(default_factory=list)  # [{"source": ..., "text": ...}]
     error:           Optional[str] = None
 
 
@@ -1002,16 +1015,23 @@ _BASE_SUBREDDITS: List[str] = [
 _REDDIT_HEADERS = {"User-Agent": "TheoryY-ResearchAgent/1.0 (research)"}
 
 # Source credibility weights for the blended score. Stocktwits carries native
-# per-ticker investor Bull/Bear labels, so it is the most trustworthy; Reddit and
-# HackerNews are lexicon-scored from free text and weighted lower.
+# per-ticker investor Bull/Bear labels, so it is the most trustworthy; the news
+# wires (Yahoo/Google/Bing) are factual press coverage; Reddit and HackerNews are
+# lexicon-scored free-text discussion and weighted lower.
 _SOURCE_WEIGHTS: Dict[str, float] = {
-    "stocktwits": 1.0,
-    "reddit":     0.7,
-    "hackernews": 0.6,
+    "stocktwits":    1.0,
+    "yahoo_finance": 0.70,
+    "google_news":   0.70,
+    "bing_news":     0.60,
+    "reddit":        0.70,
+    "hackernews":    0.60,
 }
 # Message count at which a source reaches its full credibility weight. Fewer
 # messages scale the weight down linearly so thin samples can't dominate.
 _FULL_WEIGHT_AT: int = 10
+# If the primary sources (StockTwits + the news wires + HackerNews) return fewer
+# messages than this threshold, also query Reddit as a fallback.
+_REDDIT_FALLBACK_THRESHOLD: int = 10
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -1019,8 +1039,15 @@ _FULL_WEIGHT_AT: int = 10
 # ──────────────────────────────────────────────────────────────────────────────
 
 _URL_RE = re.compile(r"https?://\S+|www\.\S+")
-# Web/markup tokens that survive URL stripping and add no thematic signal.
-_WEB_NOISE = frozenset({"https", "http", "www", "com", "amp", "href"})
+# Web/markup tokens + news-publisher names that survive cleaning and add no
+# thematic signal. Publisher names leak in from news-wire titles (e.g. Google
+# News appends "- Yahoo Finance"); excluding them keeps themes about the company.
+_WEB_NOISE = frozenset({
+    "https", "http", "www", "com", "amp", "href", "nbsp", "quot",
+    "yahoo", "finance", "marketbeat", "zacks", "benzinga", "reuters",
+    "bloomberg", "nasdaq", "motley", "fool", "seekingalpha", "insider",
+    "barron", "barrons", "investing", "markets", "newswire", "globenewswire",
+})
 
 
 def _score_texts(texts: List[str]) -> Tuple[Optional[float], Dict[str, int]]:
@@ -1046,6 +1073,61 @@ def _score_texts(texts: List[str]) -> Tuple[Optional[float], Dict[str, int]]:
     return score, word_freq
 
 
+def _pick_quotes(
+    texts: List[str],
+    n: int = 3,
+    require_any: Optional[List[str]] = None,
+) -> List[str]:
+    """Select up to n representative excerpts, preferring texts with sentiment signal and length.
+
+    require_any: if provided, only consider texts that contain at least one of these tokens
+    (used to filter off-topic results from general-purpose sources like HackerNews).
+    """
+    _MIN_CHARS = 30
+
+    def _clean(t: str) -> str:
+        t = html.unescape(t)
+        t = _URL_RE.sub("", t).strip()
+        return t
+
+    cleaned = [_clean(t) for t in texts]
+
+    if require_any:
+        must = {tok.lower() for tok in require_any}
+        cleaned = [c for c in cleaned if any(m in c.lower() for m in must)]
+
+    candidates = [c for c in cleaned if len(c) >= _MIN_CHARS]
+
+    def _score(t: str) -> float:
+        tokens = set(re.findall(r"[a-z]{3,}", t.lower()))
+        signal = len(tokens & (_POSITIVE_WORDS | _NEGATIVE_WORDS))
+        return signal * 10 + min(len(t), 280) / 280
+
+    return sorted(candidates, key=_score, reverse=True)[:n]
+
+
+def _parse_rss_headlines(content: bytes, max_items: int) -> List[str]:
+    """Parse an RSS/Atom feed body into a list of 'title: description' strings.
+
+    Shared by every news-wire fetcher (Yahoo, Google News, Bing). HTML tags inside
+    descriptions are stripped; empty titles are dropped. Raises ET.ParseError on
+    malformed XML so callers can record the error gracefully.
+    """
+    root = ET.fromstring(content)
+    items = root.findall(".//item")[:max_items]
+    texts: List[str] = []
+    for item in items:
+        title = (item.findtext("title") or "").strip()
+        desc  = (item.findtext("description") or "").strip()
+        desc  = re.sub(r"<[^>]+>", " ", desc)           # strip HTML markup
+        desc  = html.unescape(desc)                     # &nbsp; &amp; → real chars
+        desc  = re.sub(r"\s+", " ", desc).strip()
+        title = html.unescape(title)
+        if title:
+            texts.append(title if not desc else f"{title}: {desc}")
+    return texts
+
+
 @dataclass
 class _RawSourceResult:
     """Internal: one source's raw contribution before blending."""
@@ -1054,6 +1136,7 @@ class _RawSourceResult:
     message_count: int
     native_score:  Optional[float] = None  # explicit-label score (Stocktwits); else None
     error:         Optional[str]   = None
+    quotes:        List[str]       = field(default_factory=list)  # representative excerpts
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -1104,6 +1187,7 @@ class StocktwitsSentimentFetcher:
             texts=texts,
             message_count=len(messages),
             native_score=native,
+            quotes=_pick_quotes(texts, n=3),
         )
 
 
@@ -1147,10 +1231,14 @@ class HackerNewsSentimentFetcher:
             for h in hits
         ]
         texts = [t for t in texts if t]
+        # Only surface HN quotes that actually mention the company — HN searches by
+        # relevance but can return loosely-related results for non-tech companies.
+        name_tokens = re.findall(r"[A-Za-z]{3,}", company_name)
         return _RawSourceResult(
             source="hackernews",
             texts=texts,
             message_count=len(texts),
+            quotes=_pick_quotes(texts, n=2, require_any=name_tokens),
         )
 
 
@@ -1202,37 +1290,178 @@ class RedditSentimentFetcher:
             source="reddit",
             texts=titles,
             message_count=len(titles),
+            quotes=_pick_quotes(titles, n=2),
         )
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Multi-source aggregator — blends the three sources into one signal
+# Yahoo Finance — news RSS headlines (no API key, no auth)
+# ──────────────────────────────────────────────────────────────────────────────
+
+class YahooFinanceNewsFetcher:
+    """
+    Infrastructure: fetches Yahoo Finance news RSS for a ticker (no auth required).
+    Returns up to 20 recent headlines + snippets. Scored via the lexicon (no native
+    sentiment). Provides a factual news signal (earnings beats, guidance changes,
+    analyst upgrades) that complements StockTwits opinion data.
+    """
+    _URL       = "https://finance.yahoo.com/rss/headline"
+    _MAX_ITEMS = 20
+
+    def __init__(self) -> None:
+        self._session = requests.Session()
+        self._session.headers.update({"User-Agent": _REDDIT_HEADERS["User-Agent"]})
+
+    def fetch(self, ticker: str) -> _RawSourceResult:
+        try:
+            resp = self._session.get(
+                self._URL, params={"s": ticker.upper()}, timeout=_HTTP_TIMEOUT
+            )
+            resp.raise_for_status()
+            texts = _parse_rss_headlines(resp.content, self._MAX_ITEMS)
+        except requests.RequestException as exc:
+            logger.warning("Yahoo Finance RSS failed for %s: %s", ticker, exc)
+            return _RawSourceResult("yahoo_finance", [], 0, error=str(exc))
+        except ET.ParseError as exc:
+            logger.warning("Yahoo Finance RSS parse error for %s: %s", ticker, exc)
+            return _RawSourceResult("yahoo_finance", [], 0, error="xml parse error")
+
+        return _RawSourceResult(
+            source="yahoo_finance",
+            texts=texts,
+            message_count=len(texts),
+            quotes=_pick_quotes(texts, n=3),
+        )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Google News — broad press coverage via the public RSS search (no API key)
+# ──────────────────────────────────────────────────────────────────────────────
+
+class GoogleNewsFetcher:
+    """
+    Infrastructure: fetches Google News RSS search results for a company (no auth).
+    Casts the widest net of any source — national press, trade publications, and
+    wire services — so it captures coverage the finance-specific feeds miss. Scored
+    via the lexicon. Query is company name + cashtag for consistent shape per ticker.
+    """
+    _URL       = "https://news.google.com/rss/search"
+    _MAX_ITEMS = 25
+
+    def __init__(self) -> None:
+        self._session = requests.Session()
+        self._session.headers.update({"User-Agent": _REDDIT_HEADERS["User-Agent"]})
+
+    def fetch(self, ticker: str, company_name: str) -> _RawSourceResult:
+        query = f'"{company_name}" OR {ticker.upper()} stock'
+        params = {"q": query, "hl": "en-US", "gl": "US", "ceid": "US:en"}
+        try:
+            resp = self._session.get(self._URL, params=params, timeout=_HTTP_TIMEOUT)
+            resp.raise_for_status()
+            texts = _parse_rss_headlines(resp.content, self._MAX_ITEMS)
+        except requests.RequestException as exc:
+            logger.warning("Google News RSS failed for '%s': %s", company_name, exc)
+            return _RawSourceResult("google_news", [], 0, error=str(exc))
+        except ET.ParseError as exc:
+            logger.warning("Google News RSS parse error for '%s': %s", company_name, exc)
+            return _RawSourceResult("google_news", [], 0, error="xml parse error")
+
+        # Google News appends " - Publisher" to titles; the company name should
+        # still appear, so filter to on-topic items to drop bleed-over results.
+        name_tokens = re.findall(r"[A-Za-z]{3,}", company_name)
+        return _RawSourceResult(
+            source="google_news",
+            texts=texts,
+            message_count=len(texts),
+            quotes=_pick_quotes(texts, n=3, require_any=name_tokens),
+        )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Bing News — secondary press wire via the public RSS search (no API key)
+# ──────────────────────────────────────────────────────────────────────────────
+
+class BingNewsFetcher:
+    """
+    Infrastructure: fetches Bing News RSS search results for a company (no auth).
+    Provides press-coverage redundancy against Google News with a different crawler
+    and ranking, improving recall for thinly-covered tickers. Scored via the lexicon.
+    """
+    _URL       = "https://www.bing.com/news/search"
+    _MAX_ITEMS = 20
+
+    def __init__(self) -> None:
+        self._session = requests.Session()
+        self._session.headers.update({"User-Agent": _REDDIT_HEADERS["User-Agent"]})
+
+    def fetch(self, ticker: str, company_name: str) -> _RawSourceResult:
+        params = {"q": f'"{company_name}"', "format": "rss"}
+        try:
+            resp = self._session.get(self._URL, params=params, timeout=_HTTP_TIMEOUT)
+            resp.raise_for_status()
+            texts = _parse_rss_headlines(resp.content, self._MAX_ITEMS)
+        except requests.RequestException as exc:
+            logger.warning("Bing News RSS failed for '%s': %s", company_name, exc)
+            return _RawSourceResult("bing_news", [], 0, error=str(exc))
+        except ET.ParseError as exc:
+            logger.warning("Bing News RSS parse error for '%s': %s", company_name, exc)
+            return _RawSourceResult("bing_news", [], 0, error="xml parse error")
+
+        name_tokens = re.findall(r"[A-Za-z]{3,}", company_name)
+        return _RawSourceResult(
+            source="bing_news",
+            texts=texts,
+            message_count=len(texts),
+            quotes=_pick_quotes(texts, n=2, require_any=name_tokens),
+        )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Multi-source aggregator — blends every source into one signal
 # ──────────────────────────────────────────────────────────────────────────────
 
 class MultiSourceSentimentAggregator:
     """
-    Domain + orchestration: fetches all three sources for a ticker and blends them
-    into a single ConsumerSentimentSignal. The blend is a weighted mean of each
-    source's score (native where available, else lexicon), weighted by source
-    credibility scaled by sample size. Themes are pooled across all sources.
+    Domain + orchestration: fetches every source for a ticker (primary sources in
+    parallel; Reddit only as a thin-coverage fallback) and blends them into a single
+    ConsumerSentimentSignal. The blend is a weighted mean of each source's score
+    (native where available, else lexicon), weighted by source credibility scaled by
+    sample size. Themes and representative quotes are pooled across all sources.
     """
 
     def __init__(
         self,
-        stocktwits: Optional[StocktwitsSentimentFetcher] = None,
-        hackernews: Optional[HackerNewsSentimentFetcher] = None,
-        reddit:     Optional[RedditSentimentFetcher]     = None,
+        stocktwits:  Optional[StocktwitsSentimentFetcher]  = None,
+        hackernews:  Optional[HackerNewsSentimentFetcher]  = None,
+        yahoo:       Optional[YahooFinanceNewsFetcher]      = None,
+        google_news: Optional[GoogleNewsFetcher]           = None,
+        bing_news:   Optional[BingNewsFetcher]             = None,
+        reddit:      Optional[RedditSentimentFetcher]       = None,
     ) -> None:
-        self._stocktwits = stocktwits or StocktwitsSentimentFetcher()
-        self._hackernews = hackernews or HackerNewsSentimentFetcher()
-        self._reddit     = reddit     or RedditSentimentFetcher()
+        self._stocktwits  = stocktwits  or StocktwitsSentimentFetcher()
+        self._hackernews  = hackernews  or HackerNewsSentimentFetcher()
+        self._yahoo       = yahoo       or YahooFinanceNewsFetcher()
+        self._google_news = google_news or GoogleNewsFetcher()
+        self._bing_news   = bing_news   or BingNewsFetcher()
+        self._reddit      = reddit      or RedditSentimentFetcher()
 
     def get_signal(self, ticker: str, company_name: str) -> ConsumerSentimentSignal:
-        raws = [
-            self._stocktwits.fetch(ticker),
-            self._hackernews.fetch(company_name),
-            self._reddit.fetch(ticker, company_name),
+        # Primary sources: always queried, fetched concurrently for speed.
+        fetches = [
+            lambda: self._stocktwits.fetch(ticker),
+            lambda: self._yahoo.fetch(ticker),
+            lambda: self._google_news.fetch(ticker, company_name),
+            lambda: self._bing_news.fetch(ticker, company_name),
+            lambda: self._hackernews.fetch(company_name),
         ]
+        with ThreadPoolExecutor(max_workers=len(fetches)) as pool:
+            raws = list(pool.map(lambda fn: fn(), fetches))
+
+        # Reddit is a fallback: only queried when the primary sources are thin.
+        primary_count = sum(r.message_count for r in raws)
+        if primary_count < _REDDIT_FALLBACK_THRESHOLD:
+            logger.info("Primary sources thin (%d msgs); adding Reddit fallback", primary_count)
+            raws.append(self._reddit.fetch(ticker, company_name))
         return self._blend(ticker, company_name, raws)
 
     # ── private logic ───────────────────────────────────────────────────────────
@@ -1287,6 +1516,13 @@ class MultiSourceSentimentAggregator:
             if w not in name_tokens
         ][:5]
 
+        # Aggregate representative quotes: up to 2 per source, max 8 total.
+        all_quotes: List[Dict[str, str]] = []
+        for raw in raws:
+            for q in raw.quotes[:2]:
+                all_quotes.append({"source": raw.source, "text": q})
+        all_quotes = all_quotes[:8]
+
         # Surface a data-gap note only when every source came back empty.
         error: Optional[str] = None
         if total_messages == 0:
@@ -1306,6 +1542,7 @@ class MultiSourceSentimentAggregator:
             source="multi_source" if len(active) != 1 else active[0],
             subreddits=_BASE_SUBREDDITS,
             sources=sources,
+            top_quotes=all_quotes,
             error=error,
         )
 

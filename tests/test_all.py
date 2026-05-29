@@ -350,23 +350,32 @@ class _FakeSource:
 
 class TestMultiSourceSentimentAggregator(unittest.TestCase):
 
-    def _agg(self, st, hn, rd):
+    def _agg(self, st=None, hn=None, yh=None, gn=None, bn=None, rd=None):
+        """Inject fakes for every source. Unspecified sources default to empty so a
+        test only declares the sources it cares about."""
+        empty = lambda name: _RawSourceResult(name, [], 0)
         return MultiSourceSentimentAggregator(
-            stocktwits=_FakeSource(st),
-            hackernews=_FakeSource(hn),
-            reddit=_FakeSource(rd),
+            stocktwits=_FakeSource(st or empty("stocktwits")),
+            hackernews=_FakeSource(hn or empty("hackernews")),
+            yahoo=_FakeSource(yh or empty("yahoo_finance")),
+            google_news=_FakeSource(gn or empty("google_news")),
+            bing_news=_FakeSource(bn or empty("bing_news")),
+            reddit=_FakeSource(rd or empty("reddit")),
         )
 
     def test_blends_and_records_each_source(self):
         agg = self._agg(
             st=_RawSourceResult("stocktwits", ["great buy"], 12, native_score=0.8),
             hn=_RawSourceResult("hackernews", ["solid product growth"], 10),
-            rd=_RawSourceResult("reddit", ["bullish on this one"], 8),
+            gn=_RawSourceResult("google_news", ["strong earnings beat"], 8),
         )
         sig = agg.get_signal("AAPL", "Apple")
         self.assertEqual(sig.source, "multi_source")
+        # Primary sources are well above the fallback threshold → Reddit is skipped,
+        # so 5 primary sources are recorded (not 6).
         self.assertEqual(sig.post_count, 30)
-        self.assertEqual(len(sig.sources), 3)
+        self.assertEqual(len(sig.sources), 5)
+        self.assertNotIn("reddit", [s.source for s in sig.sources])
         self.assertIsNotNone(sig.sentiment_score)
         self.assertEqual(sig.sentiment, "positive")
         # Stocktwits native score is used and weighted highest.
@@ -374,24 +383,31 @@ class TestMultiSourceSentimentAggregator(unittest.TestCase):
         self.assertEqual(st_src.sentiment_score, 0.8)
         self.assertTrue(st_src.available)
 
-    def test_reddit_403_does_not_blank_signal(self):
+    def test_reddit_fallback_fires_when_primary_thin(self):
+        # Only StockTwits returns a handful of messages (< threshold) → Reddit fires.
+        agg = self._agg(
+            st=_RawSourceResult("stocktwits", ["ok"], 3, native_score=0.4),
+            rd=_RawSourceResult("reddit", ["bullish on this one"], 8),
+        )
+        sig = agg.get_signal("MU", "Micron")
+        self.assertIn("reddit", [s.source for s in sig.sources])
+        self.assertEqual(len(sig.sources), 6)
+        self.assertEqual(sig.post_count, 11)
+
+    def test_reddit_skipped_when_primary_sufficient(self):
         agg = self._agg(
             st=_RawSourceResult("stocktwits", ["strong beat"], 15, native_score=0.6),
-            hn=_RawSourceResult("hackernews", [], 0),
-            rd=_RawSourceResult("reddit", [], 0, error="403 Client Error"),
+            rd=_RawSourceResult("reddit", ["should not be fetched"], 8),
         )
         sig = agg.get_signal("INTC", "Intel")
         self.assertIsNotNone(sig.sentiment_score)
         self.assertIsNone(sig.error)            # at least one source had data
-        rd_src = next(s for s in sig.sources if s.source == "reddit")
-        self.assertFalse(rd_src.available)
-        self.assertEqual(rd_src.weight, 0.0)
-        self.assertIn("403", rd_src.error or "")
+        self.assertNotIn("reddit", [s.source for s in sig.sources])
+        self.assertEqual(sig.post_count, 15)    # reddit's 8 not counted
 
     def test_all_sources_empty_sets_error(self):
         agg = self._agg(
             st=_RawSourceResult("stocktwits", [], 0, error="404"),
-            hn=_RawSourceResult("hackernews", [], 0),
             rd=_RawSourceResult("reddit", [], 0, error="403"),
         )
         sig = agg.get_signal("XYZ", "Nonexistent")
@@ -400,19 +416,54 @@ class TestMultiSourceSentimentAggregator(unittest.TestCase):
         self.assertIsNone(sig.sentiment)
         self.assertIsNotNone(sig.error)
 
-    def test_single_source_labels_source_by_name(self):
+    def test_quotes_pooled_across_sources(self):
         agg = self._agg(
-            st=_RawSourceResult("stocktwits", ["good"], 5, native_score=0.5),
-            hn=_RawSourceResult("hackernews", [], 0),
-            rd=_RawSourceResult("reddit", [], 0),
+            st=_RawSourceResult(
+                "stocktwits", [], 12, native_score=0.8,
+                quotes=["Cintas reports a strong earnings beat this quarter"],
+            ),
+            gn=_RawSourceResult(
+                "google_news", [], 6,
+                quotes=["Cintas raises full-year guidance on solid demand"],
+            ),
         )
-        sig = agg.get_signal("MU", "Micron")
-        self.assertEqual(sig.source, "stocktwits")
+        sig = agg.get_signal("CTAS", "Cintas")
+        srcs = {q["source"] for q in sig.top_quotes}
+        self.assertIn("stocktwits", srcs)
+        self.assertIn("google_news", srcs)
 
 
 # ─── context_aggregator ───────────────────────────────────────────────────────
 
-from context_aggregator import ContextAggregator, _to_dict, _error_node
+from context_aggregator import (
+    ContextAggregator, COMPETITOR_MAP, _to_dict, _error_node, _macro_relevance,
+)
+
+
+class TestCompetitorCoverage(unittest.TestCase):
+    """Tickers that previously fell through to an empty peers list must now map."""
+
+    def test_semiconductor_cluster_has_three_peers(self):
+        for tkr in ("NVDA", "AMD", "AVGO", "TSM"):
+            self.assertIn(tkr, COMPETITOR_MAP, f"{tkr} missing from competitor map")
+            self.assertEqual(len(COMPETITOR_MAP[tkr]), 3)
+            self.assertNotIn(tkr, COMPETITOR_MAP[tkr], "a ticker must not be its own peer")
+
+
+class TestMacroRelevance(unittest.TestCase):
+    """The CRE construction series must self-flag low relevance outside its universe."""
+
+    def test_cre_linked_ticker_is_high_relevance(self):
+        r = _macro_relevance("PCOR")
+        self.assertEqual(r["relevance"], "high")
+
+    def test_non_cre_ticker_is_low_relevance(self):
+        r = _macro_relevance("NVDA")
+        self.assertEqual(r["relevance"], "low")
+        self.assertIn("relevance_note", r)
+
+    def test_case_insensitive(self):
+        self.assertEqual(_macro_relevance("nvda")["relevance"], "low")
 
 
 class TestContextAggregatorHelpers(unittest.TestCase):
@@ -439,7 +490,7 @@ class TestContextAggregatorHelpers(unittest.TestCase):
         agg = ContextAggregator(financial_service=mock_fin, alt_data_service=mock_alt)
         meta = agg._build_meta("PCOR")
         self.assertEqual(meta["target_ticker"], "PCOR")
-        self.assertEqual(meta["schema_version"], "1.4")
+        self.assertEqual(meta["schema_version"], "1.5")
         self.assertIn("generated_at_utc", meta)
 
     def test_build_minified_context_is_valid_json(self):

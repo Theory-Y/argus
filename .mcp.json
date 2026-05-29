@@ -1,9 +1,9 @@
 {
   "mcpServers": {
     "middlemarket-research": {
-      "command": "/home/lunear/theoryy/middlemarket-research-agent/.venv/bin/python3.14",
-      "args": ["/home/lunear/theoryy/middlemarket-research-agent/src/mcp_server.py"],
-      "cwd": "/home/lunear/theoryy/middlemarket-research-agent"
+      "command": "/home/lunear/theoryy/theoryy-middlemarket-research-agent/.venv/bin/python3.14",
+      "args": ["/home/lunear/theoryy/theoryy-middlemarket-research-agent/src/mcp_server.py"],
+      "cwd": "/home/lunear/theoryy/theoryy-middlemarket-research-agent"
     }
   }
 }

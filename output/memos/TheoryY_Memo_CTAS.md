@@ -63,11 +63,27 @@ The EDGAR EFTS keyword fallback (Stanford SCAC is unavailable pending Winter 202
 
 ## 4. Consumer & Public Opinion
 
-The sentiment payload draws from 32 posts: 30 from StockTwits and 2 from HackerNews. Reddit returned a 403 block, so that community's signal — typically the richest source for substantive B2B opinion in security analysis sub-reddits — is absent from this pull. The aggregate sentiment label is **positive** with a score of **1.0** (maximum), sourced almost entirely from StockTwits.
+The blended signal aggregates **87 posts across five sources** — StockTwits (30), Google News (25), Yahoo Finance (20), Bing News (10), and HackerNews (2) — to a **positive** label at **0.85**. Reddit was held back as a fallback and not triggered, since primary coverage cleared the depth threshold. Recurring themes are valuation-centric: *stock, price, value, shares, investment*. The composition matters more than the headline score: this is a near-unanimously constructive read, but it is built from investor and press coverage, not customer voice.
 
-The StockTwits score requires calibration. The platform skews toward retail traders with short-term price momentum orientation; a 1.0 sentiment score during a period when CTAS trades near its valuation ceiling reflects price enthusiasm as much as fundamental conviction. The top surfaced themes — "quot," "stock," "price," "time," "zone" — are generic trading vocabulary with zero informational content about the business. No theme references customer experience, pricing power, competitive positioning, contract win rates, or service quality.
+**Source-by-source breakdown:**
 
-For a B2B services company like Cintas, the channels most likely to carry meaningful signal — procurement communities, facilities management forums, HR/operations subreddits — are either blocked (Reddit) or unsampled. The two HackerNews posts return a null sentiment score, adding no weight. The aggregate 1.0 positive score should be interpreted as momentum-consistent noise rather than fundamental validation. It neither contradicts the thesis nor confirms it. The data gap on Reddit limits any inference about how procurement decision-makers, route drivers, or service customers perceive the Cintas offering in the near term.
+- **StockTwits (score 1.0, weight 1.0):** Maximally bullish retail-trader sentiment. The Q3 print is the anchor — Cintas reported in line on EPS and ahead on revenue, which sustains the momentum narrative.
+
+> "$CTAS Cintas reports Q3 EPS $1.24, consensus $1.24 … Reports Q3 revenue $2.84B, consensus $2.82B." — StockTwits
+
+- **Google News (score 0.78, weight 0.70) & Yahoo Finance (score 0.56, weight 0.70):** Broad financial press leans positive but more measured than the retail feed, dominated by "best stock to buy" framing — momentum coverage that follows price rather than leads it.
+
+> "Is Cintas Corporation (CTAS) A Good Stock To Buy Now?" — Google News
+> "3 Market-Beating Stocks on Our Buy List: The best-performing stocks typically have robust sales growth, increasing margins…" — Yahoo Finance
+
+- **Bing News (score 1.0, weight 0.60):** The most fundamentally substantive source, with institutional-manager commentary tying sentiment to operating results:
+
+> "Cintas Corporation (CTAS) Surged After reporting Strong Results: ClearBridge Investments, an investment management company…" — Bing News
+> "Cintas Corporation (CTAS) Rose 26% on Exceeded Expectations: TimesSquare Capital Management…" — Bing News
+
+- **HackerNews (no scoreable signal, weight 0.0):** Two off-topic hits — expected for a B2B uniform-services name with no developer footprint.
+
+The signal is internally consistent: a Q3 beat propagating through retail and press channels into uniformly positive commentary. The limitation is structural — every source captures *investor* opinion, not *customer* opinion. The channels that would reveal procurement-side satisfaction, route-driver experience, or contract-renewal friction (facilities-management forums, HR/operations communities) are not represented. For a B2B services compounder, that gap means the 0.85 confirms the market's enthusiasm for the equity without independently validating the operating durability that underwrites it.
 
 ---
 
@@ -101,7 +117,7 @@ The fundamental case for Cintas as a quality compounder holds: 8.9% revenue grow
 
 The issue is entry price. Honeywell — a diversified industrial with comparable trailing EBITDA margins (22.6%) and a broader revenue base — trades at 20.4x EV/EBITDA. CTAS commands a 21% premium on that anchor for approximately 6.5 percentage points of additional revenue growth. That trade-off is defensible in an environment where growth holds or accelerates, but it is fragile. At these multiples, CTAS is priced for everything to work.
 
-The unresolved March 2026 financing events reduce near-term conviction without being thesis-breaking. The lack of FRED macro data leaves the forward demand picture less supported than it should be. The sentiment data adds nothing analytically.
+The unresolved March 2026 financing events reduce near-term conviction without being thesis-breaking. The lack of FRED macro data leaves the forward demand picture less supported than it should be. The five-source sentiment read (0.85 positive on 87 posts) confirms broad market and press enthusiasm off the Q3 beat, but it is investor sentiment rather than customer voice — it validates the equity narrative, not the operating durability beneath it.
 
 **Key variables that would change the call:**
 

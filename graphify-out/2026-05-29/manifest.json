@@ -1,0 +1,552 @@
+{
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/package.json": {
+    "mtime": 1780023508.1901052,
+    "ast_hash": "7f9b4d2460b127a3e15d7b81d0ecbd8c",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/setup.ps1": {
+    "mtime": 1780023508.193751,
+    "ast_hash": "71fd791cc5ba8914eb8dd9a60600a6ce",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/setup.sh": {
+    "mtime": 1780023508.193751,
+    "ast_hash": "d77d184b6514152ae3e34ddefeafdf27",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/.mcp.json": {
+    "mtime": 1780028648.1114788,
+    "ast_hash": "c03f3d9bb5a7a7ea944c0be9ff487da0",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/.claude/settings.json": {
+    "mtime": 1780023508.137314,
+    "ast_hash": "75d4d86b28530c07ce9a806ae4b7f85a",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/.claude/settings.local.json": {
+    "mtime": 1780028986.0481675,
+    "ast_hash": "123f21d2d9ce7b0d2c83d8b60bf88828",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/client/python/theory_y/__init__.py": {
+    "mtime": 1780023508.1387804,
+    "ast_hash": "7fcdbbdb5b03eb902c0aa29a3d9c3dd7",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/client/python/theory_y/cli.py": {
+    "mtime": 1780023508.138931,
+    "ast_hash": "fd69535c5d218c8b7cbb39fdc2a8aa88",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/client/python/theory_y/client.py": {
+    "mtime": 1780023508.138931,
+    "ast_hash": "5be5e45fbd33d85e66d5e590e96d577c",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/client/python/theory_y/config.py": {
+    "mtime": 1780023508.138931,
+    "ast_hash": "f2bef624985f6925273831ba578cfa1d",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/client/web/package.json": {
+    "mtime": 1780023508.1392663,
+    "ast_hash": "c0cf22dc568f049b50242901ee208666",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/client/web/tsconfig.json": {
+    "mtime": 1780023508.1405928,
+    "ast_hash": "0ae30e40e3c5158b36aa279e47ca6e8c",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/client/web/tsconfig.node.json": {
+    "mtime": 1780023508.1405928,
+    "ast_hash": "df562a73dce2f53f022bc93ee20099c2",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/client/web/vite.config.d.ts": {
+    "mtime": 1780023508.1405928,
+    "ast_hash": "9fcf75521f4c43fd8b75300e0f63b867",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/client/web/vite.config.js": {
+    "mtime": 1780023508.1405928,
+    "ast_hash": "12db8c401d4a283afb68826cc4a1cdf8",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/client/web/vite.config.ts": {
+    "mtime": 1780023508.1405928,
+    "ast_hash": "93f155d4c9f796479ac4daaa554f6727",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/client/web/src/App.tsx": {
+    "mtime": 1780023508.1392663,
+    "ast_hash": "4f199863c49e7c8907d5bc8e5b30699c",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/client/web/src/main.tsx": {
+    "mtime": 1780023508.1399465,
+    "ast_hash": "b6bc7333416021e6a86dbe717b426324",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/client/web/src/vite-env.d.ts": {
+    "mtime": 1780023508.1405928,
+    "ast_hash": "b4698577655263526a571c0e6a454110",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/client/web/src/api/client.ts": {
+    "mtime": 1780023508.1398435,
+    "ast_hash": "cfb0c9214d327c7da9d04a9a26e773f9",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/client/web/src/api/types.ts": {
+    "mtime": 1780023508.1399465,
+    "ast_hash": "e3fc8c007fc69fa2a116db685b3cc784",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/client/web/src/auth/AuthContext.tsx": {
+    "mtime": 1780023508.1399465,
+    "ast_hash": "12b7fce5f77f955e382767aa520d9a23",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/client/web/src/components/Layout.tsx": {
+    "mtime": 1780023508.1399465,
+    "ast_hash": "097977dfc8fb4152c01f097c0622e86c",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/client/web/src/pages/Account.tsx": {
+    "mtime": 1780023508.1399465,
+    "ast_hash": "7212de99c1b8213f566660848ee5369d",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/client/web/src/pages/Generate.tsx": {
+    "mtime": 1780023508.1405928,
+    "ast_hash": "91871ce5d510bb6f507cb2942ba3d02d",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/client/web/src/pages/History.tsx": {
+    "mtime": 1780023508.1405928,
+    "ast_hash": "321892ba70f6ca4c793675c958365d38",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/client/web/src/pages/Login.tsx": {
+    "mtime": 1780023508.1405928,
+    "ast_hash": "28b9cc28746052c209e53ca30a0a2e75",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/core/__init__.py": {
+    "mtime": 1780023508.1405928,
+    "ast_hash": "8fae6f151c8a5efa8186d11508a0d1b9",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/core/engine.py": {
+    "mtime": 1780023508.1414971,
+    "ast_hash": "a40c4f1afa6d9563319d18da2c7ac103",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/core/render.py": {
+    "mtime": 1780023508.1416526,
+    "ast_hash": "0b1c44c077237a4f10adf4ad89920efd",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/core/memo/__init__.py": {
+    "mtime": 1780023508.1414971,
+    "ast_hash": "cea2776e3f828a85fd4b36b1b44829c3",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/core/memo/writer.py": {
+    "mtime": 1780024027.9891427,
+    "ast_hash": "e7514209c1af97417148607432d58c8f",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/core/memo/prompt.py": {
+    "mtime": 1780024663.0042753,
+    "ast_hash": "d7ccbbc9baef65e1205b1d6ab9c839e0",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/output/context_INTC.json": {
+    "mtime": 1780023508.1731672,
+    "ast_hash": "15b0f81c9a540021bcfb54bc4aa27398",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/output/context_META.json": {
+    "mtime": 1780023508.1731672,
+    "ast_hash": "b75a5676e011b8b18b489c2ed1d41675",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/output/context/context_AAPL.json": {
+    "mtime": 1780023508.1729937,
+    "ast_hash": "6861122868ac7ff762828035003104fb",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/output/context/context_CRDO.json": {
+    "mtime": 1780023508.1731672,
+    "ast_hash": "fdeb7d3340aca34b5f8600d843550577",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/output/context/context_INTC.json": {
+    "mtime": 1780023508.1731672,
+    "ast_hash": "15b0f81c9a540021bcfb54bc4aa27398",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/output/context/context_META.json": {
+    "mtime": 1780023508.1731672,
+    "ast_hash": "b75a5676e011b8b18b489c2ed1d41675",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/output/context/context_MU.json": {
+    "mtime": 1780023508.1731672,
+    "ast_hash": "d4968836e4a77b7d845afdeae373553b",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/output/context/context_POET.json": {
+    "mtime": 1780023508.1731672,
+    "ast_hash": "65d3b5e48ce7c29932bbb2888f80e464",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/output/context/context_RKLB.json": {
+    "mtime": 1780023508.1731672,
+    "ast_hash": "c1ab5ff7e5ce0f29c9d4ff992596464c",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/output/context/context_CTAS.json": {
+    "mtime": 1780028195.4464717,
+    "ast_hash": "a133be8d9eac528e1cc7ede5dbd86a95",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/output/context/context_ASTS.json": {
+    "mtime": 1780027039.5616148,
+    "ast_hash": "71f8c1cd80fdc7ba04f5c873c71efe07",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/output/context/context_NVDA.json": {
+    "mtime": 1780028032.6984735,
+    "ast_hash": "cf4a920748b1abd400f2a2e97f497298",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/scripts/build_reference_dotx.py": {
+    "mtime": 1780023508.1915662,
+    "ast_hash": "0d274ea93eee7b42f57805ce77337611",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/scripts/client-mcp.py": {
+    "mtime": 1780023508.1915662,
+    "ast_hash": "818d5861bf56e978a84471eb65593379",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/scripts/export_pdf.py": {
+    "mtime": 1780027278.45792,
+    "ast_hash": "9b72b738d6bc7f9a8aa6e77887b61a0e",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/server/__init__.py": {
+    "mtime": 1780023508.1915662,
+    "ast_hash": "25c8dad51e3f21efebfb3e4ccac2354c",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/server/app.py": {
+    "mtime": 1780023508.1921983,
+    "ast_hash": "9e6da1627d445d174c985494b9be04b6",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/server/deps.py": {
+    "mtime": 1780023508.193167,
+    "ast_hash": "e9a96e32b8cc2ebe26ef747248f9230c",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/server/schemas.py": {
+    "mtime": 1780023508.193751,
+    "ast_hash": "009a8e9debf78792b7c73775fd2afdc6",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/server/security.py": {
+    "mtime": 1780023508.193751,
+    "ast_hash": "b9cba593932f67cdcc7fcfda06ddf658",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/server/storage.py": {
+    "mtime": 1780023508.193751,
+    "ast_hash": "b8673cc06502fab0e21e8a5a460dbe7c",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/server/config.py": {
+    "mtime": 1780024036.018275,
+    "ast_hash": "bf6936bc654f130964e0e651b3c8a439",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/server/auth/__init__.py": {
+    "mtime": 1780023508.1921983,
+    "ast_hash": "5d7da0a03a8a3e93015b7ddad81aaf33",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/server/auth/base.py": {
+    "mtime": 1780023508.1925201,
+    "ast_hash": "ba6de4f1857fe726eea7acf418d1c6c4",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/server/auth/license.py": {
+    "mtime": 1780023508.1925201,
+    "ast_hash": "42e5595d99005033f79cd911b09f6078",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/server/auth/saas.py": {
+    "mtime": 1780023508.1925201,
+    "ast_hash": "f56b5fdc35180c39a4fde717d50ca6d9",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/server/billing/__init__.py": {
+    "mtime": 1780023508.1925201,
+    "ast_hash": "b0f752242f0b008ff748fd75b7e7486f",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/server/billing/plans.py": {
+    "mtime": 1780023508.1928327,
+    "ast_hash": "2328718823ee22e28a4a5deddee6b491",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/server/billing/stripe_client.py": {
+    "mtime": 1780023508.1928327,
+    "ast_hash": "2bcb9e80f5242a83f73cfa8f9341c00d",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/server/db/__init__.py": {
+    "mtime": 1780023508.1928327,
+    "ast_hash": "e1bc408955c4792a1df075cc2e74ec65",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/server/db/models.py": {
+    "mtime": 1780023508.193167,
+    "ast_hash": "245b201b5504d575bc1a3975d8e842fc",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/server/db/session.py": {
+    "mtime": 1780023508.193167,
+    "ast_hash": "ff418d3092b075702e18bd90630da439",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/server/jobs/__init__.py": {
+    "mtime": 1780023508.193167,
+    "ast_hash": "4e326e135d07deb432f9fc1479e822a0",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/server/jobs/queue.py": {
+    "mtime": 1780023508.193445,
+    "ast_hash": "38f06621da778dcd947decab3475e5fd",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/server/jobs/tasks.py": {
+    "mtime": 1780023508.193445,
+    "ast_hash": "c71ac00d60af3e43d9ffb1b628f358e6",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/server/routes/__init__.py": {
+    "mtime": 1780023508.193445,
+    "ast_hash": "58cb4d5b3f4a9bf42ff0f7d10995053d",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/server/routes/account.py": {
+    "mtime": 1780023508.193751,
+    "ast_hash": "024c8c486344028cb0d783086aef5744",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/server/routes/billing.py": {
+    "mtime": 1780023508.193751,
+    "ast_hash": "af929afaf7982d64b08689e5004525a0",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/server/routes/memos.py": {
+    "mtime": 1780023508.193751,
+    "ast_hash": "38e73b90836191c48db283b9240991ed",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/server/routes/sector.py": {
+    "mtime": 1780023508.193751,
+    "ast_hash": "46d5c8d343cb36ddd67565016864d504",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/server/routes/tickers.py": {
+    "mtime": 1780023508.193751,
+    "ast_hash": "5ac271b01f116d335f18d294bda2116e",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/src/fetch_context.py": {
+    "mtime": 1780023508.1949804,
+    "ast_hash": "ad107e014c19104a9bedd0507be256c8",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/src/financial_service.py": {
+    "mtime": 1780023508.1951053,
+    "ast_hash": "8f6d18c6ab0043e29f75ac104d0b73ae",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/src/context_aggregator.py": {
+    "mtime": 1780024667.8253827,
+    "ast_hash": "0d10bacf052ea449a0a2dae4381e3cb9",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/src/alt_data_service.py": {
+    "mtime": 1780028938.2735398,
+    "ast_hash": "e77fff5e30b97827b1bed3d539ff1808",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/src/mcp_server.py": {
+    "mtime": 1780028944.8734846,
+    "ast_hash": "b6dd7faeaec562f3ef06fa3ff9b863c2",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/tests/test_memo_writer.py": {
+    "mtime": 1780023508.1962514,
+    "ast_hash": "03bf03d973110ebef0661c261ebfa32f",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/tests/test_all.py": {
+    "mtime": 1780028116.5280979,
+    "ast_hash": "4ae2f8bbae9c1ec8d594ec85a176f04b",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/CLAUDE.md": {
+    "mtime": 1780023508.1375797,
+    "ast_hash": "82efb97a359f5c7290bf2513d14686be",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/README.md": {
+    "mtime": 1780023508.1375797,
+    "ast_hash": "ca580926f715a91c18f4aa6ede10b7d1",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/SERVICE_ARCHITECTURE.md": {
+    "mtime": 1780023508.1375797,
+    "ast_hash": "3fc0f2fa89428aa7a260d6918a6610f6",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/requirements.txt": {
+    "mtime": 1780028950.070442,
+    "ast_hash": "32395170030da7d2748d4230ebf7060a",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/.claude/CLAUDE.md": {
+    "mtime": 1780023508.1361039,
+    "ast_hash": "db73b0edd7ffbc61ceac177130730865",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/.claude/skills/graphify/SKILL.md": {
+    "mtime": 1780023508.1375797,
+    "ast_hash": "5ae00786ea53e4d944ab70abe11eedd1",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/.claude/skills/theory-y-memo/SKILL.md": {
+    "mtime": 1780027745.4907749,
+    "ast_hash": "847b97e529f59e4d7d4c6c608c150ce3",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/client/python/README.md": {
+    "mtime": 1780023508.1386673,
+    "ast_hash": "459feae2ca77258c985f87912f321c37",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/client/web/index.html": {
+    "mtime": 1780023508.1392663,
+    "ast_hash": "6db8ea6c5a3ecfb19bcf6008fd45955d",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/infra/PACKAGING.md": {
+    "mtime": 1780023508.1727586,
+    "ast_hash": "41c8a8619cc1196f10955bbbe8f5333a",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/infra/docker-compose.yml": {
+    "mtime": 1780023508.1727586,
+    "ast_hash": "80a7ca42890aac97acd97836a831e6b1",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/output/memos/TheoryY_Memo_AAPL.md": {
+    "mtime": 1780023508.1731672,
+    "ast_hash": "845dbdabffe3cea38c296aa62de4f998",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/output/memos/TheoryY_Memo_ASTS.md": {
+    "mtime": 1780023508.17392,
+    "ast_hash": "d1451d92cede8161cb1872af6f279557",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/output/memos/TheoryY_Memo_CRDO.md": {
+    "mtime": 1780023508.174105,
+    "ast_hash": "c99a6921c6c1f922f7ddfde2f56d7d76",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/output/memos/TheoryY_Memo_INTC.md": {
+    "mtime": 1780023508.1751049,
+    "ast_hash": "e777b403557c0f1300dc48d9b81373dc",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/output/memos/TheoryY_Memo_META.md": {
+    "mtime": 1780023508.176105,
+    "ast_hash": "780dad26956ee7bc4184fada11707a08",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/output/memos/TheoryY_Memo_MU.md": {
+    "mtime": 1780023508.177105,
+    "ast_hash": "4b5de89f21555fbeaa33c53702ff4287",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/output/memos/TheoryY_Memo_POET.md": {
+    "mtime": 1780023508.1781049,
+    "ast_hash": "4300a5f9e8730b03ed6f499c18659795",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/output/memos/TheoryY_Memo_RKLB.md": {
+    "mtime": 1780023508.1781049,
+    "ast_hash": "380835e0b3773992d29420bcbf596680",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/output/memos/TheoryY_Memo_NVDA.md": {
+    "mtime": 1780028174.8976555,
+    "ast_hash": "f71d520531b3f992e661d884b3106af6",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/output/memos/TheoryY_Memo_CTAS.md": {
+    "mtime": 1780028256.8094494,
+    "ast_hash": "a899a3a41e333b74db7b4fbf106a8fa9",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/server/requirements.txt": {
+    "mtime": 1780023508.193445,
+    "ast_hash": "0ffe5229f57533ca040128389b4dd014",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/output/memos/TheoryY_Memo_AAPL.pdf": {
+    "mtime": 1780023508.17392,
+    "ast_hash": "dbf1a5d15c4b27320a18d5f151eff056",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/output/memos/TheoryY_Memo_ASTS.pdf": {
+    "mtime": 1780023508.174105,
+    "ast_hash": "0c4de4482dcf74cb97971442efdcb4ec",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/output/memos/TheoryY_Memo_INTC.pdf": {
+    "mtime": 1780023508.1751049,
+    "ast_hash": "d91da5f6042a55bb4f11a7cd0231cb40",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/output/memos/TheoryY_Memo_META.pdf": {
+    "mtime": 1780023508.176105,
+    "ast_hash": "f724fbcbe45d9ad04b652e79f5a0eeb7",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/output/memos/TheoryY_Memo_MU.pdf": {
+    "mtime": 1780023508.1781049,
+    "ast_hash": "f0a6830b8140e125e7d4220fdeb28141",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/output/memos/TheoryY_Memo_CTAS.pdf": {
+    "mtime": 1780027143.2360852,
+    "ast_hash": "dc7fd560aa652d793128efeeac909795",
+    "semantic_hash": ""
+  },
+  "/home/lunear/theoryy/theoryy-middlemarket-research-agent/output/memos/TheoryY_Memo_NVDA.pdf": {
+    "mtime": 1780028180.6917112,
+    "ast_hash": "208ca902816b86699bae2452d6405676",
+    "semantic_hash": ""
+  }
+}

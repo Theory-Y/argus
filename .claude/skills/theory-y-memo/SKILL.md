@@ -72,11 +72,13 @@ Word targets are guidance, not hard caps — prioritize substance over hitting a
 
 ## Persona and voice
 
-Write as a **Principal Equity Research Analyst specializing in B2B PropTech and
-Industrials**. The voice is institutional and data-dense: lead with hard metrics
-(growth rates, margins, multiples, retention, unit economics) and reason explicitly
-about **operating leverage** — how revenue scaling flows to the cost structure and
-margins. Every claim should be anchored to a number or relationship from the payload.
+Write as a **Principal Equity Research Analyst covering the target company's sector**
+(the pipeline originated in B2B PropTech & Industrials, but adapt the lens to the
+issuer — e.g. semiconductors, software, consumer). The voice is institutional and
+data-dense: lead with hard metrics (growth rates, margins, multiples, retention, unit
+economics) and reason explicitly about **operating leverage** — how revenue scaling
+flows to the cost structure and margins. Every claim should be anchored to a number or
+relationship from the payload, or to an explicitly sourced external figure.
 
 ## Writing rules
 
@@ -95,23 +97,81 @@ margins. Every claim should be anchored to a number or relationship from the pay
   the whole memo in view, so use it.
 - **Section-specific emphasis:**
   - §1 — a single crisp thesis sentence, then the valuation snapshot (multiples vs.
-    growth, what the market is pricing in).
+    growth, what the market is pricing in). Apply rigor rules 1 (valuation bridge) and
+    2 (peer comp) here.
   - §2 — the business model and operating mechanics: revenue mix, customer base,
     go-to-market, cost structure, and where operating leverage sits.
   - §3 — alternative-data and macro read-through: what the non-financial signals in
     the payload imply for the forward numbers. This is the longest section; make it
-    the most analytically differentiated.
+    the most analytically differentiated. Apply rigor rule 5 (macro relevance gate —
+    honor `macro_fred.relevance`) and rule 6 (investigate signals, don't just flag).
   - §4 — consumer and public opinion: use `alt_signals.consumer_sentiment` from the
-    payload. Cover sentiment label and score, post volume, top recurring themes, and
-    which subreddits surfaced the most signal. Flag if post_count is low (< 5) as
-    limited sample. If error is present, note the data gap instead of omitting the
-    section. Contextualise the sentiment against the business model — negative Reddit
-    chatter means something different for a B2C platform (Zillow) vs. a B2B SaaS
-    (Procore) vs. a facilities conglomerate (Honeywell).
+    payload. Source priority is: StockTwits (native Bull/Bear labels), Yahoo Finance
+    news (earnings/guidance headlines), HackerNews (B2B/tech discussion); Reddit is a
+    fallback that only fires when primary sources are thin. Structure the section as:
+    (a) overall sentiment label + score + post volume; (b) per-source breakdown —
+    what each source contributed and why it matters for this business type; (c) up to
+    4 verbatim quotes from `top_quotes`, formatted as blockquotes with their source
+    labelled (e.g. `> "..." — StockTwits`). Skip quotes from sources that returned 0
+    messages or an error. Flag if post_count is low (< 5) as a limited sample. If
+    error is present, note the data gap. Contextualise the sentiment against the
+    business model — negative retail chatter means something different for a B2C
+    platform (Zillow) vs. a B2B SaaS (Procore) vs. a facilities conglomerate
+    (Honeywell).
   - §5 — concrete, ranked risks and structural barriers, each tied to its impact on
     the thesis or the numbers.
   - §6 — a clear recommendation (direction + conviction) that falls out of §§1–5,
     with the key variables that would change the call.
+
+## Analytical rigor requirements (non-negotiable)
+
+These exist because past memos repeated the same avoidable failures. Each rule maps
+to a real defect — satisfy all six before considering the memo complete.
+
+1. **Bridge every valuation gap; never assert "cheap" without the math.** When a
+   forward multiple diverges from a trailing one (e.g. a low forward P/E against a high
+   EV/Revenue), do not call the stock cheap and move on. Show the implied-earnings
+   bridge explicitly: derive implied forward net income (`market cap ÷ forward P/E`),
+   compare it to trailing net income, and state the revenue-growth × margin
+   step-function required to get there. Make clear *which forward period* a "forward"
+   multiple references (NTM vs. a full out-year) — a forward P/E is often an out-year
+   number, not a present-tense one. Present the multiple as a term structure
+   (trailing → NTM → out-year) rather than a single misleading figure.
+
+2. **Always produce a cross-sectional peer comparison.** Use `payload.peers` when
+   populated. **If `peers` is empty, that is a coverage gap in the competitor map — not
+   evidence that no comparables exist.** Source 2–4 real peers externally (web), build a
+   comp table (fwd P/E, EV/Revenue, EV/EBITDA, growth, PEG), label the figures as
+   externally sourced, and add the ticker's cluster to `COMPETITOR_MAP` if you can.
+   Never write "relative valuation is not possible."
+
+3. **Source segment mix when the payload omits it.** If the payload has no segment
+   breakdown but the thesis depends on revenue concentration (it usually does), pull the
+   latest 10-Q/8-K/earnings release and tabulate it. Do not write "segment mix is not
+   disclosed in this payload" as a substitute for the breakdown — find it.
+
+4. **Run an internal-contradiction check before finalizing.** A single datapoint must
+   not be argued as a positive in one section and a risk in another without explicit
+   reconciliation. (E.g. supplier competition framed as "structurally positive" in §3
+   and a "risk" in §5.) Pick a net stance or show how the two dynamics offset, and state
+   the conclusion once.
+
+5. **Gate every macro/alt-data signal on a stated transmission mechanism.** Include a
+   macro series only if you can name how it propagates to *this* issuer's revenue or
+   margins. Honor the payload's `macro_fred.relevance` flag: if it is `"low"`, either
+   omit the series or explicitly label it low-relevance backdrop — never manufacture a
+   correlation to fill space.
+
+6. **Investigate signals; don't just flag "smoke."** For governance, litigation, or
+   insider signals (e.g. a cluster of 5.02 director/officer filings, or a litigation
+   node that fell back to an EDGAR keyword search because Stanford SCAC was offline), do
+   not leave an ominous unexplained flag. Either cross-reference the underlying source
+   (proxy statements, press releases, PACER, the actual 8-K text) to resolve it, or
+   state the specific source an analyst must check next and that the current data is a
+   gap — not a clean bill.
+
+When external sourcing is used for any of the above, add a short **Sourcing note** at
+the end of the memo distinguishing payload-derived figures from externally fetched ones.
 
 ## Output
 
