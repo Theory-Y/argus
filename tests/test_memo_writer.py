@@ -71,18 +71,95 @@ def test_write_memo_returns_text_and_caches_system_prompt():
 
     assert out.startswith("# Investment Memo: PCOR")
 
-    # System prompt must be sent as a cached block (prompt caching).
+    # System prompt must be sent as a cached block (prompt caching), and the cache
+    # defaults to the 1h window so the static prefix stays warm across spaced runs.
     system = client.captured["system"]
     assert isinstance(system, list)
-    assert system[0]["cache_control"] == {"type": "ephemeral"}
+    assert system[0]["cache_control"] == {"type": "ephemeral", "ttl": "1h"}
     assert system[0]["text"] == prompt.SYSTEM_PROMPT
     # The model id is honored.
     assert client.captured["model"] == "claude-opus-4-7"
 
 
+def test_cache_ttl_is_configurable():
+    # "5m" uses the default ephemeral window (no explicit ttl); "1h" is passed through.
+    client = _FakeClient([_Block("text", "x")])
+    writer.write_memo("X", "{}", client=client, cache_ttl="5m")
+    assert client.captured["system"][0]["cache_control"] == {"type": "ephemeral"}
+
+    client = _FakeClient([_Block("text", "x")])
+    writer.write_memo("X", "{}", client=client, cache_ttl="1h")
+    assert client.captured["system"][0]["cache_control"] == {"type": "ephemeral", "ttl": "1h"}
+
+
 def test_write_memo_concatenates_only_text_blocks():
     client = _FakeClient([_Block("text", "A"), _Block("thinking", "ignored"), _Block("text", "B")])
     assert writer.write_memo("X", "{}", client=client) == "AB"
+
+
+# ── Fakes that mimic the anthropic Message Batches client surface we use ──────
+class _BatchResultInner:
+    def __init__(self, type_, message=None):
+        self.type = type_
+        self.message = message
+
+
+class _BatchResult:
+    def __init__(self, custom_id, type_, blocks=None):
+        self.custom_id = custom_id
+        message = _FinalMessage(blocks) if blocks is not None else None
+        self.result = _BatchResultInner(type_, message)
+
+
+class _Batch:
+    def __init__(self, id_, status):
+        self.id = id_
+        self.processing_status = status
+
+
+class _Batches:
+    def __init__(self, results, capture):
+        self._results = results
+        self._capture = capture
+
+    def create(self, *, requests):
+        self._capture["requests"] = requests
+        return _Batch("batch_test", "ended")  # completes immediately for the test
+
+    def retrieve(self, _id):
+        return _Batch("batch_test", "ended")
+
+    def results(self, _id):
+        return iter(self._results)
+
+
+class _FakeBatchClient:
+    def __init__(self, results):
+        self.captured = {}
+        self.messages = type("M", (), {"batches": _Batches(results, self.captured)})()
+
+
+def test_write_memos_batch_maps_results_by_ticker():
+    results = [
+        _BatchResult("PCOR", "succeeded", [_Block("text", "# Investment Memo: PCOR")]),
+        _BatchResult("Z", "errored", None),
+    ]
+    client = _FakeBatchClient(results)
+    out = writer.write_memos_batch(
+        [("pcor", '{"meta":{}}'), ("z", '{"meta":{}}')], client=client
+    )
+
+    assert out["PCOR"].startswith("# Investment Memo: PCOR")
+    assert out["Z"] is None
+    # Tickers are upper-cased and each request reuses the shared cached system prompt.
+    sent = client.captured["requests"]
+    assert {r["custom_id"] for r in sent} == {"PCOR", "Z"}
+    assert sent[0]["params"]["system"][0]["cache_control"] == {"type": "ephemeral", "ttl": "1h"}
+
+
+def test_write_memos_batch_empty_is_noop():
+    # No client needed — empty input short-circuits before any API call.
+    assert writer.write_memos_batch([]) == {}
 
 
 if __name__ == "__main__":

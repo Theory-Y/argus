@@ -162,12 +162,14 @@ relationship from the payload, or to an explicitly sourced external figure.
     payload. Source priority is: StockTwits (native Bull/Bear labels), Yahoo Finance
     news (earnings/guidance headlines), HackerNews (B2B/tech discussion); Reddit is a
     fallback that only fires when primary sources are thin. Structure the section as:
-    (a) overall sentiment label + score + post volume; (b) per-source breakdown —
-    what each source contributed and why it matters for this business type; (c) up to
-    4 verbatim quotes from `top_quotes`, formatted as blockquotes with their source
+    (a) overall sentiment label + score + overall `confidence`; (b) per-source
+    breakdown weighed by `signal_count` and `confidence` (not raw `message_count`) —
+    what each source contributed and why it matters for this business type, discounting
+    extreme scores that rest on a low signal count (see rigor rule 8); (c) up to 4
+    verbatim quotes from `top_quotes`, formatted as blockquotes with their source
     labelled (e.g. `> "..." — StockTwits`). Skip quotes from sources that returned 0
-    messages or an error. Flag if post_count is low (< 5) as a limited sample. If
-    error is present, note the data gap. Contextualise the sentiment against the
+    messages or an error. If overall `confidence` is "low", say §4 is directional only.
+    If error is present, note the data gap. Contextualise the sentiment against the
     business model — negative retail chatter means something different for a B2C
     platform (Zillow) vs. a B2B SaaS (Procore) vs. a facilities conglomerate
     (Honeywell).
@@ -179,7 +181,7 @@ relationship from the payload, or to an explicitly sourced external figure.
 ## Analytical rigor requirements (non-negotiable)
 
 These exist because past memos repeated the same avoidable failures. Each rule maps
-to a real defect — satisfy all six before considering the memo complete.
+to a real defect — satisfy all eight before considering the memo complete.
 
 1. **Bridge every valuation gap; never assert "cheap" without the math.** When a
    forward multiple diverges from a trailing one (e.g. a low forward P/E against a high
@@ -196,7 +198,12 @@ to a real defect — satisfy all six before considering the memo complete.
    evidence that no comparables exist.** Source 2–4 real peers externally (web), build a
    comp table (fwd P/E, EV/Revenue, EV/EBITDA, growth, PEG), label the figures as
    externally sourced, and add the ticker's cluster to `COMPETITOR_MAP` if you can.
-   Never write "relative valuation is not possible."
+   Never write "relative valuation is not possible." **Before using any peer ratio,
+   check `payload.data_quality.flagged_comparables` (see rule 7): a peer whose ratio
+   reads `N/M` or is flagged `currency_mismatch` is a non-certifiable figure — source
+   that peer's multiple externally rather than printing the payload number or quietly
+   dropping the peer. A foreign ADR (e.g. TSMC) reporting in a non-USD currency will be
+   flagged; its raw yfinance EV/Revenue and EV/EBITDA are not comparable to USD peers.**
 
 3. **Source segment mix when the payload omits it.** If the payload has no segment
    breakdown but the thesis depends on revenue concentration (it usually does), pull the
@@ -222,6 +229,34 @@ to a real defect — satisfy all six before considering the memo complete.
    (proxy statements, press releases, PACER, the actual 8-K text) to resolve it, or
    state the specific source an analyst must check next and that the current data is a
    gap — not a clean bill.
+
+7. **Honor the `data_quality` audit; never present a flagged figure as fact.** The
+   payload runs an automated coherence audit and exposes the result at
+   `payload.data_quality` (`flagged_comparables`, `has_flags`, `directive`). Each flag
+   names a figure that failed a check: `currency_mismatch:<rep>!=<trade>` — the issuer
+   reports in a different currency than it trades in, so the yfinance multiple is wrong
+   by the FX factor and has been set to `N/M` (source it externally per rule 2);
+   `peer_outlier:<field>=…` / `implausible:<field>=…` — the value is a gross deviation
+   from the cohort or outside sane bounds, so verify it against the primary filing
+   before citing (it may be real-but-extreme, e.g. a cyclical's depressed-EBITDA 100x
+   EV/EBITDA, or a data artifact — distinguish the two). When you compute any peer
+   median/average or make a "cheap/expensive vs. peers" claim, **exclude flagged values
+   first.** Do not let a mis-currencied 2x or 3x slip into the comp table as if real.
+
+8. **Calibrate confidence to the data; don't let a thin sample drive the thesis.**
+   `consumer_sentiment` reports a per-source `signal_count` (matched sentiment words,
+   not message volume), a per-source `confidence`, and an overall `confidence`. Weigh
+   sources by `signal_count`, not `message_count`: a source with 25 messages but
+   `signal_count` 1 is a one-word read, and an extreme score (±1.0) on a low signal
+   count is noise. A source flagged `confidence: "low"` (or `signal_count` < 3) may be
+   noted as a soft, sample-limited signal but must **never** anchor a thesis, a §5 risk
+   pillar, or the §6 call (the prior NVDA memo wrongly elevated a 25-message,
+   ~1-signal HackerNews −1.0 to "the most analytically significant data point" — do not
+   repeat that). If the overall `confidence` is "low", state that §4 is directional
+   only. Earned-confidence prose generally: match the strength of your language to the
+   strength of the evidence, and prefer plain analytical English over stacked jargon —
+   a term like "transmission mechanism" earns its place only when you actually trace
+   the mechanism, not as ornament.
 
 When external sourcing is used for any of the above, add a short **Sourcing note** at
 the end of the memo distinguishing payload-derived figures from externally fetched ones.
@@ -262,17 +297,3 @@ If `output/theme/reference.dotx` is missing or corrupt, regenerate it:
 ```
 
 Deliverables: `output/memos/TheoryY_Memo_<TICKER>.md` + `output/memos/TheoryY_Memo_<TICKER>.docx` + `output/memos/TheoryY_Memo_<TICKER>.pdf`
-
----
-
-## Quick reference
-
-**Example invocation** — Input: "write the Theory Y memo for PCOR"
-0. Ask user: md or docx? → store as `FORMAT`
-1. `.venv/bin/python3 src/fetch_context.py PCOR` → `output/context/context_PCOR.json`
-2. Read `output/context/context_PCOR.json`.
-3. Write `output/memos/TheoryY_Memo_PCOR.md`: title + the six `##` sections, in the analyst voice,
-   grounded only in the payload.
-4. **If md:**   `.venv/bin/python3 scripts/export_pdf.py output/memos/TheoryY_Memo_PCOR.md --skip-docx`
-   **If docx:** `.venv/bin/python3 scripts/export_pdf.py output/memos/TheoryY_Memo_PCOR.md`
-5. Present all output paths to the user.

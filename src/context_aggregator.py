@@ -15,7 +15,8 @@ Output contract:
         "sec_risk_snippet":    SecRiskSnippet (dict),
         "job_market":          ApifyJobsResult (dict),
         "consumer_sentiment":  ConsumerSentimentSignal (dict)
-    }
+    },
+    "data_quality": { flagged_comparables, has_flags, directive }  ← coherence audit
   }
 
 Token economy:
@@ -41,6 +42,7 @@ from financial_service import (
     CompanyFinancials,
     FinancialService,
     SECTOR_TICKERS,
+    audit_peer_set,
 )
 from alt_data_service import (
     AltDataService,
@@ -105,7 +107,7 @@ _CRE_LINKED_TICKERS: set = set(SECTOR_TICKERS)
 # FRED macro indicator used as the sector-wide CRE backdrop
 _FRED_SERIES_ID:  str = "TLNRESCONS"
 _FRED_SERIES_LABEL: str = "Commercial Construction Spending (TLNRESCONS, $MM, SA)"
-_SCHEMA_VERSION:  str = "1.5"
+_SCHEMA_VERSION:  str = "1.6"
 _OUTPUT_DIR:      Path = Path("output") / "context"
 
 
@@ -209,11 +211,61 @@ class ContextAggregator:
     # ── private pipeline stages ───────────────────────────────────────────────
 
     def _assemble_payload(self, ticker: str) -> Dict:
+        # Fetch target + peers as objects first so the cross-sectional data-quality
+        # auditor can see the whole cohort, then serialise the (now-annotated)
+        # objects. A fetch failure yields (None, error_node) and is excluded from
+        # the audit but still rendered in its slot.
+        target_obj, target_err = self._fetch_company_obj(ticker)
+        peer_pairs = [self._fetch_company_obj(p) for p in self._competitors.get(ticker, [])]
+
+        cohort = [c for c in [target_obj, *(o for o, _ in peer_pairs)] if c is not None]
+        quality_summary = audit_peer_set(cohort) if cohort else {}
+
+        target_node = _to_dict(target_obj) if target_obj is not None else target_err
+        peer_nodes = [
+            _to_dict(obj) if obj is not None else err for obj, err in peer_pairs
+        ]
+
         return {
-            "meta":        self._build_meta(ticker),
-            "target":      self._fetch_target(ticker),
-            "peers":       self._fetch_peers(ticker),
-            "alt_signals": self._fetch_alt_signals(ticker),
+            "meta":         self._build_meta(ticker),
+            "target":       target_node,
+            "peers":        peer_nodes,
+            "alt_signals":  self._fetch_alt_signals(ticker),
+            "data_quality": self._build_data_quality(quality_summary),
+        }
+
+    def _fetch_company_obj(self, ticker: str):
+        """Fetch one company's financials as an object, or (None, error_node)."""
+        try:
+            return self._get_company_financials_cached(ticker), None
+        except Exception as exc:
+            logger.error("Financials failed for %s: %s", ticker, exc)
+            return None, _error_node(ticker, exc)
+
+    def _build_data_quality(self, summary: Dict[str, List[str]]) -> Dict:
+        """
+        Machine-readable summary of every coherence flag raised over the cohort,
+        plus a directive instructing the memo writer how to treat flagged figures.
+        The writer is told to treat the payload as ground truth, so the guardrail
+        must travel *with* the data — flags here are honored by SKILL.md rigor rules.
+        """
+        return {
+            "flagged_comparables": summary,
+            "has_flags": bool(summary),
+            "directive": (
+                "Each flag marks a figure that failed an automated coherence check. "
+                "Do NOT present a flagged comparable's affected ratio as fact: exclude "
+                "it from any peer median or 'cheap/expensive vs peers' argument, and "
+                "either omit it or footnote it as suspect with the stated reason. "
+                "'currency_mismatch' — the issuer reports in a currency other than its "
+                "trading currency (e.g. an ADR); the yfinance ratio is not certifiable, "
+                "so source that comp's multiples externally per the peer-comp rigor "
+                "rule. 'peer_outlier'/'implausible' — verify against the primary filing "
+                "before citing; it may be real-but-extreme or a data artifact."
+            ) if summary else (
+                "No data-quality flags were raised for this cohort; comparables passed "
+                "the currency-coherence and cross-sectional plausibility checks."
+            ),
         }
 
     def _build_meta(self, ticker: str) -> Dict:
@@ -230,24 +282,6 @@ class ContextAggregator:
         if ticker not in self._fin_cache:
             self._fin_cache[ticker] = self._fin.get_company_financials(ticker)
         return self._fin_cache[ticker]
-
-    def _fetch_target(self, ticker: str) -> Dict:
-        try:
-            return _to_dict(self._get_company_financials_cached(ticker))
-        except Exception as exc:
-            logger.error("Target financials failed for %s: %s", ticker, exc)
-            return _error_node(ticker, exc)
-
-    def _fetch_peers(self, ticker: str) -> List[Dict]:
-        peers = self._competitors.get(ticker, [])
-        results: List[Dict] = []
-        for peer in peers:
-            try:
-                results.append(_to_dict(self._fin.get_company_financials(peer)))
-            except Exception as exc:
-                logger.error("Peer financials failed for %s: %s", peer, exc)
-                results.append(_error_node(peer, exc))
-        return results
 
     def _fetch_alt_signals(self, ticker: str) -> Dict:
         return {

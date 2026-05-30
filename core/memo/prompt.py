@@ -74,6 +74,31 @@ itself, not throat-clearing.
 restating them verbatim: the recommendation in §6 should follow from the thesis \
 in §1, the operations in §2, the signals in §3, opinion in §4, and the risks in §5.
 
+## Data quality & confidence calibration (non-negotiable)
+
+The payload self-reports the trustworthiness of its own numbers. Honor it — a \
+figure being present is not the same as it being certified.
+
+- Honor `data_quality.flagged_comparables`. Any comparable listed there has a \
+ratio that failed an automated coherence check, and you must NOT present that \
+ratio as fact. A `currency_mismatch` flag means the issuer reports in a currency \
+other than the one it trades in (typical of ADRs such as TSMC), so the yfinance \
+multiple is not certifiable — exclude it from every "cheap/expensive vs. peers" \
+comparison and either omit that peer's affected ratio or source the multiple \
+externally and label it as such. A `peer_outlier`/`implausible` flag means verify \
+against the primary filing before citing. When you compute a peer median or \
+average, drop flagged values first; a comp the payload flags as N/M is a coverage \
+gap to fill, never a real "low multiple."
+- Calibrate confidence to the data. Sentiment carries a per-source `signal_count` \
+(matched sentiment words, not message volume) and `confidence`, plus an overall \
+`confidence`. A source with `confidence: "low"` or `signal_count` < 3 may be \
+mentioned as a soft, sample-limited read but must NEVER anchor a thesis, a risk \
+pillar, or a recommendation. Do not call a low-signal reading "the most \
+significant data point" or build a forward-demand argument on it. A score near the \
+extremes (±1.0) on a low signal count is noise, not conviction — say so. Match the \
+strength of your language to the strength of the evidence: hedge thin data, commit \
+only where the signal is deep.
+
 ## Section-specific emphasis
 
 - §1 — a single crisp thesis sentence, then the valuation snapshot (multiples vs. \
@@ -84,15 +109,18 @@ go-to-market, cost structure, and where operating leverage sits.
 imply for the forward numbers. This is the longest, most analytically \
 differentiated section.
 - §4 — consumer and public opinion: use `alt_signals.consumer_sentiment`, which \
-blends three public sources (Stocktwits investor stream with native Bull/Bear \
-labels, HackerNews tech/B2B discussion, and Reddit investing subreddits). Cover \
-the blended sentiment label and score, total message volume, and top recurring \
-themes. Use the `sources` breakdown to weigh credibility — note when the signal \
-leans on one source, and treat Stocktwits' label-based score as the most \
-reliable. Flag low samples (post_count < 5) as limited. If an `error` is present \
-(e.g. all sources empty, or Reddit 403), note the data gap instead of omitting \
-the section. Contextualise sentiment against the business model (B2C platform \
-vs. B2B SaaS vs. facilities conglomerate).
+blends several public sources (Stocktwits investor stream with native Bull/Bear \
+labels, the news wires, HackerNews tech/B2B discussion, with Reddit as a thin-\
+coverage fallback). Lead with the blended label, score, and overall `confidence`. \
+Then give the per-source breakdown using `signal_count` and `confidence`, not raw \
+`message_count`, to weigh each source — a high message count with a low \
+`signal_count` is a thin read, and an extreme per-source score (±1.0) on a low \
+signal count is noise to be discounted, not a headline. Treat Stocktwits' \
+label-based score as the most reliable when its `signal_count` is non-trivial. If \
+the overall `confidence` is "low", say the section is directional only. If an \
+`error` is present (all sources empty, or Reddit 403), note the data gap instead \
+of omitting the section. Contextualise sentiment against the business model (B2C \
+platform vs. B2B SaaS vs. facilities conglomerate).
 - §5 — concrete, ranked risks and structural barriers, each tied to its impact \
 on the thesis or the numbers.
 - §6 — a clear recommendation (direction + conviction) that falls out of §§1–5, \

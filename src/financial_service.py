@@ -14,10 +14,11 @@ Architecture (Clean Architecture + SOLID):
 from __future__ import annotations
 
 import logging
+import statistics
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 import yfinance as yf
@@ -59,6 +60,10 @@ class CompanyFinancials:
     yoy_revenue_growth_pct: Optional[float] # e.g. 12.5 means +12.5 %
     ev_revenue: Union[float, str]           # Calculated EV/Revenue or "N/M"
     ev_ebitda: Union[float, str]            # Calculated EV/EBITDA or "N/M"
+    # ── Data-provenance & quality (additive; default-safe for existing callers) ──
+    currency: Optional[str] = None          # Trading currency of price/market cap (e.g. "USD")
+    financial_currency: Optional[str] = None  # Reporting currency of the statements (e.g. "TWD")
+    quality_flags: List[str] = field(default_factory=list)  # Coherence-check annotations
 
 
 @dataclass
@@ -157,6 +162,29 @@ class FinancialDataTransformer:
         forward_pe           = self._safe_float(raw_info.get("forwardPE"), positive_only=True)
         yoy_growth_pct       = self._growth_to_pct(raw_info.get("revenueGrowth"))
 
+        currency           = self._norm_ccy(raw_info.get("currency"))
+        financial_currency = self._norm_ccy(raw_info.get("financialCurrency"))
+
+        ev_revenue = self._ratio(ev_mm, revenue_mm, require_positive_denom=False)
+        ev_ebitda  = self._ratio(ev_mm, ebitda_mm, require_positive_denom=True)
+
+        # Currency-coherence gate. Market-based figures (market cap, enterprise
+        # value) are denominated in the *trading* currency; statement-based figures
+        # (revenue, EBITDA) in the *reporting* currency (`financialCurrency`). For a
+        # US-listed ADR that reports in a local currency — e.g. TSMC: USD price vs.
+        # TWD statements — dividing one by the other yields a ratio that is wrong by
+        # the FX factor (TSM printed EV/EBITDA 3.1x against a true ~14x). yfinance's
+        # own enterpriseValue can itself be field-mixed for ADRs, so an FX conversion
+        # would substitute a different wrong number that *looks* plausible — worse
+        # than a visible gap. The institutionally-correct response is to refuse to
+        # certify the cross-currency ratio: mark it N/M with a structured reason and
+        # let the memo writer source the comp externally (peer-comp rigor rule).
+        flags: List[str] = []
+        if currency and financial_currency and currency != financial_currency:
+            flags.append(f"currency_mismatch:{financial_currency}!={currency}")
+            ev_revenue = NM
+            ev_ebitda  = NM
+
         return CompanyFinancials(
             ticker=ticker,
             name=name,
@@ -166,11 +194,22 @@ class FinancialDataTransformer:
             trailing_ebitda_mm=ebitda_mm,
             forward_pe=forward_pe,
             yoy_revenue_growth_pct=yoy_growth_pct,
-            ev_revenue=self._ratio(ev_mm, revenue_mm, require_positive_denom=False),
-            ev_ebitda=self._ratio(ev_mm, ebitda_mm, require_positive_denom=True),
+            ev_revenue=ev_revenue,
+            ev_ebitda=ev_ebitda,
+            currency=currency,
+            financial_currency=financial_currency,
+            quality_flags=flags,
         )
 
     # ── private helpers ───────────────────────────────────────────────────────
+
+    @staticmethod
+    def _norm_ccy(value: Optional[object]) -> Optional[str]:
+        """Normalise a currency code to an upper-case string, or None if absent."""
+        if not value:
+            return None
+        code = str(value).strip().upper()
+        return code or None
 
     @staticmethod
     def _to_mm(value: Optional[object]) -> Optional[float]:
@@ -224,6 +263,83 @@ class FinancialDataTransformer:
         if require_positive_denom and denominator <= 0:
             return NM
         return round(numerator / denominator, 2)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Cross-sectional data-quality auditor (pure, sector-agnostic)
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Universal sanity bounds. A going-concern equity outside these is almost always a
+# parse/units error, not a real multiple — independent of sector. These catch gross
+# anomalies that survive into a same-currency cohort.
+_RATIO_BOUNDS: Dict[str, Tuple[float, float]] = {
+    "ev_revenue": (0.05, 100.0),
+    "ev_ebitda":  (0.50, 400.0),
+    "forward_pe": (0.50, 500.0),
+}
+
+# A finite ratio this many times above/below the cohort median is treated as a
+# cross-sectional outlier and flagged for analyst verification. Set wide enough that
+# genuinely-extreme-but-real multiples (a cyclical's depressed-EBITDA 100x EV/EBITDA)
+# are not falsely condemned, but a ~5x currency/parse artifact is.
+_OUTLIER_FACTOR: float = 4.0
+_MIN_COHORT_FOR_MEDIAN: int = 3
+
+
+def _finite(value: Union[float, str, None]) -> Optional[float]:
+    """Return the value if it is a usable positive number, else None (NM/None/≤0)."""
+    if isinstance(value, bool):           # guard: bool is a subclass of int
+        return None
+    if isinstance(value, (int, float)) and value > 0:
+        return float(value)
+    return None
+
+
+def _add_flag(company: "CompanyFinancials", flag: str) -> None:
+    if flag not in company.quality_flags:
+        company.quality_flags.append(flag)
+
+
+def audit_peer_set(companies: List["CompanyFinancials"]) -> Dict[str, List[str]]:
+    """
+    Plausibility-audit a target+peers cohort and annotate each company in place.
+
+    Two sector-agnostic checks per ratio (EV/Revenue, EV/EBITDA, forward P/E):
+      1. Absolute bounds — values outside `_RATIO_BOUNDS` are structurally
+         implausible for any equity → `implausible:<field>=…`.
+      2. Cross-sectional outlier — values more than `_OUTLIER_FACTOR`× away from the
+         cohort median → `peer_outlier:<field>=…`.
+
+    Relies only on the dispersion of the cohort and universal sanity bounds, so it
+    catches misparsed or mis-currencied figures in *any* sector with no per-sector
+    config. It is the safety net behind the per-company currency-coherence gate:
+    a cross-currency ratio is already N/M'd (and excluded from the median) by the
+    transformer, while a same-currency parse error is caught here.
+
+    Returns a {ticker: [flags]} summary for the data-quality payload node.
+    """
+    for field_name, (lo, hi) in _RATIO_BOUNDS.items():
+        pairs = [(c, _finite(getattr(c, field_name))) for c in companies]
+        finite_vals = [v for _, v in pairs if v is not None]
+        median = (
+            statistics.median(finite_vals)
+            if len(finite_vals) >= _MIN_COHORT_FOR_MEDIAN
+            else None
+        )
+        for company, value in pairs:
+            if value is None:
+                continue
+            if value < lo or value > hi:
+                _add_flag(company, f"implausible:{field_name}={value} (sane range {lo}-{hi})")
+            elif median and median > 0:
+                deviation = value / median
+                if deviation > _OUTLIER_FACTOR or deviation < 1.0 / _OUTLIER_FACTOR:
+                    _add_flag(
+                        company,
+                        f"peer_outlier:{field_name}={value} (cohort median ~{round(median, 1)})",
+                    )
+
+    return {c.ticker: list(c.quality_flags) for c in companies if c.quality_flags}
 
 
 # ──────────────────────────────────────────────────────────────────────────────

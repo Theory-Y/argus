@@ -218,9 +218,11 @@ class SourceSentiment:
     source:          str              # "stocktwits", "hackernews", "reddit"
     available:       bool             # True if the source returned any messages
     message_count:   int              # messages/posts that fed the score
-    sentiment_score: Optional[float]  # -1.0 … 1.0 for this source alone
+    sentiment_score: Optional[float]  # -1.0 … 1.0 for this source alone (smoothed)
     weight:          float            # contribution weight in the blend (0 if unused)
     error:           Optional[str] = None
+    signal_count:    int   = 0        # matched sentiment words (drives weight + confidence)
+    confidence:      str   = "low"    # "low" | "medium" | "high" — from signal_count
 
 
 @dataclass
@@ -243,6 +245,10 @@ class ConsumerSentimentSignal:
     sources:         List[SourceSentiment] = field(default_factory=list)
     top_quotes:      List[Dict[str, str]] = field(default_factory=list)  # [{"source": ..., "text": ...}]
     error:           Optional[str] = None
+    # Overall confidence in the blended score, from the total matched signal and the
+    # number of sources that actually contributed. The blend can be "positive" yet
+    # "low" confidence — the writer must hedge accordingly rather than assert it.
+    confidence:      Optional[str] = None  # "low" | "medium" | "high" | None
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -1026,9 +1032,24 @@ _SOURCE_WEIGHTS: Dict[str, float] = {
     "reddit":        0.70,
     "hackernews":    0.60,
 }
-# Message count at which a source reaches its full credibility weight. Fewer
-# messages scale the weight down linearly so thin samples can't dominate.
-_FULL_WEIGHT_AT: int = 10
+# Additive (Laplace-style) smoothing constant applied to every lexicon/label
+# score: score = (pos - neg) / (pos + neg + K). It pulls thin samples toward
+# neutral so a single matched word can no longer saturate the score to ±1.0 (a
+# lone negative word yields ≈ -0.2, not -1.0). Saturation now requires real signal
+# volume. This is the fix for the "HackerNews -1.0 / Bing +1.0 from n≈1 signal"
+# artifact: confidence in the number must be *earned* by matched evidence.
+_SENTIMENT_SMOOTHING_K: int = 4
+
+# Number of *matched sentiment words* (NOT raw messages) at which a source reaches
+# its full credibility weight. Sentiment words are far rarer than messages, so the
+# matched-signal count — not message_count — is the honest measure of how much a
+# source actually contributed. A source with 25 messages but 1 lexicon hit is a
+# 1-signal source and is weighted as such.
+_FULL_SIGNAL_AT: int = 8
+# Matched-signal thresholds for the per-source confidence label.
+_CONF_MEDIUM_AT: int = 3
+_CONF_HIGH_AT:   int = 8
+
 # If the primary sources (StockTwits + the news wires + HackerNews) return fewer
 # messages than this threshold, also query Reddit as a fallback.
 _REDDIT_FALLBACK_THRESHOLD: int = 10
@@ -1050,10 +1071,37 @@ _WEB_NOISE = frozenset({
 })
 
 
-def _score_texts(texts: List[str]) -> Tuple[Optional[float], Dict[str, int]]:
+def _smoothed_score(pos: int, neg: int) -> Optional[float]:
+    """
+    Additive-smoothed polarity in [-1, 1], or None when no sentiment word matched.
+
+    score = (pos - neg) / (pos + neg + K). The +K pseudo-count shrinks thin samples
+    toward neutral so a single matched word cannot saturate the score; the magnitude
+    only approaches ±1.0 as matched-word volume grows.
+    """
+    signal = pos + neg
+    if signal == 0:
+        return None
+    return round((pos - neg) / (signal + _SENTIMENT_SMOOTHING_K), 2)
+
+
+def _confidence_from_signal(signal_count: int) -> str:
+    """Map matched-sentiment-word count → confidence label (low/medium/high)."""
+    if signal_count >= _CONF_HIGH_AT:
+        return "high"
+    if signal_count >= _CONF_MEDIUM_AT:
+        return "medium"
+    return "low"
+
+
+def _score_texts(texts: List[str]) -> Tuple[Optional[float], Dict[str, int], int]:
     """
     Lexicon-score a list of short texts (post titles, message bodies).
-    Returns (sentiment_score in [-1, 1] or None, token-frequency map for themes).
+
+    Returns (smoothed sentiment_score in [-1, 1] or None, token-frequency map for
+    themes, signal_count) — where signal_count is the number of matched
+    positive/negative lexicon words. signal_count, not len(texts), is the true
+    measure of how much sentiment evidence the sample carried.
     """
     pos = neg = 0
     word_freq: Dict[str, int] = {}
@@ -1068,9 +1116,7 @@ def _score_texts(texts: List[str]) -> Tuple[Optional[float], Dict[str, int]]:
                 neg += 1
             if tok not in _STOPWORDS and len(tok) > 3:
                 word_freq[tok] = word_freq.get(tok, 0) + 1
-    total = pos + neg
-    score = round((pos - neg) / total, 2) if total > 0 else None
-    return score, word_freq
+    return _smoothed_score(pos, neg), word_freq, pos + neg
 
 
 def _pick_quotes(
@@ -1137,6 +1183,7 @@ class _RawSourceResult:
     native_score:  Optional[float] = None  # explicit-label score (Stocktwits); else None
     error:         Optional[str]   = None
     quotes:        List[str]       = field(default_factory=list)  # representative excerpts
+    signal_count:  int = 0              # native-label count for native sources (else 0)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -1180,13 +1227,17 @@ class StocktwitsSentimentFetcher:
             elif basic == "Bearish":
                 bear += 1
 
+        # Smooth the native Bull/Bear score the same way as the lexicon sources so a
+        # handful of labels can't saturate it, and carry the labeled count as the
+        # source's signal so the blend weights it by real evidence, not raw volume.
         labeled = bull + bear
-        native = round((bull - bear) / labeled, 2) if labeled > 0 else None
+        native = _smoothed_score(bull, bear)
         return _RawSourceResult(
             source="stocktwits",
             texts=texts,
             message_count=len(messages),
             native_score=native,
+            signal_count=labeled,
             quotes=_pick_quotes(texts, n=3),
         )
 
@@ -1475,20 +1526,26 @@ class MultiSourceSentimentAggregator:
         total_messages = 0
 
         for raw in raws:
-            score = raw.native_score
-            if score is None:
-                score, freq = _score_texts(raw.texts)
+            # Effective signal = matched sentiment evidence, NOT raw message count.
+            # For native (Stocktwits) sources it is the labeled count; for lexicon
+            # sources it is the matched-word count. This is what gates credibility:
+            # a 25-message source with one lexicon hit is a 1-signal source.
+            if raw.native_score is not None:
+                score = raw.native_score
+                eff_signal = raw.signal_count if raw.signal_count > 0 else raw.message_count
+                _, freq, _ = _score_texts(raw.texts)  # still pool themes from text
             else:
-                _, freq = _score_texts(raw.texts)  # still pool themes from text
+                score, freq, eff_signal = _score_texts(raw.texts)
 
             for tok, n in freq.items():
                 pooled_freq[tok] = pooled_freq.get(tok, 0) + n
             total_messages += raw.message_count
 
-            # Sample-scaled credibility weight; only counts if we have a score.
+            # Credibility weight scaled by matched signal, so thin samples can't
+            # dominate even if they returned many (low-signal) messages.
             weight = 0.0
-            if score is not None and raw.message_count > 0:
-                sample_factor = min(raw.message_count, _FULL_WEIGHT_AT) / _FULL_WEIGHT_AT
+            if score is not None and eff_signal > 0:
+                sample_factor = min(eff_signal, _FULL_SIGNAL_AT) / _FULL_SIGNAL_AT
                 weight = _SOURCE_WEIGHTS.get(raw.source, 0.5) * sample_factor
                 weighted_sum += score * weight
                 weight_total += weight
@@ -1500,13 +1557,28 @@ class MultiSourceSentimentAggregator:
                 sentiment_score=score,
                 weight=round(weight, 3),
                 error=raw.error,
+                signal_count=eff_signal,
+                confidence=_confidence_from_signal(eff_signal),
             ))
 
-        blended: Optional[float] = None
-        label:   Optional[str]   = None
+        blended:    Optional[float] = None
+        label:      Optional[str]   = None
+        confidence: Optional[str]   = None
         if weight_total > 0:
             blended = round(weighted_sum / weight_total, 2)
             label = "positive" if blended > 0.2 else "negative" if blended < -0.2 else "mixed"
+            # Overall confidence: total matched signal across contributing sources,
+            # tempered by how many cleared at least the medium bar. A blend resting on
+            # a single low-signal source stays "low" even if its score is extreme.
+            contributing = [s for s in sources if s.weight > 0]
+            total_signal = sum(s.signal_count for s in contributing)
+            med_plus = sum(1 for s in contributing if s.confidence in ("medium", "high"))
+            if total_signal >= _CONF_HIGH_AT and med_plus >= 2:
+                confidence = "high"
+            elif total_signal >= _CONF_MEDIUM_AT and med_plus >= 1:
+                confidence = "medium"
+            else:
+                confidence = "low"
 
         # Pooled top-5 themes, excluding the ticker/company name tokens.
         name_tokens = set(re.findall(r"[a-z]{3,}", company_name.lower()))
@@ -1544,6 +1616,7 @@ class MultiSourceSentimentAggregator:
             sources=sources,
             top_quotes=all_quotes,
             error=error,
+            confidence=confidence,
         )
 
 

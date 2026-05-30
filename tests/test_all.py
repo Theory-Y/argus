@@ -23,6 +23,7 @@ from financial_service import (
     FinancialService,
     NM,
     SECTOR_TICKERS,
+    audit_peer_set,
 )
 
 
@@ -95,6 +96,94 @@ class TestFinancialDataTransformer(unittest.TestCase):
         raw = {"revenueGrowth": 0.15}
         r = self.tx.transform("X", raw)
         self.assertAlmostEqual(r.yoy_revenue_growth_pct, 15.0)
+
+    def test_currency_mismatch_suppresses_ratios(self):
+        # An ADR-style payload: USD trading currency, TWD reporting currency. The raw
+        # ratios mix units, so the gate must N/M them and record the reason — never
+        # emit a wrong-by-FX number (the TSMC 2.1x / 3.1x defect).
+        raw = {
+            "currency": "USD",
+            "financialCurrency": "TWD",
+            "enterpriseValue": 9_000_000_000_000,
+            "totalRevenue": 4_100_000_000_000,
+            "ebitda": 2_900_000_000_000,
+        }
+        r = self.tx.transform("TSM", raw)
+        self.assertEqual(r.ev_revenue, NM)
+        self.assertEqual(r.ev_ebitda, NM)
+        self.assertEqual(r.currency, "USD")
+        self.assertEqual(r.financial_currency, "TWD")
+        self.assertTrue(any(f.startswith("currency_mismatch") for f in r.quality_flags))
+
+    def test_matching_currency_keeps_ratios(self):
+        raw = {
+            "currency": "USD",
+            "financialCurrency": "USD",
+            "enterpriseValue": 9_500_000_000,
+            "totalRevenue": 1_000_000_000,
+            "ebitda": 100_000_000,
+        }
+        r = self.tx.transform("PCOR", raw)
+        self.assertEqual(r.ev_revenue, 9.5)
+        self.assertEqual(r.ev_ebitda, 95.0)
+        self.assertEqual(r.quality_flags, [])
+
+
+class TestAuditPeerSet(unittest.TestCase):
+    """Cross-sectional plausibility audit — sector-agnostic outlier/bounds checks."""
+
+    def _co(self, ticker, ev_rev, ev_ebitda, fwd_pe=20.0):
+        return CompanyFinancials(
+            ticker=ticker, name=ticker, market_cap_mm=1000.0,
+            enterprise_value_mm=1000.0, trailing_revenue_mm=100.0,
+            trailing_ebitda_mm=50.0, forward_pe=fwd_pe,
+            yoy_revenue_growth_pct=10.0, ev_revenue=ev_rev, ev_ebitda=ev_ebitda,
+        )
+
+    def test_flags_cross_sectional_outlier(self):
+        # Three peers near ~25x EV/Revenue, one wildly low (a parse/currency artifact
+        # that slipped through as a same-currency number) → flagged.
+        cohort = [
+            self._co("A", 22.0, 30.0),
+            self._co("B", 28.0, 26.0),
+            self._co("C", 25.0, 28.0),
+            self._co("BAD", 2.1, 3.1),
+        ]
+        summary = audit_peer_set(cohort)
+        self.assertIn("BAD", summary)
+        self.assertTrue(any("peer_outlier" in f for f in summary["BAD"]))
+        # Coherent peers are not flagged.
+        self.assertNotIn("A", summary)
+
+    def test_real_but_extreme_value_within_factor_not_flagged(self):
+        # A genuinely high EV/EBITDA (depressed-EBITDA cyclical) that stays within the
+        # outlier factor of the cohort median must NOT be condemned as an artifact.
+        cohort = [
+            self._co("N", ev_rev=20.0, ev_ebitda=31.0),
+            self._co("V", ev_rev=30.0, ev_ebitda=55.0),
+            self._co("M", ev_rev=18.0, ev_ebitda=40.0),
+            self._co("A", ev_rev=22.0, ev_ebitda=112.0),  # high but < 4x median
+        ]
+        summary = audit_peer_set(cohort)
+        self.assertNotIn("A", summary)
+
+    def test_flags_absolute_implausible_bound(self):
+        cohort = [self._co("X", ev_rev=5000.0, ev_ebitda=20.0)]  # EV/Rev 5000x impossible
+        summary = audit_peer_set(cohort)
+        self.assertIn("X", summary)
+        self.assertTrue(any("implausible" in f for f in summary["X"]))
+
+    def test_nm_ratios_excluded_from_median(self):
+        # A currency-suppressed peer (NM) must not poison the median or be flagged on
+        # ratios it doesn't have.
+        cohort = [
+            self._co("A", 22.0, 30.0),
+            self._co("B", 28.0, 26.0),
+            self._co("C", 25.0, 28.0),
+            self._co("TSM", NM, NM),
+        ]
+        summary = audit_peer_set(cohort)
+        self.assertNotIn("TSM", summary)
 
 
 class TestFinancialService(unittest.TestCase):
@@ -325,19 +414,37 @@ class TestNormalizeCompanyName(unittest.TestCase):
 class TestScoreTexts(unittest.TestCase):
 
     def test_positive_dominates(self):
-        score, freq = _score_texts(["strong growth and a solid beat", "bullish momentum"])
+        score, freq, signal = _score_texts(["strong growth and a solid beat", "bullish momentum"])
         self.assertIsNotNone(score)
         self.assertGreater(score, 0)
         self.assertIn("growth", freq)
+        self.assertEqual(signal, 6)  # strong, growth, solid, beat, bullish, momentum
 
     def test_no_lexicon_hits_returns_none(self):
-        score, _ = _score_texts(["the quick brown fox jumps"])
+        score, _, signal = _score_texts(["the quick brown fox jumps"])
         self.assertIsNone(score)
+        self.assertEqual(signal, 0)
 
     def test_empty_input(self):
-        score, freq = _score_texts([])
+        score, freq, signal = _score_texts([])
         self.assertIsNone(score)
         self.assertEqual(freq, {})
+        self.assertEqual(signal, 0)
+
+    def test_thin_sample_shrinks_toward_neutral(self):
+        # One negative word among 25 otherwise-neutral texts must NOT saturate to
+        # -1.0 (the HackerNews artifact). With smoothing K=4 it lands near -0.2.
+        texts = ["the company posted a loss"] + ["neutral filler text here"] * 24
+        score, _, signal = _score_texts(texts)
+        self.assertEqual(signal, 1)
+        self.assertAlmostEqual(score, round(-1 / (1 + 4), 2))   # -0.2
+        self.assertGreater(score, -0.5)                         # nowhere near -1.0
+
+    def test_deep_signal_can_approach_extreme(self):
+        # Confidence is earned: many matched words let the score grow in magnitude.
+        score, _, signal = _score_texts(["loss miss weak"] * 20)
+        self.assertEqual(signal, 60)
+        self.assertLess(score, -0.9)
 
 
 class _FakeSource:
@@ -416,6 +523,25 @@ class TestMultiSourceSentimentAggregator(unittest.TestCase):
         self.assertIsNone(sig.sentiment)
         self.assertIsNotNone(sig.error)
 
+    def test_thin_signal_source_gets_low_weight_and_confidence(self):
+        # 25 HackerNews messages but only one negative lexicon word: must be marked
+        # low confidence with a near-zero weight, so it cannot dominate or anchor the
+        # blend the way the raw -1.0 / n=25 reading did.
+        hn_texts = ["the company posted a loss"] + ["neutral filler text here"] * 24
+        agg = self._agg(
+            st=_RawSourceResult("stocktwits", ["great strong buy beat win"], 30,
+                                native_score=0.6, signal_count=20),
+            hn=_RawSourceResult("hackernews", hn_texts, 25),
+        )
+        sig = agg.get_signal("NVDA", "NVIDIA")
+        hn = next(s for s in sig.sources if s.source == "hackernews")
+        self.assertEqual(hn.signal_count, 1)
+        self.assertEqual(hn.confidence, "low")
+        self.assertGreater(hn.sentiment_score, -0.5)   # smoothed, not -1.0
+        st = next(s for s in sig.sources if s.source == "stocktwits")
+        self.assertGreater(st.weight, hn.weight * 3)   # deep source dominates thin one
+        self.assertEqual(sig.sentiment, "positive")    # not dragged down by the 1-word HN
+
     def test_quotes_pooled_across_sources(self):
         agg = self._agg(
             st=_RawSourceResult(
@@ -490,7 +616,7 @@ class TestContextAggregatorHelpers(unittest.TestCase):
         agg = ContextAggregator(financial_service=mock_fin, alt_data_service=mock_alt)
         meta = agg._build_meta("PCOR")
         self.assertEqual(meta["target_ticker"], "PCOR")
-        self.assertEqual(meta["schema_version"], "1.5")
+        self.assertEqual(meta["schema_version"], "1.6")
         self.assertIn("generated_at_utc", meta)
 
     def test_build_minified_context_is_valid_json(self):
