@@ -12,6 +12,12 @@ Sources:
          • Yahoo Finance   — RSS news headlines; factual demand/earnings signal
          • HackerNews      — tech / B2B discussion via the Algolia search API
          • Reddit          — investing subreddits, public JSON (fallback only)
+  6. Massive / Polygon API (requests, MASSIVE_API_KEY) — two signals:
+         • MassiveNewsFetcher      — recent news with machine-written per-ticker
+                                     sentiment labels and reasoning text (replaces
+                                     raw RSS lexicon scoring as the primary news signal)
+         • MassivePriceFetcher     — 365 days of OHLCV bars for 52-week high/low,
+                                     1-year return, and 30-day momentum
 
 Architecture (Clean Architecture + SOLID):
   Each data source has a dedicated Fetcher (I/O) and Processor (pure logic).
@@ -54,6 +60,11 @@ logger = logging.getLogger(__name__)
 # FRED API key — free registration at https://fred.stlouisfed.org/docs/api/api_key.html
 FRED_API_KEY: str = os.getenv("FRED_API_KEY", "YOUR_FRED_API_KEY_HERE")
 FRED_BASE_URL: str = "https://api.stlouisfed.org/fred/series/observations"
+
+# Massive / Polygon API key — set MASSIVE_API_KEY in .env to activate price metrics
+# and structured-news signals. Without it both nodes are marked unavailable.
+MASSIVE_API_KEY: str = os.getenv("MASSIVE_API_KEY", "")
+_MASSIVE_BASE_URL: str = "https://api.polygon.io"
 
 # SEC EDGAR requires a descriptive User-Agent (app name + contact email).
 # See SEC Fair Access policy: https://www.sec.gov/developer
@@ -1621,6 +1632,213 @@ class MultiSourceSentimentAggregator:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Massive / Polygon — structured news sentiment + 52-week price metrics
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+@dataclass
+class MassiveNewsArticle:
+    """Single news article with machine-written per-ticker sentiment from Polygon."""
+    title:                str
+    published_utc:        str
+    publisher:            str
+    description:          Optional[str]
+    sentiment:            Optional[str]           # "positive" | "neutral" | "negative"
+    sentiment_reasoning:  Optional[str]           # analyst-quality prose from Polygon
+
+
+@dataclass
+class MassiveNewsSignal:
+    """Recent news for one ticker with pre-computed sentiment from Polygon news API."""
+    ticker:            str
+    article_count:     int
+    articles:          List[MassiveNewsArticle]
+    blended_sentiment: Optional[str]              # majority vote across articles
+    error:             Optional[str] = None
+
+
+@dataclass
+class MassivePriceMetrics:
+    """52-week price performance computed from Polygon OHLCV bars."""
+    ticker:          str
+    current_price:   Optional[float]
+    high_52w:        Optional[float]
+    low_52w:         Optional[float]
+    return_1y_pct:   Optional[float]              # % change over trailing 52 weeks
+    return_30d_pct:  Optional[float]              # % change over trailing ~22 trading days
+    bars_used:       int = 0
+    error:           Optional[str] = None
+
+
+class MassiveNewsFetcher:
+    """
+    Infrastructure: fetches recent news articles for a ticker from the Polygon
+    news API, extracting the per-ticker sentiment label and reasoning for each article.
+
+    Polygon's `/v2/reference/news` returns an `insights` array per article where
+    each element carries an explicit sentiment label and machine-written reasoning
+    sentence for every ticker mentioned. This is substantially higher signal than
+    lexicon-scored RSS headlines: the reasoning explains *why* sentiment was assigned,
+    giving the memo writer concrete, citable analyst perspectives.
+    """
+
+    _NEWS_LIMIT: int = 10
+
+    def __init__(self, api_key: str = MASSIVE_API_KEY) -> None:
+        self._api_key = api_key
+        self._session = requests.Session()
+        if api_key:
+            self._session.headers.update({"Authorization": f"Bearer {api_key}"})
+
+    @property
+    def is_configured(self) -> bool:
+        return bool(self._api_key)
+
+    def fetch(self, ticker: str) -> MassiveNewsSignal:
+        if not self.is_configured:
+            return MassiveNewsSignal(
+                ticker=ticker, article_count=0, articles=[],
+                blended_sentiment=None, error="MASSIVE_API_KEY not configured",
+            )
+        ticker_up = ticker.upper()
+        try:
+            resp = self._session.get(
+                f"{_MASSIVE_BASE_URL}/v2/reference/news",
+                params={"ticker": ticker_up, "limit": self._NEWS_LIMIT,
+                        "order": "desc", "sort": "published_utc"},
+                timeout=_HTTP_TIMEOUT,
+            )
+            resp.raise_for_status()
+            results = resp.json().get("results", [])
+        except requests.RequestException as exc:
+            logger.error("Massive news fetch failed for %s: %s", ticker, exc)
+            return MassiveNewsSignal(
+                ticker=ticker, article_count=0, articles=[],
+                blended_sentiment=None, error=str(exc),
+            )
+
+        articles: List[MassiveNewsArticle] = []
+        for item in results:
+            insight = next(
+                (i for i in (item.get("insights") or []) if i.get("ticker") == ticker_up),
+                None,
+            )
+            articles.append(MassiveNewsArticle(
+                title=item.get("title", ""),
+                published_utc=item.get("published_utc", ""),
+                publisher=(item.get("publisher") or {}).get("name", ""),
+                description=item.get("description"),
+                sentiment=insight.get("sentiment") if insight else None,
+                sentiment_reasoning=insight.get("sentiment_reasoning") if insight else None,
+            ))
+
+        return MassiveNewsSignal(
+            ticker=ticker,
+            article_count=len(articles),
+            articles=articles,
+            blended_sentiment=self._majority_sentiment(articles),
+        )
+
+    @staticmethod
+    def _majority_sentiment(articles: List[MassiveNewsArticle]) -> Optional[str]:
+        counts: Dict[str, int] = {}
+        for a in articles:
+            if a.sentiment:
+                counts[a.sentiment] = counts.get(a.sentiment, 0) + 1
+        if not counts:
+            return None
+        return max(counts, key=lambda k: counts[k])
+
+
+class MassivePriceFetcher:
+    """
+    Infrastructure: fetches one year of daily OHLCV bars from the Polygon aggregates
+    API and derives the four price-performance metrics the memo uses most:
+      • current_price   — latest adjusted close
+      • high_52w        — highest intraday high over the trailing 52 weeks
+      • low_52w         — lowest intraday low over the trailing 52 weeks
+      • return_1y_pct   — total price return from the first bar to the latest bar
+      • return_30d_pct  — price return over the last ~22 trading days (≈ 1 calendar month)
+
+    These are standard valuation-snapshot anchors that the existing yfinance pipeline
+    does not expose in the context payload.
+    """
+
+    _LOOKBACK_DAYS: int = 370    # fetch slightly more than 365 to absorb weekends/holidays
+
+    def __init__(self, api_key: str = MASSIVE_API_KEY) -> None:
+        self._api_key = api_key
+        self._session = requests.Session()
+        if api_key:
+            self._session.headers.update({"Authorization": f"Bearer {api_key}"})
+
+    @property
+    def is_configured(self) -> bool:
+        return bool(self._api_key)
+
+    def fetch(self, ticker: str) -> MassivePriceMetrics:
+        if not self.is_configured:
+            return MassivePriceMetrics(
+                ticker=ticker, current_price=None, high_52w=None, low_52w=None,
+                return_1y_pct=None, return_30d_pct=None, error="MASSIVE_API_KEY not configured",
+            )
+        today        = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        one_year_ago = (datetime.now(timezone.utc) - timedelta(days=self._LOOKBACK_DAYS)).strftime("%Y-%m-%d")
+        ticker_up    = ticker.upper()
+
+        try:
+            resp = self._session.get(
+                f"{_MASSIVE_BASE_URL}/v2/aggs/ticker/{ticker_up}/range/1/day/{one_year_ago}/{today}",
+                params={"adjusted": "true", "sort": "asc", "limit": 365},
+                timeout=_HTTP_TIMEOUT,
+            )
+            resp.raise_for_status()
+            bars = resp.json().get("results", [])
+        except requests.RequestException as exc:
+            logger.error("Massive price fetch failed for %s: %s", ticker, exc)
+            return MassivePriceMetrics(
+                ticker=ticker, current_price=None, high_52w=None, low_52w=None,
+                return_1y_pct=None, return_30d_pct=None, error=str(exc),
+            )
+
+        if not bars:
+            return MassivePriceMetrics(
+                ticker=ticker, current_price=None, high_52w=None, low_52w=None,
+                return_1y_pct=None, return_30d_pct=None, bars_used=0,
+                error="no price bars returned",
+            )
+
+        closes = [b["c"] for b in bars]
+        highs  = [b["h"] for b in bars]
+        lows   = [b["l"] for b in bars]
+
+        current  = round(closes[-1], 2)
+        high_52w = round(max(highs), 2)
+        low_52w  = round(min(lows), 2)
+
+        ret_1y: Optional[float] = None
+        if closes[0]:
+            ret_1y = round((closes[-1] - closes[0]) / closes[0] * 100, 2)
+
+        # ~22 trading days ≈ 1 calendar month; skip if we don't have enough history
+        ret_30d: Optional[float] = None
+        if len(closes) >= 23:
+            ref = closes[-22]
+            if ref:
+                ret_30d = round((closes[-1] - ref) / ref * 100, 2)
+
+        return MassivePriceMetrics(
+            ticker=ticker,
+            current_price=current,
+            high_52w=high_52w,
+            low_52w=low_52w,
+            return_1y_pct=ret_1y,
+            return_30d_pct=ret_30d,
+            bars_used=len(bars),
+        )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Service Façade — composes all data sources
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -1632,19 +1850,21 @@ class AltDataService:
 
     def __init__(
         self,
-        fred_api_key:        str                               = FRED_API_KEY,
-        trends_fetcher:      Optional[GoogleTrendsFetcher]     = None,
-        trends_processor:    Optional[GoogleTrendsProcessor]   = None,
-        fred_fetcher:        Optional[FredApiFetcher]          = None,
-        fred_processor:      Optional[FredDataProcessor]       = None,
-        cik_resolver:        Optional[SecCikResolver]          = None,
-        filing_fetcher:      Optional[SecFilingFetcher]        = None,
-        risk_extractor:      Optional[SecRiskFactorExtractor]  = None,
-        job_scraper:         Optional[ApifyJobScraper]         = None,
-        sec_8k_fetcher:      Optional[Sec8KFetcher]            = None,
-        pr_fetcher:          Optional[PressReleaseFetcher]     = None,
-        lit_fetcher:         Optional[LitigationFetcher]       = None,
+        fred_api_key:         str                                = FRED_API_KEY,
+        trends_fetcher:       Optional[GoogleTrendsFetcher]      = None,
+        trends_processor:     Optional[GoogleTrendsProcessor]    = None,
+        fred_fetcher:         Optional[FredApiFetcher]           = None,
+        fred_processor:       Optional[FredDataProcessor]        = None,
+        cik_resolver:         Optional[SecCikResolver]           = None,
+        filing_fetcher:       Optional[SecFilingFetcher]         = None,
+        risk_extractor:       Optional[SecRiskFactorExtractor]   = None,
+        job_scraper:          Optional[ApifyJobScraper]          = None,
+        sec_8k_fetcher:       Optional[Sec8KFetcher]             = None,
+        pr_fetcher:           Optional[PressReleaseFetcher]      = None,
+        lit_fetcher:          Optional[LitigationFetcher]        = None,
         sentiment_aggregator: Optional[MultiSourceSentimentAggregator] = None,
+        massive_news_fetcher:  Optional[MassiveNewsFetcher]      = None,
+        massive_price_fetcher: Optional[MassivePriceFetcher]     = None,
     ) -> None:
         self._trends_fetcher      = trends_fetcher      or GoogleTrendsFetcher()
         self._trends_processor    = trends_processor    or GoogleTrendsProcessor()
@@ -1659,6 +1879,8 @@ class AltDataService:
         self._pr_fetcher          = pr_fetcher          or PressReleaseFetcher(cik_resolver=self._cik_resolver)
         self._lit_fetcher         = lit_fetcher         or LitigationFetcher(cik_resolver=self._cik_resolver)
         self._sentiment_aggregator = sentiment_aggregator or MultiSourceSentimentAggregator()
+        self._massive_news        = massive_news_fetcher  or MassiveNewsFetcher()
+        self._massive_price       = massive_price_fetcher or MassivePriceFetcher()
 
     # ── public API ────────────────────────────────────────────────────────────
 
@@ -1710,3 +1932,9 @@ class AltDataService:
 
     def get_consumer_sentiment(self, ticker: str, company_name: str) -> ConsumerSentimentSignal:
         return self._sentiment_aggregator.get_signal(ticker, company_name)
+
+    def get_massive_news(self, ticker: str) -> MassiveNewsSignal:
+        return self._massive_news.fetch(ticker)
+
+    def get_massive_price_metrics(self, ticker: str) -> MassivePriceMetrics:
+        return self._massive_price.fetch(ticker)

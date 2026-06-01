@@ -151,15 +151,32 @@ relationship from the payload, or to an explicitly sourced external figure.
 - **Section-specific emphasis:**
   - §1 — a single crisp thesis sentence, then the valuation snapshot (multiples vs.
     growth, what the market is pricing in). Apply rigor rules 1 (valuation bridge) and
-    2 (peer comp) here.
+    2 (peer comp) here. If `alt_signals.massive_price_metrics` is present without an
+    `error`, anchor the snapshot with the current price and the 52-week range
+    (`high_52w` / `low_52w`) — note whether the stock is near its 52-week high (market
+    confidence) or low (potential undervaluation or thesis break) — and cite
+    `return_1y_pct` to frame total price return against the multiples argument. If
+    `return_30d_pct` is available, use it to show near-term momentum or mean-reversion.
   - §2 — the business model and operating mechanics: revenue mix, customer base,
     go-to-market, cost structure, and where operating leverage sits.
   - §3 — alternative-data and macro read-through: what the non-financial signals in
     the payload imply for the forward numbers. This is the longest section; make it
     the most analytically differentiated. Apply rigor rule 5 (macro relevance gate —
     honor `macro_fred.relevance`) and rule 6 (investigate signals, don't just flag).
-  - §4 — consumer and public opinion: use `alt_signals.consumer_sentiment` from the
-    payload. Source priority is: StockTwits (native Bull/Bear labels), Yahoo Finance
+    The payload includes two Polygon/Massive signals — use them as follows:
+    - `alt_signals.massive_news`: when `article_count` ≥ 3 and `blended_sentiment` is
+      non-null, use it to frame recent news momentum alongside Google Trends and SEC
+      feeds. The `articles[*].sentiment_reasoning` fields are machine-written, per-ticker
+      analyst-quality prose — cite them as press or analyst perspectives (with publisher
+      and date), not as your own analysis. When this signal conflicts with the lexicon-
+      scored RSS sources, prefer `massive_news`; it is pre-computed per-ticker rather than
+      bag-of-words scored. If `massive_news.error` is set or `article_count` is 0, note
+      the gap and rely on the other news sources.
+    - `alt_signals.massive_price_metrics`: use the 52-week range and 1-year return in §1;
+      in §3 they can contextualize demand-signal read-throughs (e.g. a Google Trends
+      uptick paired with a 30-day price recovery is a stronger signal than either alone).
+  - §4 — consumer and public opinion: lead with `alt_signals.consumer_sentiment` from
+    the payload. Source priority is: StockTwits (native Bull/Bear labels), Yahoo Finance
     news (earnings/guidance headlines), HackerNews (B2B/tech discussion); Reddit is a
     fallback that only fires when primary sources are thin. Structure the section as:
     (a) overall sentiment label + score + overall `confidence`; (b) per-source
@@ -168,11 +185,14 @@ relationship from the payload, or to an explicitly sourced external figure.
     extreme scores that rest on a low signal count (see rigor rule 8); (c) up to 4
     verbatim quotes from `top_quotes`, formatted as blockquotes with their source
     labelled (e.g. `> "..." — StockTwits`). Skip quotes from sources that returned 0
-    messages or an error. If overall `confidence` is "low", say §4 is directional only.
-    If error is present, note the data gap. Contextualise the sentiment against the
-    business model — negative retail chatter means something different for a B2C
-    platform (Zillow) vs. a B2B SaaS (Procore) vs. a facilities conglomerate
-    (Honeywell).
+    messages or an error. Supplement with `alt_signals.massive_news`: if any article's
+    `sentiment_reasoning` reflects investor or public reaction (not just a product
+    announcement), cite it as a press perspective with publisher and publication date —
+    these are higher-signal than lexicon-scored snippets. If overall `consumer_sentiment`
+    `confidence` is "low", say §4 is directional only. If error is present, note the
+    data gap. Contextualise the sentiment against the business model — negative retail
+    chatter means something different for a B2C platform (Zillow) vs. a B2B SaaS
+    (Procore) vs. a facilities conglomerate (Honeywell).
   - §5 — concrete, ranked risks and structural barriers, each tied to its impact on
     the thesis or the numbers.
   - §6 — a clear recommendation (direction + conviction) that falls out of §§1–5,
@@ -253,10 +273,14 @@ to a real defect — satisfy all eight before considering the memo complete.
    pillar, or the §6 call (the prior NVDA memo wrongly elevated a 25-message,
    ~1-signal HackerNews −1.0 to "the most analytically significant data point" — do not
    repeat that). If the overall `confidence` is "low", state that §4 is directional
-   only. Earned-confidence prose generally: match the strength of your language to the
-   strength of the evidence, and prefer plain analytical English over stacked jargon —
-   a term like "transmission mechanism" earns its place only when you actually trace
-   the mechanism, not as ornament.
+   only. For `massive_news`: when `article_count` < 3, treat `blended_sentiment` as
+   directional only — a two-article majority is not a consensus. The
+   `sentiment_reasoning` fields are machine-generated; cite them as press perspectives,
+   not as verified analyst conclusions, and cross-reference the article title/publisher
+   so the reader can locate the source. Earned-confidence prose generally: match the
+   strength of your language to the strength of the evidence, and prefer plain
+   analytical English over stacked jargon — a term like "transmission mechanism" earns
+   its place only when you actually trace the mechanism, not as ornament.
 
 When external sourcing is used for any of the above, add a short **Sourcing note** at
 the end of the memo distinguishing payload-derived figures from externally fetched ones.

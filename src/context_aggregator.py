@@ -50,6 +50,8 @@ from alt_data_service import (
     ConsumerSentimentSignal,
     FredSeries,
     LitigationSignal,
+    MassiveNewsSignal,
+    MassivePriceMetrics,
     PressReleaseSignal,
     Sec8KSignal,
     SecRiskSnippet,
@@ -187,6 +189,8 @@ class ContextAggregator:
           4. FRED commercial construction macro
           5. SEC 10-K Item 1A risk-factor snippet
           6. Apify job-market signal (stub)
+          7. Massive/Polygon: recent news with per-ticker sentiment + reasoning
+          8. Massive/Polygon: 52W price metrics (high/low, 1Y/30D return)
 
         Returns the minified JSON string and writes it to
         `context_{target_ticker}.json` in *output_dir*.
@@ -285,13 +289,15 @@ class ContextAggregator:
 
     def _fetch_alt_signals(self, ticker: str) -> Dict:
         return {
-            "google_trends":      self._fetch_trends(ticker),
-            "macro_fred":         self._fetch_fred(ticker),
-            "sec_risk_snippet":   self._fetch_sec(ticker),
-            "job_market":         self._fetch_jobs(ticker),
-            "sec_8k_events":      self._fetch_8k_events(ticker),
-            "litigation":         self._fetch_litigation(ticker),
-            "consumer_sentiment": self._fetch_consumer_sentiment(ticker),
+            "google_trends":        self._fetch_trends(ticker),
+            "macro_fred":           self._fetch_fred(ticker),
+            "sec_risk_snippet":     self._fetch_sec(ticker),
+            "job_market":           self._fetch_jobs(ticker),
+            "sec_8k_events":        self._fetch_8k_events(ticker),
+            "litigation":           self._fetch_litigation(ticker),
+            "consumer_sentiment":   self._fetch_consumer_sentiment(ticker),
+            "massive_news":         self._fetch_massive_news(ticker),
+            "massive_price_metrics": self._fetch_massive_price_metrics(ticker),
         }
 
     def _fetch_trends(self, ticker: str) -> Dict:
@@ -352,6 +358,20 @@ class ContextAggregator:
             return _to_dict(self._alt.get_consumer_sentiment(ticker, company_name))
         except Exception as exc:
             logger.error("Consumer sentiment failed for %s: %s", ticker, exc)
+            return _error_node(ticker, exc)
+
+    def _fetch_massive_news(self, ticker: str) -> Dict:
+        try:
+            return _to_dict(self._alt.get_massive_news(ticker))
+        except Exception as exc:
+            logger.error("Massive news fetch failed for %s: %s", ticker, exc)
+            return _error_node(ticker, exc)
+
+    def _fetch_massive_price_metrics(self, ticker: str) -> Dict:
+        try:
+            return _to_dict(self._alt.get_massive_price_metrics(ticker))
+        except Exception as exc:
+            logger.error("Massive price metrics failed for %s: %s", ticker, exc)
             return _error_node(ticker, exc)
 
     def _fetch_jobs(self, ticker: str) -> Dict:
