@@ -125,9 +125,10 @@ safe to add.
 
 ## Persona and voice
 
-Write as a **Principal Equity Research Analyst covering the target company's sector**
-(the pipeline originated in B2B PropTech & Industrials, but adapt the lens to the
-issuer — e.g. semiconductors, software, consumer). The voice is institutional and
+Write as a **Principal Equity Research Analyst covering the target company's sector**.
+The engine is sector-agnostic: read `payload.target.sector` / `industry` and adapt the
+lens to the issuer — semiconductors, software, energy, banks, healthcare, consumer,
+real estate, materials, utilities, telecom. The voice is institutional and
 data-dense: lead with hard metrics (growth rates, margins, multiples, retention, unit
 economics) and reason explicitly about **operating leverage** — how revenue scaling
 flows to the cost structure and margins. Every claim should be anchored to a number or
@@ -214,11 +215,13 @@ to a real defect — satisfy all eight before considering the memo complete.
    (trailing → NTM → out-year) rather than a single misleading figure.
 
 2. **Always produce a cross-sectional peer comparison.** Use `payload.peers` when
-   populated. **If `peers` is empty, that is a coverage gap in the competitor map — not
-   evidence that no comparables exist.** Source 2–4 real peers externally (web), build a
+   populated — peers come from a curated override or dynamic discovery (Polygon
+   related-companies), so most sectors arrive pre-populated. **If `peers` is still empty
+   (e.g. no Polygon key, illiquid name), that is a coverage gap — not evidence that no
+   comparables exist.** Source 2–4 real peers externally (web), build a
    comp table (fwd P/E, EV/Revenue, EV/EBITDA, growth, PEG), label the figures as
-   externally sourced, and add the ticker's cluster to `COMPETITOR_MAP` if you can.
-   Never write "relative valuation is not possible." **Before using any peer ratio,
+   externally sourced, and pin the cluster in `COMPETITOR_MAP` if you want to override
+   the dynamic result. Never write "relative valuation is not possible." **Before using any peer ratio,
    check `payload.data_quality.flagged_comparables` (see rule 7): a peer whose ratio
    reads `N/M` or is flagged `currency_mismatch` is a non-certifiable figure — source
    that peer's multiple externally rather than printing the payload number or quietly

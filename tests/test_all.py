@@ -55,6 +55,18 @@ class TestFinancialDataTransformer(unittest.TestCase):
         self.assertEqual(r.ev_revenue, 9.5)
         self.assertEqual(r.ev_ebitda, 95.0)
 
+    def test_captures_sector_and_industry(self):
+        r = self.tx.transform("NVDA", {
+            "symbol": "NVDA", "sector": "Technology", "industry": " Semiconductors "
+        })
+        self.assertEqual(r.sector, "Technology")
+        self.assertEqual(r.industry, "Semiconductors")   # trimmed
+
+    def test_missing_sector_is_none(self):
+        r = self.tx.transform("NVDA", {"symbol": "NVDA"})
+        self.assertIsNone(r.sector)
+        self.assertIsNone(r.industry)
+
     def test_empty_payload_returns_nm_ratios(self):
         r = self.tx.transform("PCOR", {})
         self.assertEqual(r.ticker, "PCOR")
@@ -228,10 +240,61 @@ from alt_data_service import (
     TrendsSignal,
     FredSeries,
     MultiSourceSentimentAggregator,
+    RelatedCompaniesFetcher,
     _RawSourceResult,
     _score_texts,
+    _trends_keyword,
     normalize_company_name,
 )
+
+
+class TestTrendsKeyword(unittest.TestCase):
+    """Trends keyword: curated wins, else cleaned company name, else ticker."""
+
+    def test_curated_keyword_wins(self):
+        self.assertEqual(_trends_keyword("PCOR", "Procore Technologies Inc"),
+                         "Procore construction software")
+
+    def test_company_name_cleaned_of_suffix(self):
+        self.assertEqual(_trends_keyword("INTC", "Intel Corporation"), "Intel")
+        self.assertEqual(_trends_keyword("XYZ", "Acme Holdings, Inc."), "Acme")
+
+    def test_falls_back_to_ticker(self):
+        self.assertEqual(_trends_keyword("XYZ"), "XYZ")
+        self.assertEqual(_trends_keyword("XYZ", ""), "XYZ")
+
+
+class TestRelatedCompaniesFetcher(unittest.TestCase):
+    """Dynamic peer discovery degrades gracefully and sanitises results."""
+
+    def test_not_configured_returns_empty_with_error(self):
+        sig = RelatedCompaniesFetcher(api_key="").fetch("XOM")
+        self.assertEqual(sig.related, [])
+        self.assertIn("MASSIVE_API_KEY", sig.error or "")
+
+    def test_parses_and_excludes_self_and_dupes(self):
+        fetcher = RelatedCompaniesFetcher(api_key="key")
+        resp = MagicMock()
+        resp.raise_for_status.return_value = None
+        resp.json.return_value = {"results": [
+            {"ticker": "CVX"}, {"ticker": "xom"},      # self (case-insensitive)
+            {"ticker": "BP"}, {"ticker": "CVX"},        # dup
+            {"ticker": ""},                             # empty
+        ]}
+        fetcher._session = MagicMock()
+        fetcher._session.get.return_value = resp
+        sig = fetcher.fetch("XOM")
+        self.assertEqual(sig.related, ["CVX", "BP"])
+        self.assertIsNone(sig.error)
+
+    def test_request_failure_returns_empty(self):
+        import requests
+        fetcher = RelatedCompaniesFetcher(api_key="key")
+        fetcher._session = MagicMock()
+        fetcher._session.get.side_effect = requests.RequestException("boom")
+        sig = fetcher.fetch("XOM")
+        self.assertEqual(sig.related, [])
+        self.assertIn("boom", sig.error or "")
 
 
 class TestGoogleTrendsProcessor(unittest.TestCase):
@@ -563,6 +626,7 @@ class TestMultiSourceSentimentAggregator(unittest.TestCase):
 
 from context_aggregator import (
     ContextAggregator, COMPETITOR_MAP, _to_dict, _error_node, _macro_relevance,
+    _macro_for_ticker, SECTOR_MACRO_MAP, _MAX_PEERS,
 )
 
 
@@ -592,6 +656,68 @@ class TestMacroRelevance(unittest.TestCase):
         self.assertEqual(_macro_relevance("nvda")["relevance"], "low")
 
 
+class TestSectorAwareMacro(unittest.TestCase):
+    """`_macro_for_ticker` must pick a sector-appropriate FRED series."""
+
+    def test_cre_universe_keeps_construction_series(self):
+        m = _macro_for_ticker("PCOR")
+        self.assertEqual(m["series_id"], "TLNRESCONS")
+        self.assertEqual(m["relevance"], "high")
+
+    def test_cre_override_wins_over_sector(self):
+        # HON is classified Industrials by yfinance but is in the CRE-linked set,
+        # so the construction series must still win.
+        m = _macro_for_ticker("HON", "Industrials")
+        self.assertEqual(m["series_id"], "TLNRESCONS")
+
+    def test_known_sector_maps_to_specific_series(self):
+        self.assertEqual(_macro_for_ticker("NVDA", "Technology")["series_id"], "INDPRO")
+        self.assertEqual(_macro_for_ticker("XOM", "Energy")["series_id"], "DCOILWTICO")
+        self.assertEqual(_macro_for_ticker("JPM", "Financial Services")["series_id"], "FEDFUNDS")
+        for sector in SECTOR_MACRO_MAP:
+            self.assertEqual(_macro_for_ticker("ZZZZ", sector)["relevance"], "high")
+
+    def test_unknown_sector_falls_back_to_gdp_low_relevance(self):
+        m = _macro_for_ticker("ZZZZ", "Some New Sector")
+        self.assertEqual(m["series_id"], "GDPC1")
+        self.assertEqual(m["relevance"], "low")
+
+    def test_no_sector_falls_back_to_gdp(self):
+        self.assertEqual(_macro_for_ticker("ZZZZ")["series_id"], "GDPC1")
+
+
+class TestPeerResolution(unittest.TestCase):
+    """Peers resolve via curated override first, then dynamic discovery."""
+
+    def _aggregator(self, related):
+        mock_alt = MagicMock()
+        mock_alt.get_related_tickers.return_value = related
+        return ContextAggregator(financial_service=MagicMock(), alt_data_service=mock_alt), mock_alt
+
+    def test_curated_override_wins(self):
+        agg, mock_alt = self._aggregator(["AAA", "BBB", "CCC"])
+        # NVDA has a curated cluster — dynamic discovery must NOT be consulted.
+        self.assertEqual(agg._resolve_peers("NVDA"), COMPETITOR_MAP["NVDA"])
+        mock_alt.get_related_tickers.assert_not_called()
+
+    def test_dynamic_discovery_for_uncurated_ticker(self):
+        agg, mock_alt = self._aggregator(["AAA", "BBB", "CCC", "DDD"])
+        peers = agg._resolve_peers("XYZ")
+        self.assertEqual(peers, ["AAA", "BBB", "CCC"])      # capped at _MAX_PEERS
+        self.assertEqual(len(peers), _MAX_PEERS)
+        mock_alt.get_related_tickers.assert_called_once_with("XYZ")
+
+    def test_dynamic_discovery_failure_returns_empty(self):
+        mock_alt = MagicMock()
+        mock_alt.get_related_tickers.side_effect = RuntimeError("api down")
+        agg = ContextAggregator(financial_service=MagicMock(), alt_data_service=mock_alt)
+        self.assertEqual(agg._resolve_peers("XYZ"), [])
+
+    def test_no_peers_anywhere_returns_empty(self):
+        agg, _ = self._aggregator([])
+        self.assertEqual(agg._resolve_peers("XYZ"), [])
+
+
 class TestContextAggregatorHelpers(unittest.TestCase):
 
     def test_to_dict_on_dataclass(self):
@@ -616,7 +742,7 @@ class TestContextAggregatorHelpers(unittest.TestCase):
         agg = ContextAggregator(financial_service=mock_fin, alt_data_service=mock_alt)
         meta = agg._build_meta("PCOR")
         self.assertEqual(meta["target_ticker"], "PCOR")
-        self.assertEqual(meta["schema_version"], "1.6")
+        self.assertEqual(meta["schema_version"], "1.7")
         self.assertIn("generated_at_utc", meta)
 
     def test_build_minified_context_is_valid_json(self):

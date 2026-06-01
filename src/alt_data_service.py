@@ -128,6 +128,32 @@ TICKER_KEYWORDS: Dict[str, str] = {
     "Z":    "Zillow home search",
 }
 
+# Corporate-form suffixes stripped from a company name before using it as a search
+# keyword, so "Procore Technologies Inc" → "Procore Technologies".
+_CORP_SUFFIXES = re.compile(
+    r"[,\.]?\s+(inc|incorporated|corp|corporation|co|company|ltd|limited|plc|"
+    r"llc|lp|holdings|group|sa|nv|ag|se|class\s+[a-c])\b\.?",
+    re.IGNORECASE,
+)
+
+
+def _trends_keyword(ticker: str, company_name: Optional[str] = None) -> str:
+    """
+    Pick the Google-Trends search keyword for *ticker*.
+
+    Curated keywords win (they encode the most search-relevant product/brand for
+    the original universe). Otherwise fall back to the cleaned company name —
+    which generalises to every sector — and finally to the bare ticker.
+    """
+    curated = TICKER_KEYWORDS.get(ticker.upper())
+    if curated:
+        return curated
+    if company_name:
+        cleaned = _CORP_SUFFIXES.sub("", company_name).strip()
+        if cleaned:
+            return cleaned
+    return ticker
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Domain Models
@@ -1670,6 +1696,62 @@ class MassivePriceMetrics:
     error:           Optional[str] = None
 
 
+@dataclass
+class RelatedCompaniesSignal:
+    """Peer tickers for one company, discovered dynamically from Polygon."""
+    ticker:    str
+    related:   List[str]                          # related tickers, self excluded
+    source:    str = "polygon_related_companies"
+    error:     Optional[str] = None
+
+
+class RelatedCompaniesFetcher:
+    """
+    Infrastructure: discovers peer tickers for *any* company from Polygon's
+    `/v1/related-companies/{ticker}` endpoint.
+
+    Polygon derives this set from news co-mentions and price-action correlation,
+    so it generalises across every sector with zero hand-maintained config — it is
+    the dynamic replacement for the static COMPETITOR_MAP. Returns an empty list
+    (never raises) when the key is absent or the endpoint has no data, so callers
+    can fall back to a curated mapping or simply omit peers.
+    """
+
+    def __init__(self, api_key: str = MASSIVE_API_KEY) -> None:
+        self._api_key = api_key
+        self._session = requests.Session()
+        if api_key:
+            self._session.headers.update({"Authorization": f"Bearer {api_key}"})
+
+    @property
+    def is_configured(self) -> bool:
+        return bool(self._api_key)
+
+    def fetch(self, ticker: str) -> RelatedCompaniesSignal:
+        ticker_up = ticker.upper().strip()
+        if not self.is_configured:
+            return RelatedCompaniesSignal(
+                ticker=ticker_up, related=[], error="MASSIVE_API_KEY not configured"
+            )
+        try:
+            resp = self._session.get(
+                f"{_MASSIVE_BASE_URL}/v1/related-companies/{ticker_up}",
+                timeout=_HTTP_TIMEOUT,
+            )
+            resp.raise_for_status()
+            results = resp.json().get("results", [])
+        except requests.RequestException as exc:
+            logger.error("Related-companies fetch failed for %s: %s", ticker_up, exc)
+            return RelatedCompaniesSignal(ticker=ticker_up, related=[], error=str(exc))
+
+        related: List[str] = []
+        for item in results:
+            sym = (item.get("ticker") or "").upper().strip()
+            if sym and sym != ticker_up and sym not in related:
+                related.append(sym)
+        return RelatedCompaniesSignal(ticker=ticker_up, related=related)
+
+
 class MassiveNewsFetcher:
     """
     Infrastructure: fetches recent news articles for a ticker from the Polygon
@@ -1865,6 +1947,7 @@ class AltDataService:
         sentiment_aggregator: Optional[MultiSourceSentimentAggregator] = None,
         massive_news_fetcher:  Optional[MassiveNewsFetcher]      = None,
         massive_price_fetcher: Optional[MassivePriceFetcher]     = None,
+        related_companies_fetcher: Optional[RelatedCompaniesFetcher] = None,
     ) -> None:
         self._trends_fetcher      = trends_fetcher      or GoogleTrendsFetcher()
         self._trends_processor    = trends_processor    or GoogleTrendsProcessor()
@@ -1881,13 +1964,18 @@ class AltDataService:
         self._sentiment_aggregator = sentiment_aggregator or MultiSourceSentimentAggregator()
         self._massive_news        = massive_news_fetcher  or MassiveNewsFetcher()
         self._massive_price       = massive_price_fetcher or MassivePriceFetcher()
+        self._related_companies   = related_companies_fetcher or RelatedCompaniesFetcher()
 
     # ── public API ────────────────────────────────────────────────────────────
 
-    def get_trends_signal(self, ticker: str) -> TrendsSignal:
-        keyword = TICKER_KEYWORDS.get(ticker.upper(), ticker)
+    def get_trends_signal(self, ticker: str, company_name: Optional[str] = None) -> TrendsSignal:
+        keyword = _trends_keyword(ticker, company_name)
         df = self._trends_fetcher.fetch_interest_over_time(keyword)
         return self._trends_processor.compute_signal(ticker, keyword, df)
+
+    def get_related_tickers(self, ticker: str) -> List[str]:
+        """Dynamically discover peer tickers for *ticker* (empty list on failure)."""
+        return self._related_companies.fetch(ticker).related
 
     def get_fred_macro(
         self,

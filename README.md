@@ -1,6 +1,6 @@
 # TheoryY Middle-Market Research Agent
 
-An MCP server and Claude Code skill that generates institutional-grade equity research memos. It originated as a PropTech & Facilities tool and now ships peer mappings for semiconductors/AI infrastructure and mega-cap tech as well. Point it at a ticker and get a six-section investment memo grounded in live financial data — no fabricated numbers.
+An MCP server and Claude Code skill that generates institutional-grade equity research memos for **any public company in any sector**. It originated as a PropTech & Facilities tool but is now sector-agnostic: it captures each issuer's sector/industry, discovers peers dynamically, and selects a sector-appropriate macro series automatically. Point it at a ticker and get a six-section investment memo grounded in live financial data — no fabricated numbers.
 
 ## How it works
 
@@ -37,7 +37,15 @@ Claude writes the memo from the fetched JSON — it never fills in financials fr
 
 ## Supported tickers
 
-Pre-configured names with peer mappings (`COMPETITOR_MAP` in `src/context_aggregator.py`):
+**Any valid ticker, in any sector, is supported.** Peers are resolved in two tiers:
+
+1. **Dynamic discovery (default)** — for any ticker, peers come from Polygon's
+   `related-companies` endpoint (requires `MASSIVE_API_KEY`). This covers every
+   sector with no hand-maintained config, and the macro series is auto-selected from
+   the issuer's yfinance sector (e.g. Energy → WTI crude, Financials → Fed Funds Rate,
+   Real Estate → construction spend, Tech/Industrials → industrial production).
+2. **Curated overrides** — a hand-tuned peer set in `COMPETITOR_MAP`
+   (`src/context_aggregator.py`) takes precedence over dynamic discovery for these names:
 
 **PropTech & Facilities** (original universe)
 
@@ -71,7 +79,7 @@ Pre-configured names with peer mappings (`COMPETITOR_MAP` in `src/context_aggreg
 | QCOM | Qualcomm | AVGO, NVDA, AMD |
 | META | Meta Platforms | GOOGL, MSFT, AMZN |
 
-Any ticker outside this list can still be queried, but its `peers` array comes back empty. That is a **coverage gap, not a signal that no comparables exist** — the memo skill is instructed to source comparables externally in that case and to add the ticker's cluster to `COMPETITOR_MAP`. See the peer-comparison rule in `.claude/skills/theory-y-memo/SKILL.md`.
+A ticker outside this list is **not** a coverage gap — its peers are discovered dynamically via Polygon. The `peers` array only comes back empty when dynamic discovery is unavailable (no `MASSIVE_API_KEY`) *and* there is no curated override; in that case the memo skill sources comparables externally. See the peer-comparison rule in `.claude/skills/theory-y-memo/SKILL.md`.
 
 ## Setup
 
@@ -127,16 +135,17 @@ The server exposes three tools to Claude Code via `.mcp.json`:
 
 | Tool | Description |
 |------|-------------|
-| `build_company_context` | Builds a minified JSON payload (schema 1.5) for one ticker: fundamentals, up to 3 peers, Google Trends velocity, FRED macro (with a `relevance` flag — see below), SEC 10-K risk snippet, SEC 8-K events, press releases, litigation monitor |
+| `build_company_context` | Builds a minified JSON payload (schema 1.7) for one ticker: fundamentals + sector/industry, up to 3 peers (curated or dynamically discovered), Google Trends velocity, a sector-appropriate FRED macro series (with a `relevance` flag — see below), SEC 10-K risk snippet, SEC 8-K events, press releases, litigation monitor |
 | `generate_sector_sheet` | Exports a CSV of valuation metrics (Market Cap, EV, EV/Revenue, EV/EBITDA, Fwd P/E, YoY Revenue Growth) for a list of tickers |
-| `list_supported_tickers` | Returns the pre-configured ticker universe and competitor mappings |
+| `list_supported_tickers` | Returns the curated peer overrides + default seed universe (any ticker works via dynamic discovery) |
 
 ## Data sources
 
 | Source | Signal | Auth |
 |--------|--------|------|
 | yfinance | Fundamentals, valuation multiples | None |
-| FRED API | Commercial construction spending (TLNRESCONS), tagged with a `relevance` flag — `high` for CRE-linked PropTech/Facilities issuers, `low` (treat as backdrop only) otherwise | Free API key |
+| FRED API | A sector-appropriate macro series auto-selected from the issuer's sector (e.g. construction spend for Real Estate, WTI crude for Energy, Fed Funds for Financials, industrial production for Tech/Industrials, real PCE for Consumer; real GDP fallback). Tagged with a `relevance` flag — `high` when the series is a genuine sector driver, `low` (backdrop only) for the GDP fallback | Free API key |
+| Polygon related-companies | Dynamic peer discovery for any ticker (used when no curated override exists) | `MASSIVE_API_KEY` |
 | Google Trends (pytrends) | 12-month search-interest velocity | None |
 | SEC EDGAR | 10-K Item 1A risk snippet, 8-K material events | User-Agent header |
 | GlobeNewswire RSS | Last 5 press releases | None |

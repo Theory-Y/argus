@@ -36,7 +36,7 @@ import logging
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from financial_service import (
     CompanyFinancials,
@@ -64,14 +64,14 @@ logger = logging.getLogger(__name__)
 # Competitor Map
 # ──────────────────────────────────────────────────────────────────────────────
 
-# For each target ticker, list the 3 closest public-market comparables
-# drawn from the same sector universe where possible.
+# Curated peer overrides: for a target ticker, the 3 closest public-market
+# comparables, hand-picked for the original universe(s).
 #
-# NOTE: A ticker absent from this map yields an empty `peers` list. That is a
-# coverage gap, not "no comparables exist" — the memo writer must source comps
-# externally in that case rather than declaring relative valuation impossible
-# (see the peer-comparison rule in theory-y-memo/SKILL.md). Add new clusters
-# here so the gap closes at the source.
+# These are OVERRIDES, not the only supported names. A ticker absent from this
+# map no longer yields an empty `peers` list — PeerResolver falls back to dynamic
+# discovery (Polygon related-companies) so any sector gets live comparables.
+# Add a cluster here only when you want to pin a specific, higher-quality peer set
+# that overrides the dynamic result (see PeerResolver below).
 COMPETITOR_MAP: Dict[str, List[str]] = {
     # ── PropTech & Facilities (original universe) ──
     "CSGP": ["CBRE", "PCOR",  "Z"   ],
@@ -100,45 +100,96 @@ COMPETITOR_MAP: Dict[str, List[str]] = {
     "META": ["GOOGL","MSFT",  "AMZN"],
 }
 
-# CRE-linked universe for which the default FRED macro series (commercial
-# construction spend) is a genuine demand proxy. Outside this set the series is
-# carried only as a generic backdrop and is flagged low-relevance so the memo
-# does not manufacture a spurious correlation (see macro-relevance rule in SKILL.md).
+# The original CRE-linked universe always reads through the commercial-construction
+# series, regardless of how yfinance classifies a given name (HON is "Industrials",
+# CSGP is "Real Estate", etc., but all are CRE-demand-linked). This preserves the
+# project's founding behaviour exactly while the sector map generalises everything else.
 _CRE_LINKED_TICKERS: set = set(SECTOR_TICKERS)
 
-# FRED macro indicator used as the sector-wide CRE backdrop
-_FRED_SERIES_ID:  str = "TLNRESCONS"
+# Commercial-construction series + label, retained for the CRE-linked cohort.
+_FRED_SERIES_ID:    str = "TLNRESCONS"
 _FRED_SERIES_LABEL: str = "Commercial Construction Spending (TLNRESCONS, $MM, SA)"
-_SCHEMA_VERSION:  str = "1.6"
+
+# Broad fallback when an issuer's sector has no specific demand proxy configured.
+_DEFAULT_FRED: Tuple[str, str] = ("GDPC1", "U.S. Real GDP (GDPC1, chained $B, SAAR)")
+
+# yfinance sector → (FRED series id, label). Each series is a genuine
+# demand / price / rate driver for that sector, so the memo can argue a real
+# transmission mechanism instead of carrying a generic backdrop. Sector strings
+# match yfinance's GICS-style `sector` field.
+SECTOR_MACRO_MAP: Dict[str, Tuple[str, str]] = {
+    "Real Estate":            ("TLNRESCONS", "Nonresidential Construction Spending (TLNRESCONS, $MM, SA)"),
+    "Technology":             ("INDPRO",     "Industrial Production Index (INDPRO, 2017=100, SA)"),
+    "Industrials":            ("DGORDER",    "Durable Goods New Orders (DGORDER, $MM, SA)"),
+    "Energy":                 ("DCOILWTICO", "Crude Oil WTI Spot Price (DCOILWTICO, $/bbl)"),
+    "Basic Materials":        ("INDPRO",     "Industrial Production Index (INDPRO, 2017=100, SA)"),
+    "Utilities":              ("INDPRO",     "Industrial Production Index (INDPRO, 2017=100, SA)"),
+    "Financial Services":     ("FEDFUNDS",   "Effective Federal Funds Rate (FEDFUNDS, %)"),
+    "Healthcare":             ("CPIMEDSL",   "CPI: Medical Care Services (CPIMEDSL, index, SA)"),
+    "Consumer Cyclical":      ("PCEC96",     "Real Personal Consumption Expenditures (PCEC96, chained $B, SA)"),
+    "Consumer Defensive":     ("PCEC96",     "Real Personal Consumption Expenditures (PCEC96, chained $B, SA)"),
+    "Communication Services": ("PCEC96",     "Real Personal Consumption Expenditures (PCEC96, chained $B, SA)"),
+}
+
+_SCHEMA_VERSION:  str = "1.7"
 _OUTPUT_DIR:      Path = Path("output") / "context"
 
+# How many comparables to carry when peers are discovered dynamically.
+_MAX_PEERS: int = 3
 
-def _macro_relevance(ticker: str) -> Dict[str, str]:
+
+def _macro_for_ticker(ticker: str, sector: Optional[str] = None) -> Dict[str, str]:
     """
-    Classify how directly the default FRED series reads through to *ticker*.
+    Pick the FRED series + relevance framing for *ticker*, given its sector.
 
-    The pipeline was built for a CRE-linked PropTech/Facilities universe, so the
-    commercial-construction series is only a real demand driver for that cohort.
-    For any other issuer we say so explicitly, so the memo treats the datapoint
-    as backdrop (or omits it) instead of inventing a correlation.
+    Resolution order:
+      1. The original CRE-linked universe always gets the commercial-construction
+         series (preserves founding behaviour).
+      2. A known sector maps to its sector-specific demand/price/rate driver,
+         tagged `high` relevance with a stated transmission mechanism.
+      3. Anything else falls back to broad real GDP, tagged `low` relevance so the
+         memo treats it as backdrop only and never invents a correlation.
     """
     if ticker.upper() in _CRE_LINKED_TICKERS:
         return {
+            "series_id": _FRED_SERIES_ID,
+            "series_label": _FRED_SERIES_LABEL,
             "relevance": "high",
             "relevance_note": (
                 "Commercial construction spend is a direct demand proxy for this "
                 "PropTech/Facilities issuer."
             ),
         }
+    if sector and sector in SECTOR_MACRO_MAP:
+        series_id, label = SECTOR_MACRO_MAP[sector]
+        return {
+            "series_id": series_id,
+            "series_label": label,
+            "relevance": "high",
+            "relevance_note": (
+                f"{label} is a sector-level demand/price driver for {sector} issuers; "
+                "treat it as the macro read-through for this name and state the "
+                "transmission mechanism explicitly."
+            ),
+        }
+    series_id, label = _DEFAULT_FRED
+    sector_clause = f" (sector: {sector})" if sector else ""
     return {
+        "series_id": series_id,
+        "series_label": label,
         "relevance": "low",
         "relevance_note": (
-            "TLNRESCONS is a commercial-real-estate proxy carried as the pipeline's "
-            "sector default; it has limited direct read-through to this issuer. Treat "
-            "as macro backdrop only — do not assert a demand correlation unless a "
-            "transmission mechanism can be stated, otherwise omit it."
+            f"No sector-specific demand proxy is configured for this issuer{sector_clause}; "
+            "real GDP is carried as a generic macro backdrop only. Do not assert a demand "
+            "correlation unless a transmission mechanism can be stated, otherwise omit it."
         ),
     }
+
+
+def _macro_relevance(ticker: str, sector: Optional[str] = None) -> Dict[str, str]:
+    """Back-compat shim: the {relevance, relevance_note} subset of _macro_for_ticker."""
+    macro = _macro_for_ticker(ticker, sector)
+    return {"relevance": macro["relevance"], "relevance_note": macro["relevance_note"]}
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -183,10 +234,10 @@ class ContextAggregator:
     def build_minified_context(self, target_ticker: str) -> str:
         """
         Full pipeline for one ticker:
-          1. Target company financials
-          2. Three peer comparables' financials
+          1. Target company financials (incl. sector/industry)
+          2. Up to three peer comparables (curated override or dynamic discovery)
           3. Google Trends velocity signal
-          4. FRED commercial construction macro
+          4. Sector-appropriate FRED macro series (CRE / industrial / energy / …)
           5. SEC 10-K Item 1A risk-factor snippet
           6. Apify job-market signal (stub)
           7. Massive/Polygon: recent news with per-ticker sentiment + reasoning
@@ -220,7 +271,14 @@ class ContextAggregator:
         # objects. A fetch failure yields (None, error_node) and is excluded from
         # the audit but still rendered in its slot.
         target_obj, target_err = self._fetch_company_obj(ticker)
-        peer_pairs = [self._fetch_company_obj(p) for p in self._competitors.get(ticker, [])]
+
+        # Classification drives both peer discovery and macro selection; read it off
+        # the target once fetched (None-safe — peers/macro degrade gracefully).
+        sector       = getattr(target_obj, "sector", None) if target_obj is not None else None
+        company_name = getattr(target_obj, "name", None) if target_obj is not None else None
+
+        peer_tickers = self._resolve_peers(ticker)
+        peer_pairs   = [self._fetch_company_obj(p) for p in peer_tickers]
 
         cohort = [c for c in [target_obj, *(o for o, _ in peer_pairs)] if c is not None]
         quality_summary = audit_peer_set(cohort) if cohort else {}
@@ -231,12 +289,34 @@ class ContextAggregator:
         ]
 
         return {
-            "meta":         self._build_meta(ticker),
+            "meta":         self._build_meta(ticker, sector),
             "target":       target_node,
             "peers":        peer_nodes,
-            "alt_signals":  self._fetch_alt_signals(ticker),
+            "alt_signals":  self._fetch_alt_signals(ticker, sector, company_name),
             "data_quality": self._build_data_quality(quality_summary),
         }
+
+    def _resolve_peers(self, ticker: str) -> List[str]:
+        """
+        Resolve up to `_MAX_PEERS` comparables for *ticker*.
+
+        Order: curated COMPETITOR_MAP override → dynamic discovery via the alt-data
+        service (Polygon related-companies) → empty list. Dynamic discovery is what
+        lets the engine cover every sector instead of only the curated universe; the
+        curated map remains an override for hand-tuned, higher-quality peer sets.
+        """
+        curated = self._competitors.get(ticker)
+        if curated:
+            return list(curated)
+        try:
+            dynamic = self._alt.get_related_tickers(ticker)
+        except Exception as exc:
+            logger.error("Dynamic peer discovery failed for %s: %s", ticker, exc)
+            dynamic = []
+        if dynamic:
+            logger.info("Discovered %d dynamic peers for %s: %s",
+                        min(len(dynamic), _MAX_PEERS), ticker, dynamic[:_MAX_PEERS])
+        return dynamic[:_MAX_PEERS]
 
     def _fetch_company_obj(self, ticker: str):
         """Fetch one company's financials as an object, or (None, error_node)."""
@@ -272,12 +352,12 @@ class ContextAggregator:
             ),
         }
 
-    def _build_meta(self, ticker: str) -> Dict:
+    def _build_meta(self, ticker: str, sector: Optional[str] = None) -> Dict:
         return {
             "target_ticker":   ticker,
             "schema_version":  _SCHEMA_VERSION,
             "generated_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "fred_series":     _FRED_SERIES_ID,
+            "fred_series":     _macro_for_ticker(ticker, sector)["series_id"],
         }
 
     def _get_company_financials_cached(self, ticker: str):
@@ -287,10 +367,12 @@ class ContextAggregator:
             self._fin_cache[ticker] = self._fin.get_company_financials(ticker)
         return self._fin_cache[ticker]
 
-    def _fetch_alt_signals(self, ticker: str) -> Dict:
+    def _fetch_alt_signals(
+        self, ticker: str, sector: Optional[str] = None, company_name: Optional[str] = None
+    ) -> Dict:
         return {
-            "google_trends":        self._fetch_trends(ticker),
-            "macro_fred":           self._fetch_fred(ticker),
+            "google_trends":        self._fetch_trends(ticker, company_name),
+            "macro_fred":           self._fetch_fred(ticker, sector),
             "sec_risk_snippet":     self._fetch_sec(ticker),
             "job_market":           self._fetch_jobs(ticker),
             "sec_8k_events":        self._fetch_8k_events(ticker),
@@ -300,26 +382,28 @@ class ContextAggregator:
             "massive_price_metrics": self._fetch_massive_price_metrics(ticker),
         }
 
-    def _fetch_trends(self, ticker: str) -> Dict:
+    def _fetch_trends(self, ticker: str, company_name: Optional[str] = None) -> Dict:
         try:
-            return _to_dict(self._alt.get_trends_signal(ticker))
+            return _to_dict(self._alt.get_trends_signal(ticker, company_name))
         except Exception as exc:
             logger.error("Trends signal failed for %s: %s", ticker, exc)
             return _error_node(ticker, exc)
 
-    def _fetch_fred(self, ticker: str) -> Dict:
-        relevance = _macro_relevance(ticker)
+    def _fetch_fred(self, ticker: str, sector: Optional[str] = None) -> Dict:
+        macro = _macro_for_ticker(ticker, sector)
+        series_id, series_label = macro["series_id"], macro["series_label"]
+        relevance = {"relevance": macro["relevance"], "relevance_note": macro["relevance_note"]}
         try:
-            series = self._alt.get_fred_macro(_FRED_SERIES_ID, _FRED_SERIES_LABEL)
+            series = self._alt.get_fred_macro(series_id, series_label)
             d = _to_dict(series)
             if d.get("latest_value") is None:
-                return {"series_id": _FRED_SERIES_ID, "available": False,
+                return {"series_id": series_id, "available": False,
                         "reason": "no_data", **relevance}
             d.update(relevance)
             return d
         except Exception as exc:
-            logger.error("FRED fetch failed: %s", exc)
-            return {"series_id": _FRED_SERIES_ID, "available": False,
+            logger.error("FRED fetch failed for %s (%s): %s", ticker, series_id, exc)
+            return {"series_id": series_id, "available": False,
                     "reason": str(exc), **relevance}
 
     def _fetch_sec(self, ticker: str) -> Dict:
@@ -429,7 +513,7 @@ if __name__ == "__main__":
         print(f"\nGenerated {len(results)} context files.")
     else:
         if target not in COMPETITOR_MAP:
-            print(f"Warning: '{target}' has no competitor mapping — peer section will be empty.")
+            print(f"Note: '{target}' has no curated peer override — peers will be discovered dynamically.")
         result = agg.build_minified_context(target)
         # Print a human-readable preview (pretty-print the first few keys)
         preview = json.loads(result)

@@ -62,11 +62,11 @@ _VALID_TICKERS = set(SECTOR_TICKERS)
 def generate_sector_sheet(tickers: list[str]) -> str:
     """
     Generate a CSV of valuation metrics (Market Cap, EV, EV/Revenue, EV/EBITDA,
-    Fwd P/E, YoY Revenue Growth) for one or more PropTech & Facilities companies.
+    Fwd P/E, YoY Revenue Growth) for one or more public companies in any sector.
 
     Args:
-        tickers: Stock tickers to include, e.g. ["CARR", "PCOR", "CBRE"].
-                 Pass an empty list to run all 14 sector tickers.
+        tickers: Stock tickers to include, e.g. ["NVDA", "XOM", "JPM"].
+                 Pass an empty list to run the default seed universe.
 
     Returns:
         On success: "Saved: <absolute path>" — the CSV is also written to disk.
@@ -88,10 +88,10 @@ def generate_sector_sheet(tickers: list[str]) -> str:
 def build_company_context(ticker: str) -> str:
     """
     Build a minified JSON context payload for a single company, combining:
-      • Fundamental financials (via yfinance)
-      • Three peer comparables
+      • Fundamental financials + sector/industry (via yfinance)
+      • Up to three peer comparables (curated override or dynamic discovery)
       • Google Trends search-velocity signal (12-month)
-      • FRED commercial construction macro (TLNRESCONS)
+      • Sector-appropriate FRED macro series (auto-selected from the issuer's sector)
       • SEC 10-K Item 1A risk-factor snippet
       • SEC 8-K material-event feed (last 12 months, item-labeled)
       • GlobeNewswire press releases (last 5, public RSS)
@@ -122,15 +122,18 @@ def build_company_context(ticker: str) -> str:
 @mcp.tool()
 def list_supported_tickers() -> dict[str, Any]:
     """
-    Return the set of tickers this server has pre-configured competitor mappings
-    for, along with their known peer groups.
+    Return the curated peer overrides and the default seed universe.
 
-    Use this before calling build_company_context to confirm a ticker is supported.
-    Tickers outside this list can still be queried but will have an empty peers list.
+    NOTE: This is NOT the set of researchable tickers. Any valid ticker in any
+    sector can be passed to build_company_context — peers are discovered
+    dynamically (Polygon related-companies) when a ticker is absent from the
+    curated map. The `competitor_map` below lists only hand-tuned overrides that
+    take precedence over dynamic discovery.
     """
     return {
-        "sector_tickers": SECTOR_TICKERS,
-        "competitor_map": COMPETITOR_MAP,
+        "default_seed_universe": SECTOR_TICKERS,
+        "curated_peer_overrides": COMPETITOR_MAP,
+        "dynamic_discovery": "Polygon related-companies (any ticker, all sectors)",
     }
 
 

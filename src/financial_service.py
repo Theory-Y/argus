@@ -1,8 +1,10 @@
 """
 financial_service.py — Valuation Engine
 ========================================
-Fetches, transforms, and exports financial comparables for the
-PropTech & Facilities sector using yfinance (no API key required).
+Fetches, transforms, and exports financial comparables for any sector using
+yfinance (no API key required). The transformer is fully sector-agnostic: it
+captures each issuer's sector/industry classification so downstream peer
+discovery and macro selection can adapt to whatever universe is requested.
 
 Architecture (Clean Architecture + SOLID):
   - FinancialDataFetcher   → Infrastructure: raw yfinance I/O only
@@ -29,6 +31,11 @@ logger = logging.getLogger(__name__)
 # Constants
 # ──────────────────────────────────────────────────────────────────────────────
 
+# Default convenience universe. This is NOT a constraint on what the engine can
+# research — any valid ticker can be fetched, peered (via dynamic discovery), and
+# memo'd. This list is only the seed cohort used when a caller asks for a sector
+# sheet without naming tickers, and it remains the project's original
+# PropTech/Facilities cluster for backward compatibility.
 SECTOR_TICKERS: List[str] = [
     "CSGP", "CBRE", "CARR", "TT",   "JCI",
     "LII",  "ABM",  "CTAS", "ADT",  "ALLE",
@@ -64,6 +71,9 @@ class CompanyFinancials:
     currency: Optional[str] = None          # Trading currency of price/market cap (e.g. "USD")
     financial_currency: Optional[str] = None  # Reporting currency of the statements (e.g. "TWD")
     quality_flags: List[str] = field(default_factory=list)  # Coherence-check annotations
+    # ── Classification (drives sector-aware peer discovery + macro selection) ──
+    sector: Optional[str] = None            # yfinance GICS-style sector, e.g. "Technology"
+    industry: Optional[str] = None          # yfinance industry, e.g. "Semiconductors"
 
 
 @dataclass
@@ -165,6 +175,9 @@ class FinancialDataTransformer:
         currency           = self._norm_ccy(raw_info.get("currency"))
         financial_currency = self._norm_ccy(raw_info.get("financialCurrency"))
 
+        sector   = self._norm_text(raw_info.get("sector"))
+        industry = self._norm_text(raw_info.get("industry"))
+
         ev_revenue = self._ratio(ev_mm, revenue_mm, require_positive_denom=False)
         ev_ebitda  = self._ratio(ev_mm, ebitda_mm, require_positive_denom=True)
 
@@ -199,9 +212,19 @@ class FinancialDataTransformer:
             currency=currency,
             financial_currency=financial_currency,
             quality_flags=flags,
+            sector=sector,
+            industry=industry,
         )
 
     # ── private helpers ───────────────────────────────────────────────────────
+
+    @staticmethod
+    def _norm_text(value: Optional[object]) -> Optional[str]:
+        """Normalise a free-text classification field to a trimmed string, or None."""
+        if not value:
+            return None
+        text = str(value).strip()
+        return text or None
 
     @staticmethod
     def _norm_ccy(value: Optional[object]) -> Optional[str]:
