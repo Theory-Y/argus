@@ -83,22 +83,23 @@ A ticker outside this list is **not** a coverage gap — its peers are discovere
 
 ## Setup
 
-**Prerequisites:** Python ≥ 3.10, Node.js, pandoc, Chromium/Chrome (for PDF rendering).
+**Prerequisites:** none — the setup script bootstraps everything automatically.
+Only `curl` (or `wget`) and `bash` are required on macOS/Linux; PowerShell 5.1+ on Windows.
 
 ```bash
 # macOS / Linux
-npm run setup          # or: bash setup.sh
+bash setup.sh
 
 # Windows
-npm run setup:win      # or: powershell -ExecutionPolicy Bypass -File setup.ps1
+powershell -ExecutionPolicy Bypass -File setup.ps1
 ```
 
-The setup script:
-1. Installs Node dependencies (`md-to-pdf`)
-2. Creates a Python virtual environment and installs `requirements.txt`
-3. Installs pandoc if missing
-4. Installs Chromium if no compatible browser is found
-5. Generates the branded `.dotx` Word template
+The setup script installs everything from scratch if needed:
+1. **Node.js** — via [fnm](https://github.com/Schniz/fnm) (no sudo)
+2. **Python 3.12** — via [uv](https://github.com/astral-sh/uv) (no sudo)
+3. **pandoc** — standalone binary from GitHub releases (no sudo)
+4. **Chromium** — via Playwright if no system browser is found; path written to `.env`
+5. **Branded `.dotx` Word template** — generated once from pandoc defaults
 
 ## Environment variables
 

@@ -1,117 +1,250 @@
 #!/usr/bin/env bash
 # Setup script for middlemarket-research-agent (macOS / Linux)
-# Run once on each machine:  bash setup.sh
+# Zero prerequisites — only curl (or wget) and bash are required.
+# Run:  bash setup.sh
 
 set -euo pipefail
-
-# Always operate from the repo root (the directory this script lives in).
 cd "$(dirname "$0")"
 
-echo "=== middlemarket-research-agent setup ==="
+# ── colour helpers ────────────────────────────────────────────────────────────
+BOLD='\033[1m'; CYAN='\033[36m'; GREEN='\033[32m'; YELLOW='\033[33m'
+RED='\033[31m'; RESET='\033[0m'
+say()  { printf "\n${CYAN}${BOLD}%s${RESET}\n" "$*"; }
+ok()   { printf "  ${GREEN}✓${RESET}  %s\n" "$*"; }
+info() { printf "  %s\n" "$*"; }
+warn() { printf "  ${YELLOW}WARNING:${RESET} %s\n" "$*"; }
+die()  { printf "  ${RED}ERROR:${RESET} %s\n" "$*"; exit 1; }
 
-# ── helper: install a system package with whatever manager is present ────────
-install_pkg() {
-  local pkg="$1"
-  if [[ "$OSTYPE" == "darwin"* ]]; then
-    if command -v brew &>/dev/null; then brew install "$pkg"; return; fi
-    echo "  ERROR: Homebrew not found. Install it first: https://brew.sh"; return 1
-  elif command -v pacman  &>/dev/null; then sudo pacman -S --noconfirm "$pkg"
-  elif command -v apt-get &>/dev/null; then sudo apt-get install -y "$pkg"
-  elif command -v dnf     &>/dev/null; then sudo dnf install -y "$pkg"
-  elif command -v zypper  &>/dev/null; then sudo zypper install -y "$pkg"
-  else
-    echo "  ERROR: Could not detect a package manager."; return 1
-  fi
+echo ""
+say "=== middlemarket-research-agent setup ==="
+
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')   # linux | darwin
+ARCH=$(uname -m)                               # x86_64 | aarch64 | arm64
+
+# ── core helpers ──────────────────────────────────────────────────────────────
+has() { command -v "$1" &>/dev/null; }
+
+# fetch <url> <dest-file>
+fetch() {
+  if has curl;   then curl -fsSL "$1" -o "$2"
+  elif has wget; then wget -q    "$1" -O "$2"
+  else die "curl or wget is required — install one and re-run setup.sh"; fi
 }
 
-# ── 1. Node dependencies ──────────────────────────────────────────────────────
-echo ""
-echo "[1/5] Installing Node.js dependencies..."
-npm install
+# fetch_out <url>  →  stdout
+fetch_out() {
+  if has curl;   then curl -fsSL "$1"
+  elif has wget; then wget -qO-  "$1"
+  else die "curl or wget is required — install one and re-run setup.sh"; fi
+}
 
-# ── 2. Python virtual environment ────────────────────────────────────────────
-echo ""
-echo "[2/5] Setting up Python virtual environment..."
-# Recreate if pip's shebang interpreter no longer exists on disk
-# (happens when the project is moved — shebangs bake in the old absolute path)
+# Ensure ~/.local/bin is on PATH for this session (used for fnm, uv, pandoc)
+LOCAL_BIN="$HOME/.local/bin"
+mkdir -p "$LOCAL_BIN"
+[[ ":$PATH:" != *":$LOCAL_BIN:"* ]] && export PATH="$LOCAL_BIN:$PATH"
+
+# ── 1. Node.js ────────────────────────────────────────────────────────────────
+say "[1/5] Node.js"
+if has node && has npm; then
+  ok "node $(node --version)  npm $(npm --version)"
+else
+  info "node/npm not found — installing via fnm (Fast Node Manager)..."
+
+  # Install fnm binary to LOCAL_BIN if not already there
+  if ! has fnm && [ ! -x "$LOCAL_BIN/fnm" ]; then
+    fetch_out "https://fnm.vercel.app/install" \
+      | bash -s -- --install-dir "$LOCAL_BIN" --skip-shell
+  fi
+
+  FNM=$(command -v fnm 2>/dev/null || echo "$LOCAL_BIN/fnm")
+  eval "$("$FNM" env --shell bash)"   # add fnm-managed node to PATH
+  "$FNM" install --lts
+  eval "$("$FNM" env --shell bash)"   # re-eval so node/npm resolve
+
+  if has node; then
+    ok "node $(node --version) installed via fnm"
+  else
+    die "Node.js install failed. Install from https://nodejs.org/ and re-run."
+  fi
+fi
+
+info "Running npm install..."
+npm install
+ok "Node.js dependencies installed"
+
+# ── 2. Python ─────────────────────────────────────────────────────────────────
+say "[2/5] Python"
+
+# Ensure uv is available — it bootstraps Python if needed and replaces pip
+UV=$(command -v uv 2>/dev/null || echo "$HOME/.local/bin/uv")
+if ! has uv && [ ! -x "$UV" ]; then
+  info "Installing uv (Python manager + fast package installer)..."
+  fetch_out "https://astral.sh/uv/install.sh" | sh
+  [[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && export PATH="$HOME/.local/bin:$PATH"
+  UV=$(command -v uv 2>/dev/null || echo "$HOME/.local/bin/uv")
+fi
+
+# Check for Python 3.10+; if absent, let uv install it
+PYTHON_OK=false
+if has python3 && python3 -c "import sys; sys.exit(0 if sys.version_info>=(3,10) else 1)" 2>/dev/null; then
+  PYTHON_OK=true
+fi
+
+if [ "$PYTHON_OK" = false ]; then
+  info "Python 3.10+ not found — installing Python 3.12 via uv..."
+  "$UV" python install 3.12
+  ok "Python 3.12 installed"
+else
+  ok "$(python3 --version)"
+fi
+
+# Create or refresh the virtual environment
 if [ -d ".venv" ] && [ -f ".venv/bin/pip" ]; then
   PIP_PYTHON=$(head -1 .venv/bin/pip | sed 's/^#!//')
   if [ ! -f "$PIP_PYTHON" ]; then
-    echo "  Stale .venv (shebang '$PIP_PYTHON' missing). Recreating..."
+    info "Stale .venv detected (baked path '$PIP_PYTHON' missing). Recreating..."
     rm -rf .venv
   fi
 fi
-if [ ! -d ".venv" ]; then
-  python3 -m venv .venv
-fi
-.venv/bin/pip install --quiet --upgrade pip
-# Install the full, declared dependency set (not a hardcoded subset).
-.venv/bin/pip install --quiet -r requirements.txt
 
-# ── 3. System dependency: pandoc ─────────────────────────────────────────────
-echo ""
-echo "[3/5] Checking for pandoc..."
-if command -v pandoc &>/dev/null; then
-  echo "  pandoc $(pandoc --version | head -1 | awk '{print $2}') already installed."
+if [ -x "$UV" ] || has uv; then
+  # uv auto-selects the managed Python if system Python is absent
+  "$UV" venv .venv --python 3.12 2>/dev/null || "$UV" venv .venv
+  "$UV" pip install --quiet -r requirements.txt
 else
-  echo "  pandoc not found. Installing..."
-  install_pkg pandoc || {
-    echo "  Install pandoc manually: https://pandoc.org/installing.html"; exit 1; }
+  # Fallback: standard venv + pip
+  [ ! -d ".venv" ] && python3 -m venv .venv
+  .venv/bin/pip install --quiet --upgrade pip
+  .venv/bin/pip install --quiet -r requirements.txt
+fi
+ok "Python virtual environment ready (.venv)"
+
+# ── 3. pandoc ─────────────────────────────────────────────────────────────────
+say "[3/5] pandoc"
+if has pandoc; then
+  ok "pandoc $(pandoc --version | head -1 | awk '{print $2}')"
+else
+  info "pandoc not found — downloading standalone binary (no sudo needed)..."
+  PANDOC_VER="3.6.4"
+
+  case "$OS-$ARCH" in
+    darwin-arm64)          PANDOC_PKG="pandoc-${PANDOC_VER}-arm64-macOS.zip"    ;;
+    darwin-x86_64)         PANDOC_PKG="pandoc-${PANDOC_VER}-x86_64-macOS.zip"   ;;
+    linux-aarch64|linux-arm64)
+                           PANDOC_PKG="pandoc-${PANDOC_VER}-linux-arm64.tar.gz" ;;
+    linux-*)               PANDOC_PKG="pandoc-${PANDOC_VER}-linux-amd64.tar.gz" ;;
+    *) die "Unsupported OS/arch: $OS/$ARCH — install pandoc manually: https://pandoc.org/installing.html" ;;
+  esac
+
+  PANDOC_URL="https://github.com/jgm/pandoc/releases/download/${PANDOC_VER}/${PANDOC_PKG}"
+  TMP_DIR=$(mktemp -d)
+  # shellcheck disable=SC2064
+  trap "rm -rf $TMP_DIR" EXIT
+
+  info "Downloading $PANDOC_PKG..."
+  fetch "$PANDOC_URL" "$TMP_DIR/pandoc_pkg"
+
+  if [[ "$PANDOC_PKG" == *.zip ]]; then
+    unzip -q "$TMP_DIR/pandoc_pkg" -d "$TMP_DIR/src"
+    cp "$TMP_DIR/src/pandoc-${PANDOC_VER}/bin/pandoc" "$LOCAL_BIN/pandoc"
+  else
+    tar -xzf "$TMP_DIR/pandoc_pkg" -C "$TMP_DIR"
+    cp "$TMP_DIR/pandoc-${PANDOC_VER}/bin/pandoc" "$LOCAL_BIN/pandoc"
+  fi
+  chmod +x "$LOCAL_BIN/pandoc"
+
+  ok "pandoc $(pandoc --version | head -1 | awk '{print $2}') installed → $LOCAL_BIN/pandoc"
 fi
 
-# ── 4. System dependency: headless browser (for PDF rendering) ───────────────
-echo ""
-echo "[4/5] Checking for a Chromium-family browser (PDF rendering)..."
+# ── 4. Chromium (headless PDF rendering) ──────────────────────────────────────
+say "[4/5] Chromium (headless PDF rendering)"
 BROWSER=""
-for b in chromium chromium-browser google-chrome google-chrome-stable \
-         microsoft-edge microsoft-edge-stable; do
-  if command -v "$b" &>/dev/null; then BROWSER="$b"; break; fi
+
+# 4a. System browsers
+for b in chromium chromium-browser google-chrome google-chrome-stable chrome \
+         microsoft-edge microsoft-edge-stable msedge; do
+  has "$b" && BROWSER="$b" && break
 done
-# macOS app bundles aren't on PATH — check the standard locations too.
+
+# 4b. macOS application bundles
 if [ -z "$BROWSER" ]; then
-  for p in "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
-           "/Applications/Chromium.app/Contents/MacOS/Chromium"; do
+  for p in \
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+    "/Applications/Chromium.app/Contents/MacOS/Chromium" \
+    "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"; do
     [ -x "$p" ] && BROWSER="$p" && break
   done
 fi
+
+# 4c. Playwright-managed Chromium (from a previous setup run)
+if [ -z "$BROWSER" ]; then
+  for cache_dir in "$HOME/.cache/ms-playwright" "$HOME/Library/Caches/ms-playwright"; do
+    for p in \
+      "$cache_dir/chromium-"*/chrome-linux/chrome \
+      "$cache_dir/chromium-"*/chrome-mac/Chromium.app/Contents/MacOS/Chromium; do
+      [ -x "$p" ] && BROWSER="$p" && break 2
+    done
+  done
+fi
+
 if [ -n "$BROWSER" ]; then
-  echo "  Found browser: $BROWSER"
+  ok "Found browser: $BROWSER"
 else
-  echo "  No browser found. Installing chromium..."
-  if [[ "$OSTYPE" == "darwin"* ]]; then
-    if command -v brew &>/dev/null; then
-      brew install --cask chromium || true
-    else
-      echo "  Homebrew not found — install Chrome/Chromium manually."
-    fi
+  info "No browser found — installing Chromium via Playwright (≈150 MB)..."
+  # Install playwright into the venv (dev-only use; not added to requirements.txt)
+  .venv/bin/pip install --quiet playwright
+
+  # Try with system dependencies first (needs sudo on Linux, safe on macOS)
+  if .venv/bin/playwright install chromium --with-deps 2>/dev/null; then
+    :
   else
-    # Debian/Ubuntu call it chromium-browser; most others use chromium.
-    install_pkg chromium || install_pkg chromium-browser || true
+    .venv/bin/playwright install chromium
   fi
-  if command -v chromium &>/dev/null || command -v chromium-browser &>/dev/null \
-     || [ -x "/Applications/Chromium.app/Contents/MacOS/Chromium" ]; then
-    echo "  chromium installed."
+
+  # Re-probe after install
+  for cache_dir in "$HOME/.cache/ms-playwright" "$HOME/Library/Caches/ms-playwright"; do
+    for p in \
+      "$cache_dir/chromium-"*/chrome-linux/chrome \
+      "$cache_dir/chromium-"*/chrome-mac/Chromium.app/Contents/MacOS/Chromium; do
+      [ -x "$p" ] && BROWSER="$p" && break 2
+    done
+  done
+
+  if [ -n "$BROWSER" ]; then
+    ok "Chromium installed: $BROWSER"
   else
-    echo "  WARNING: could not auto-install a browser."
-    echo "  Install Chrome/Chromium/Edge manually, or set CHROMIUM_BIN=/path/to/browser."
+    warn "Could not auto-install Chromium."
+    warn "Install Chrome/Chromium manually, then set CHROMIUM_BIN=/path/to/browser in .env"
   fi
 fi
 
-# ── 5. Generate the branded .dotx reference template ─────────────────────────
-echo ""
-echo "[5/5] Generating branded reference template → output/theme/reference.dotx"
+# Write CHROMIUM_BIN to .env when the binary is not on PATH (absolute path required)
+if [ -n "$BROWSER" ] && [[ "$BROWSER" == /* ]]; then
+  BROWSER_CMD=$(basename "$BROWSER")
+  if ! has "$BROWSER_CMD" || [ "$(command -v "$BROWSER_CMD")" != "$BROWSER" ]; then
+    touch .env
+    # Remove any existing CHROMIUM_BIN line, then append the new one
+    grep -v "^CHROMIUM_BIN=" .env > .env.tmp && mv .env.tmp .env
+    echo "CHROMIUM_BIN=$BROWSER" >> .env
+    info "CHROMIUM_BIN written to .env"
+  fi
+fi
+
+# ── 5. Branded .dotx reference template ──────────────────────────────────────
+say "[5/5] Generating branded reference template → output/theme/reference.dotx"
 mkdir -p output/theme
-# Step (a): produce a base reference.dotx from pandoc's default if missing.
 if [ ! -f "output/theme/reference.dotx" ]; then
   pandoc --print-default-data-file reference.docx > output/theme/reference.dotx
 fi
-# Step (b): apply the Theory Y institutional styling in-place (needs lxml from venv).
 .venv/bin/python3 scripts/build_reference_dotx.py
-echo "  Branded template ready."
+ok "Branded template ready"
 
 echo ""
-echo "=== Setup complete ==="
+say "=== Setup complete ==="
 echo ""
 echo "Quick-start:"
-echo "  Run a memo:  /theory-y-memo TICKER"
+echo "  Run a memo:         /theory-y-memo TICKER"
 echo "  Re-brand template:  .venv/bin/python3 scripts/build_reference_dotx.py"
+echo ""
+echo "Note: if this session installed Node.js or uv, open a new terminal so"
+echo "      PATH changes from ~/.bashrc / ~/.zshrc take effect permanently."
