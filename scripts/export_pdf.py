@@ -349,6 +349,19 @@ figure.chart .chart-empty-box strong{color:var(--navy)}
 }
 """
 
+# CJK overlay — injected only for CJK languages (see _CJK_LANGS) so Latin-script
+# memos (en/es/fr) keep the exact original font stacks and never embed a CJK face.
+# It appends the locally-installed Noto CJK **SC** family (correct weight, full
+# Simplified coverage, offline) ahead of the Google webfont fallback, re-declaring
+# the same selectors as the base CSS so the cascade order makes these win. Charts
+# carry their own CJK fallback inline (chart_service FONT_SANS/FONT_SERIF).
+_CJK_LANGS = {"zh"}
+_CJK_CSS = """
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;600;700&display=swap');
+body,p.subtitle,h3,h4,thead th,caption,figure.chart figcaption,.doc-header .meta,tbody td{font-family:"Calibri",Arial,"Noto Sans CJK SC","Noto Sans SC",sans-serif}
+h1,h1.title,h2,blockquote,.doc-header .firm{font-family:"EB Garamond",Georgia,"Noto Serif CJK SC","Noto Serif SC",serif}
+"""
+
 
 def run(cmd, **kwargs):
     result = subprocess.run(cmd, capture_output=True, text=True, **kwargs)
@@ -359,13 +372,31 @@ def run(cmd, **kwargs):
     return result
 
 
-def inject_header(html: str, ticker: str, date: str) -> str:
+# Localized header chrome. The firm name "Theory Y Research" is a brand and stays
+# verbatim; only the descriptor + the institutional-use banner translate. Falls
+# back to English for any unknown lang.
+# BCP-47 document-language tags. The script subtag on zh ("zh-Hans") is what makes
+# the headless browser resolve Han characters to the Simplified (SC) glyph variants
+# / Noto Sans CJK **SC** face — a bare "zh" is ambiguous (could be Traditional) and
+# lets Skia fall back to the Japanese (CJK JP) face for the body text.
+_BCP47_LANG = {"en": "en", "zh": "zh-Hans", "es": "es", "fr": "fr"}
+
+_HEADER_CHROME = {
+    "en": ("Equity Research",                "INSTITUTIONAL USE ONLY"),
+    "zh": ("股票研究",                         "仅供机构使用"),
+    "es": ("Análisis de Renta Variable",     "USO INSTITUCIONAL EXCLUSIVO"),
+    "fr": ("Recherche Actions",              "USAGE INSTITUTIONNEL EXCLUSIVEMENT"),
+}
+
+
+def inject_header(html: str, ticker: str, date: str, lang: str = "en") -> str:
+    research, institutional = _HEADER_CHROME.get(lang, _HEADER_CHROME["en"])
     header_html = f"""<div class="doc-header">
-  <div class="firm">Theory Y Research &nbsp;·&nbsp; Equity Research</div>
+  <div class="firm">Theory Y Research &nbsp;·&nbsp; {research}</div>
   <div class="meta">
     <strong style="font-size:11pt;color:#0D1F3C">{ticker}</strong><br>
     NASDAQ: {ticker} &nbsp;|&nbsp; {date}<br>
-    <span style="color:#B8922A;font-weight:600">INSTITUTIONAL USE ONLY</span>
+    <span style="color:#B8922A;font-weight:600">{institutional}</span>
   </div>
 </div>
 """
@@ -389,7 +420,7 @@ def load_context(ticker: str, override: str | None = None) -> dict:
         return {}
 
 
-def inject_charts(html: str, ticker: str, context: dict) -> str:
+def inject_charts(html: str, ticker: str, context: dict, lang: str = "en") -> str:
     """Replace every [[chart:name]] token in *html* with its rendered SVG figure."""
     if chart_service is None:
         print(f"      · chart_service unavailable ({_CHART_IMPORT_ERROR}); "
@@ -400,7 +431,7 @@ def inject_charts(html: str, ticker: str, context: dict) -> str:
 
     def _replace(match: "re.Match") -> str:
         name = match.group(1).lower()
-        svg = chart_service.build_chart(name, ticker, context)
+        svg = chart_service.build_chart(name, ticker, context, lang=lang)
         rendered.append(name)
         return svg  # "" for unknown tokens → cleanly removed
 
@@ -438,21 +469,26 @@ def inject_table_captions(html: str) -> str:
     return new_html
 
 
-def number_figures(html: str) -> str:
+# Localized figure-label word. Chart/table captions read "<word> N — caption".
+_FIGURE_WORD = {"en": "Figure", "zh": "图", "es": "Figura", "fr": "Figure"}
+
+
+def number_figures(html: str, lang: str = "en") -> str:
     """
     Assign the single running ``Figure N`` sequence shared by charts and tables.
 
     Both chart figcaptions (from chart_service) and table captions open with
     ``FIG_PLACEHOLDER``. This pass walks the fully-assembled HTML top-to-bottom
-    and replaces the Nth placeholder with ``Figure N``, so the numbers always
-    match the order figures actually appear in the document — regardless of how
-    charts and tables interleave.
+    and replaces the Nth placeholder with ``<word> N`` (the word localized per
+    *lang*), so the numbers always match the order figures actually appear in the
+    document — regardless of how charts and tables interleave.
     """
+    word = _FIGURE_WORD.get(lang, _FIGURE_WORD["en"])
     counter = {"n": 0}
 
     def _replace(_match: "re.Match") -> str:
         counter["n"] += 1
-        return f"Figure {counter['n']}"
+        return f"{word} {counter['n']}"
 
     new_html, n = re.subn(re.escape(FIG_PLACEHOLDER), _replace, html)
     if n:
@@ -470,6 +506,9 @@ def main():
                         help="Path to context_<TICKER>.json (default: output/context/)")
     parser.add_argument("--no-charts", action="store_true",
                         help="Disable [[chart:…]] token rendering")
+    parser.add_argument("--lang", default="en", choices=["en", "zh", "es", "fr"],
+                        help="Memo language: selects CJK font fallback + localized "
+                             "header chrome (default: en)")
     args = parser.parse_args()
 
     md_path   = args.md_path
@@ -477,7 +516,9 @@ def main():
     docx_path  = base + ".docx"
     pdf_path   = base + ".pdf"
 
-    # infer ticker from filename
+    # Infer ticker from filename. The [A-Z]+ class stops at the first underscore,
+    # so a localized memo like TheoryY_Memo_NVDA_zh.md still yields "NVDA" — charts
+    # and context_<TICKER>.json resolve correctly regardless of the _<lang> suffix.
     m = re.search(r"TheoryY_Memo_([A-Z]+)", os.path.basename(md_path))
     ticker = m.group(1) if m else "MEMO"
 
@@ -502,20 +543,30 @@ def main():
 
     # ── Inject CSS + header ────────────────────────────────────────────────
     html = re.sub(r"<style[^>]*>.*?</style>", "", html, flags=re.DOTALL)
-    html = html.replace("</head>", f"<style>\n{CSS}\n</style>\n</head>", 1)
-    html = inject_header(html, ticker, args.date)
+    style = CSS + (_CJK_CSS if args.lang in _CJK_LANGS else "")
+    html = html.replace("</head>", f"<style>\n{style}\n</style>\n</head>", 1)
+    # Set the document language so the browser applies correct line-breaking
+    # (CJK wrapping for zh, hyphenation for es/fr) AND the right Han glyph variant
+    # (zh-Hans → Simplified/SC face). Pandoc emits <html ... lang="">; overwrite any
+    # existing lang attr, else add one.
+    doc_lang = _BCP47_LANG.get(args.lang, args.lang)
+    if re.search(r"<html[^>]*\blang=", html):
+        html = re.sub(r'(<html[^>]*\blang=")[^"]*(")', rf"\g<1>{doc_lang}\g<2>", html, count=1)
+    else:
+        html = re.sub(r"<html\b", f'<html lang="{doc_lang}"', html, count=1)
+    html = inject_header(html, ticker, args.date, args.lang)
 
     # ── Inject data-driven charts (live price + payload signals) ───────────────
     if args.no_charts:
         html = _CHART_TOKEN_RE.sub("", html)
     else:
         context = load_context(ticker, args.context)
-        html = inject_charts(html, ticker, context)
+        html = inject_charts(html, ticker, context, args.lang)
 
     # Caption tables (runs for both chart modes), then assign the single running
     # Figure N sequence over charts + tables in the order they appear.
     html = inject_table_captions(html)
-    html = number_figures(html)
+    html = number_figures(html, args.lang)
 
     with tempfile.NamedTemporaryFile(suffix=".html", mode="w",
                                      delete=False, encoding="utf-8") as tf:

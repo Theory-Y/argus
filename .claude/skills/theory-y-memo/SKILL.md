@@ -17,15 +17,22 @@ strictly in that data.
 > Just keep the sections coherent and non-repetitive (see Writing rules). The only
 > code that still needs to run is the data fetch.
 
-## Phase 0 — Ask the user for output format
+## Phase 0 — Ask the user for output format and languages
 
-Before fetching any data, use the `AskUserQuestion` tool to ask:
+Before fetching any data, use the `AskUserQuestion` tool to ask **two** questions in
+a single call:
 
-> **Which output format do you want for this memo?**
+> **1. Which output format do you want for this memo?**
 > - **Markdown (.md)** — plain markdown file; PDF rendered via CSS theme
 > - **Word (.docx)** — formatted Word document using the branded `.dotx` style template; PDF also generated
 
-Store the answer as `FORMAT` (either `md` or `docx`) and proceed.
+> **2. Which languages? (multi-select)**
+> - **English** — always produced (the canonical analysis)
+> - **Mandarin (zh)** · **Spanish (es)** · **French (fr)** — localized versions
+
+Store the format as `FORMAT` (either `md` or `docx`). Store the extra languages as
+`LANGS` (the subset of `{zh, es, fr}` the user picked; English is always included and
+is produced by Phases 1–2). Then proceed.
 
 ---
 
@@ -324,3 +331,30 @@ If `output/theme/reference.dotx` is missing or corrupt, regenerate it:
 ```
 
 Deliverables: `output/memos/TheoryY_Memo_<TICKER>.md` + `output/memos/TheoryY_Memo_<TICKER>.docx` + `output/memos/TheoryY_Memo_<TICKER>.pdf`
+
+---
+
+## Phase 3 — Localization (only if `LANGS` is non-empty)
+
+The English memo from Phase 2 is the canonical analysis. To produce the requested
+localized versions, **dispatch one subagent per language, in parallel** — do **not**
+translate inline in this session. Isolation is the point: each translation runs in
+its own context that loads only the finished English memo plus the language glossary,
+never the data payload or the analytical-rigor rules, and returns only file paths. So
+this session never re-loads the heavy context or accumulates N copies of the memo.
+
+For each `lang` in `LANGS`, launch an `Agent` (general-purpose) with a prompt that
+invokes the **`theory-y-localize`** skill for `TICKER` + `lang`, e.g.:
+
+> Use the `theory-y-localize` skill to translate the existing English memo for
+> ticker `<TICKER>` into `<lang>`. Follow that skill exactly: load the English memo
+> and `localization/glossary.<lang>.md`, translate while preserving every
+> `[[chart:…]]`/`[[table:…]]` token and the markdown structure, write
+> `output/memos/TheoryY_Memo_<TICKER>_<lang>.md`, then run the PDF export with
+> `--lang <lang>`. Return only the two output paths.
+
+Issue all the subagent calls **in one message** so they run concurrently. Collect the
+returned paths and list every deliverable (English + each localized `.md`/`.pdf`).
+
+Localized deliverables per language: `output/memos/TheoryY_Memo_<TICKER>_<lang>.md`
++ `output/memos/TheoryY_Memo_<TICKER>_<lang>.pdf`
