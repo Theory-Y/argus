@@ -14,7 +14,11 @@ Output contract:
         "macro_fred":          FredSeries   (dict),
         "sec_risk_snippet":    SecRiskSnippet (dict),
         "job_market":          ApifyJobsResult (dict),
-        "consumer_sentiment":  ConsumerSentimentSignal (dict)
+        "consumer_sentiment":  ConsumerSentimentSignal (dict),
+        "web_research":        WebResearchSignal (dict) — first-hand news/forum
+                               scrape; its uniform forum_posts / news_extracts
+                               arrays are TOON-encoded into *_toon strings to cut
+                               output tokens (the rest of the payload stays JSON)
     },
     "data_quality": { flagged_comparables, has_flags, directive }  ← coherence audit
   }
@@ -131,7 +135,7 @@ SECTOR_MACRO_MAP: Dict[str, Tuple[str, str]] = {
     "Communication Services": ("PCEC96",     "Real Personal Consumption Expenditures (PCEC96, chained $B, SA)"),
 }
 
-_SCHEMA_VERSION:  str = "1.7"
+_SCHEMA_VERSION:  str = "1.8"
 _OUTPUT_DIR:      Path = Path("output") / "context"
 
 # How many comparables to carry when peers are discovered dynamically.
@@ -203,6 +207,31 @@ def _to_dict(obj: Any) -> Dict:
 
 def _error_node(ticker: str, exc: Exception) -> Dict:
     return {"ticker": ticker, "error": str(exc)}
+
+
+def _toon_encode(rows: List[Dict]) -> str:
+    """
+    Encode a uniform array of row dicts as a compact TOON string (indentation +
+    CSV-style tabular layout → ~40–60% fewer tokens than nested JSON for this shape).
+    Tries the maintained `python-toon` / `toon_py` packages; falls back to minified
+    JSON if neither is installed so the payload is always well-formed.
+    """
+    if not rows:
+        return ""
+    compact_json = json.dumps(rows, separators=(",", ":"), default=str)
+    try:
+        try:
+            from toon import encode as _encode          # python-toon
+        except ImportError:
+            from toon_py import encode as _encode        # toon-py
+        toon = _encode(rows)
+    except Exception as exc:
+        logger.warning("TOON encode failed (%s); falling back to JSON", exc)
+        return compact_json
+    # TOON's tabular header only pays off on dense, flat, uniform arrays; on tiny,
+    # sparse, or nested rows it can be larger than JSON. Never emit the bigger form —
+    # the whole point is fewer tokens, so keep whichever is smaller.
+    return toon if len(toon) <= len(compact_json) else compact_json
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -380,6 +409,7 @@ class ContextAggregator:
             "consumer_sentiment":   self._fetch_consumer_sentiment(ticker),
             "massive_news":         self._fetch_massive_news(ticker),
             "massive_price_metrics": self._fetch_massive_price_metrics(ticker),
+            "web_research":         self._fetch_web_research(ticker, company_name),
         }
 
     def _fetch_trends(self, ticker: str, company_name: Optional[str] = None) -> Dict:
@@ -449,6 +479,19 @@ class ContextAggregator:
             return _to_dict(self._alt.get_massive_news(ticker))
         except Exception as exc:
             logger.error("Massive news fetch failed for %s: %s", ticker, exc)
+            return _error_node(ticker, exc)
+
+    def _fetch_web_research(self, ticker: str, company_name: Optional[str] = None) -> Dict:
+        try:
+            signal = self._alt.get_web_research(ticker, company_name or ticker)
+            d = _to_dict(signal)
+            # Compact the two uniform arrays into TOON strings; drop the raw arrays
+            # so the node carries each row exactly once (TOON form only).
+            d["forum_posts_toon"]   = _toon_encode(d.pop("forum_posts", []))
+            d["news_extracts_toon"] = _toon_encode(d.pop("news_extracts", []))
+            return d
+        except Exception as exc:
+            logger.error("Web research failed for %s: %s", ticker, exc)
             return _error_node(ticker, exc)
 
     def _fetch_massive_price_metrics(self, ticker: str) -> Dict:

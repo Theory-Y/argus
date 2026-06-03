@@ -95,7 +95,15 @@ Every claim anchored to a payload number/relationship or an explicitly sourced e
     (c) ≤4 verbatim `top_quotes` as blockquotes with source label, skipping 0-message/error
     sources. Supplement with `massive_news` reasoning that reflects investor/public reaction.
     If overall `confidence` "low", say §4 is directional only. Contextualize sentiment vs
-    business model (B2C vs B2B vs conglomerate).
+    business model (B2C vs B2B vs conglomerate). Also read `alt_signals.web_research`
+    (first-hand scrape of full news article bodies + niche forums): its
+    `forum_posts_toon`/`news_extracts_toon` are compact TOON tables (or minified JSON when
+    smaller) — read them as the arrays they encode, never quote the serialization markup.
+    Honor its `sentiment`/`confidence` and weave a `top_quotes` excerpt where it sharpens
+    §3/§4; when `available` is false or `error` is set, skip it (don't invent forum chatter).
+    Calibrate by `extraction_mode`: `"lexical"` (no-LLM keyword scoring of page text) is a
+    directional read like the other lexicon sources; `"llm"` (structured extraction) may be
+    cited more concretely. Never let a low-`confidence` web_research read anchor the call.
   - §5 — concrete, ranked risks/barriers, each tied to thesis or numbers.
   - §6 — clear direction + conviction falling out of §§1–5, with variables that would change the call.
 

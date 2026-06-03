@@ -37,6 +37,17 @@ FIG_PLACEHOLDER = getattr(chart_service, "FIG_PLACEHOLDER", "[[#fig]]")
 # fights the surrounding <strong> and renders in the wrong (serif/bold) font.
 PANDOC_MD = "markdown-subscript-superscript"
 
+def _ensure_table_blank_lines(md: str) -> str:
+    """Insert a blank line between [[table:...]] tokens and the pipe table that follows.
+
+    Pandoc collapses a [[table:...]] line and an immediately-adjacent pipe-table
+    row into a single <p> when no blank line separates them, so no <table> element
+    is emitted and _TABLE_TOKEN_RE never matches. This pass inserts the required
+    blank line defensively so the memo author doesn't need to remember the quirk.
+    """
+    return re.sub(r'(\[\[table:[^\]]*\]\])\n(\|)', r'\1\n\n\2', md)
+
+
 # Matches [[chart:name]] tokens, including the <p>…</p> pandoc wraps them in.
 _CHART_TOKEN_RE = re.compile(
     r"(?:<p>)?\s*\[\[chart:([a-z_]+)\]\]\s*(?:</p>)?", re.IGNORECASE
@@ -522,20 +533,23 @@ def main():
     m = re.search(r"TheoryY_Memo_([A-Z]+)", os.path.basename(md_path))
     ticker = m.group(1) if m else "MEMO"
 
+    # Pre-process the markdown once; both pandoc calls below use the result.
+    with open(md_path, encoding="utf-8") as _fh:
+        md_content = _ensure_table_blank_lines(_fh.read())
+
     # ── Step 1: md → docx via reference.dotx ──────────────────────────────
     if not args.skip_docx:
         print(f"[1/3] pandoc  {md_path} → {docx_path}  (using {REFERENCE_DOTX})")
-        run(["pandoc", md_path,
-             "-f", PANDOC_MD,
+        run(["pandoc", "-f", PANDOC_MD,
              "--reference-doc", REFERENCE_DOTX,
-             "-o", docx_path])
+             "-o", docx_path], input=md_content)
         print(f"      ✓ {docx_path}")
 
     # ── Step 2: docx → html (or md → html when skipping docx) ───────────────
     if args.skip_docx:
         print(f"[2/3] pandoc  {md_path} → HTML")
-        result = run(["pandoc", md_path, "-f", PANDOC_MD,
-                      "-t", "html", "--standalone"])
+        result = run(["pandoc", "-f", PANDOC_MD,
+                      "-t", "html", "--standalone"], input=md_content)
     else:
         print(f"[2/3] pandoc  {docx_path} → HTML")
         result = run(["pandoc", docx_path, "-t", "html", "--standalone"])

@@ -27,6 +27,15 @@ beautifulsoup4>=4.12.0      # HTML parser for risk factor extraction
 lxml>=5.0.0                 # Fast HTML/XML backend for BeautifulSoup
 defusedxml>=0.7.1           # Safe XML parsing (guards against XXE / billion-laughs)
 
+# ── Web research (news bodies + niche forums via ScrapeGraphAI) ───────────────
+# scrapegraphai is heavy (pulls LangChain); imported lazily and degrades to a stub
+# when absent, so it is effectively optional. markdownify does the HTML→Markdown
+# token-reduction step; python-toon compacts the uniform output arrays.
+scrapegraphai>=1.30.0       # LLM web scraper, pointed at the existing Claude key
+langchain-anthropic>=0.2.0  # Claude backend scrapegraphai uses for "anthropic/*" models
+markdownify>=0.11.0         # HTML → Markdown (strips script/style/nav before the LLM)
+python-toon>=0.1.0          # Token-Oriented Object Notation encoder for output arrays
+
 # ── Dev / test (optional, not required at runtime) ───────────────────────────
 # pytest>=8.0.0
 # pytest-mock>=3.12.0

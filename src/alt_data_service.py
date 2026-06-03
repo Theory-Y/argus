@@ -1670,6 +1670,7 @@ class MassiveNewsArticle:
     publisher:            str
     sentiment:            Optional[str]           # "positive" | "neutral" | "negative"
     sentiment_reasoning:  Optional[str]           # analyst-quality prose from Polygon
+    url:                  Optional[str] = None    # article URL (for deep web-research scraping)
 
 
 @dataclass
@@ -1810,6 +1811,7 @@ class MassiveNewsFetcher:
                 publisher=(item.get("publisher") or {}).get("name", ""),
                 sentiment=insight.get("sentiment") if insight else None,
                 sentiment_reasoning=insight.get("sentiment_reasoning") if insight else None,
+                url=item.get("article_url") or None,
             ))
 
         return MassiveNewsSignal(
@@ -1946,6 +1948,7 @@ class AltDataService:
         massive_news_fetcher:  Optional[MassiveNewsFetcher]      = None,
         massive_price_fetcher: Optional[MassivePriceFetcher]     = None,
         related_companies_fetcher: Optional[RelatedCompaniesFetcher] = None,
+        web_research_service:  Optional[object]                  = None,
     ) -> None:
         self._trends_fetcher      = trends_fetcher      or GoogleTrendsFetcher()
         self._trends_processor    = trends_processor    or GoogleTrendsProcessor()
@@ -1963,6 +1966,9 @@ class AltDataService:
         self._massive_news        = massive_news_fetcher  or MassiveNewsFetcher()
         self._massive_price       = massive_price_fetcher or MassivePriceFetcher()
         self._related_companies   = related_companies_fetcher or RelatedCompaniesFetcher()
+        # Lazily constructed on first use so the heavy scrapegraphai import only
+        # happens when web research is actually requested (and stays optional).
+        self._web_research        = web_research_service
 
     # ── public API ────────────────────────────────────────────────────────────
 
@@ -2024,3 +2030,15 @@ class AltDataService:
 
     def get_massive_price_metrics(self, ticker: str) -> MassivePriceMetrics:
         return self._massive_price.fetch(ticker)
+
+    def get_web_research(self, ticker: str, company_name: str):
+        """
+        First-hand web research (news bodies + niche forums) via ScrapeGraphAI.
+        The collaborator is imported and built lazily so the heavy scrapegraphai
+        dependency is only loaded when this signal is actually requested; it
+        degrades to a clearly-marked stub when scrapegraphai/key are absent.
+        """
+        if self._web_research is None:
+            from web_research_service import WebResearchService
+            self._web_research = WebResearchService()
+        return self._web_research.get_web_research(ticker, company_name)

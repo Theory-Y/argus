@@ -136,7 +136,18 @@ reactions — cite them by publisher and date. Per-source breakdown: use \
 `signal_count` and `confidence`, not raw `message_count`. Treat Stocktwits' \
 label-based score as the most reliable when its `signal_count` is non-trivial. A \
 `confidence: "low"` overall means the section is directional only. Note any `error` \
-instead of omitting the section. Contextualise against the business model.
+instead of omitting the section. Contextualise against the business model. \
+`alt_signals.web_research` adds first-hand discussion scraped from full news \
+article bodies and niche forums: its `forum_posts_toon` and `news_extracts_toon` \
+fields are compact TOON tables (indentation + CSV-style rows; minified JSON when \
+that is smaller for a tiny array) — read them as the arrays they encode, do not \
+quote the serialization markup itself. Treat it like any other \
+free-text source: honor its `confidence`/`sentiment`, cite a `top_quotes` excerpt \
+where it sharpens the read, and when `available` is false or `error` is set, simply \
+skip it rather than inventing forum chatter. Calibrate by `extraction_mode`: \
+`"lexical"` (no-LLM keyword scoring of page text) is directional like the other \
+lexicon sources, while `"llm"` (structured extraction) may be cited more concretely; \
+a low-`confidence` web_research read must never anchor a thesis, risk, or the call.
 - §5 — concrete, ranked risks and structural barriers, each tied to its impact \
 on the thesis or the numbers.
 - §6 — a clear recommendation (direction + conviction) that falls out of §§1–5, \
