@@ -12,7 +12,7 @@ Usage:
   .venv/bin/python3 scripts/export_pdf.py output/memos/TheoryY_Memo_MU.md --skip-docx
 """
 
-import argparse, json, os, re, shutil, subprocess, sys, tempfile
+import argparse, datetime, json, os, re, shutil, subprocess, sys, tempfile
 
 # chart_service lives in src/ alongside the other domain modules
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
@@ -21,6 +21,12 @@ try:
 except Exception as _chart_exc:                              # pragma: no cover
     chart_service = None
     _CHART_IMPORT_ERROR = _chart_exc
+
+try:
+    from playwright.sync_api import sync_playwright as _sync_playwright
+    _PLAYWRIGHT_AVAILABLE = True
+except ImportError:
+    _PLAYWRIGHT_AVAILABLE = False
 
 REFERENCE_DOTX = "output/theme/reference.dotx"
 CONTEXT_DIR = "output/context"
@@ -46,6 +52,16 @@ def _ensure_table_blank_lines(md: str) -> str:
     blank line defensively so the memo author doesn't need to remember the quirk.
     """
     return re.sub(r'(\[\[table:[^\]]*\]\])\n(\|)', r'\1\n\n\2', md)
+
+
+def _sanitize_footnote_markers(md: str) -> str:
+    """Convert ^(x) markdown footnote notation to <sup>x</sup> HTML.
+
+    The pandoc superscript extension is disabled (PANDOC_MD) to prevent bare
+    "~" from becoming <sub>. Any ^(x) the LLM writes therefore renders as
+    literal text. This pass normalises them to inline HTML that survives pandoc.
+    """
+    return re.sub(r'\^\(([^)\n]+)\)', lambda m: f'<sup>{m.group(1)}</sup>', md)
 
 
 # Matches [[chart:name]] tokens, including the <p>…</p> pandoc wraps them in.
@@ -507,12 +523,39 @@ def number_figures(html: str, lang: str = "en") -> str:
     return new_html
 
 
+def render_pdf(html_path: str, pdf_path: str) -> None:
+    """Render *html_path* to *pdf_path* without browser-injected headers or footers.
+
+    Prefers Playwright (CDP `displayHeaderFooter=false`) because the legacy
+    `--print-to-pdf-no-header` CLI flag is a no-op on Chromium 112+.
+    Falls back to direct CLI invocation when Playwright is unavailable.
+    """
+    if _PLAYWRIGHT_AVAILABLE:
+        with _sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page()
+            page.goto(f"file://{os.path.abspath(html_path)}")
+            page.pdf(
+                path=pdf_path,
+                print_background=True,
+                display_header_footer=False,
+                prefer_css_page_size=True,
+                margin={"top": "0", "right": "0", "bottom": "0", "left": "0"},
+            )
+            browser.close()
+    else:
+        browser = find_browser()
+        run([browser, "--headless", "--no-sandbox", "--disable-gpu",
+             f"--print-to-pdf={pdf_path}", "--print-to-pdf-no-header", html_path])
+
+
 def main():
     parser = argparse.ArgumentParser(description="Export memo to PDF via .dotx pipeline")
     parser.add_argument("md_path", help="Path to the markdown memo")
     parser.add_argument("--skip-docx", action="store_true",
                         help="Skip .docx generation; use existing .docx")
-    parser.add_argument("--date", default="2026-05-28")
+    parser.add_argument("--date", default=None,
+                        help="Header date string (default: today's date)")
     parser.add_argument("--context", default=None,
                         help="Path to context_<TICKER>.json (default: output/context/)")
     parser.add_argument("--no-charts", action="store_true",
@@ -521,6 +564,10 @@ def main():
                         help="Memo language: selects CJK font fallback + localized "
                              "header chrome (default: en)")
     args = parser.parse_args()
+
+    if args.date is None:
+        d = datetime.date.today()
+        args.date = f"{d.strftime('%B')} {d.day}, {d.year}"
 
     md_path   = args.md_path
     base       = os.path.splitext(md_path)[0]
@@ -535,7 +582,7 @@ def main():
 
     # Pre-process the markdown once; both pandoc calls below use the result.
     with open(md_path, encoding="utf-8") as _fh:
-        md_content = _ensure_table_blank_lines(_fh.read())
+        md_content = _sanitize_footnote_markers(_ensure_table_blank_lines(_fh.read()))
 
     # ── Step 1: md → docx via reference.dotx ──────────────────────────────
     if not args.skip_docx:
@@ -545,14 +592,9 @@ def main():
              "-o", docx_path], input=md_content)
         print(f"      ✓ {docx_path}")
 
-    # ── Step 2: docx → html (or md → html when skipping docx) ───────────────
-    if args.skip_docx:
-        print(f"[2/3] pandoc  {md_path} → HTML")
-        result = run(["pandoc", "-f", PANDOC_MD,
-                      "-t", "html", "--standalone"], input=md_content)
-    else:
-        print(f"[2/3] pandoc  {docx_path} → HTML")
-        result = run(["pandoc", docx_path, "-t", "html", "--standalone"])
+    # ── Step 2: md → html directly (avoids docx round-trip drift in table rendering) ──
+    print(f"[2/3] pandoc  {md_path} → HTML")
+    result = run(["pandoc", "-f", PANDOC_MD, "-t", "html", "--standalone"], input=md_content)
     html = result.stdout
 
     # ── Inject CSS + header ────────────────────────────────────────────────
@@ -587,15 +629,10 @@ def main():
         tf.write(html)
         tmp_html = tf.name
 
-    # ── Step 3: headless browser → pdf ─────────────────────────────────────
-    browser = find_browser()
-    print(f"[3/3] {os.path.basename(browser)} → {pdf_path}")
-    run([browser,
-         "--headless", "--no-sandbox",
-         "--disable-gpu",
-         f"--print-to-pdf={pdf_path}",
-         "--print-to-pdf-no-header",
-         tmp_html])
+    # ── Step 3: html → pdf via Playwright (CDP displayHeaderFooter=false) ────
+    renderer = "playwright" if _PLAYWRIGHT_AVAILABLE else find_browser()
+    print(f"[3/3] {renderer if isinstance(renderer, str) else os.path.basename(renderer)} → {pdf_path}")
+    render_pdf(tmp_html, pdf_path)
     os.unlink(tmp_html)
     size = os.path.getsize(pdf_path)
     print(f"      ✓ {pdf_path}  ({size/1024:.0f} KB)")

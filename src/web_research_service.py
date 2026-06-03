@@ -61,7 +61,6 @@ logger = logging.getLogger(__name__)
 # Configuration — all overridable via environment; no new API key required.
 # ──────────────────────────────────────────────────────────────────────────────
 
-# Reused from the memo writer — the anthropic SDK reads ANTHROPIC_API_KEY itself.
 ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
 
 _TRUTHY = {"1", "true", "yes", "on"}
@@ -70,6 +69,20 @@ WEB_RESEARCH_MAX_URLS: int = int(os.getenv("WEB_RESEARCH_MAX_URLS", "5"))
 # Haiku is plenty for bulk extraction; the memo writer keeps Opus. scrapegraphai
 # uses provider/model strings, so anthropic models are prefixed "anthropic/".
 _EXTRACTION_MODEL: str = os.getenv("WEB_RESEARCH_MODEL", "anthropic/claude-haiku-4-5")
+
+# Provider → env-var lookup. Add entries here as new providers are enabled.
+_PROVIDER_KEY_ENVVARS: dict = {
+    "anthropic": "ANTHROPIC_API_KEY",
+    "groq":      "GROQ_API_KEY",
+    "openai":    "OPENAI_API_KEY",
+    "mistralai": "MISTRAL_API_KEY",
+}
+
+def _api_key_for_model(model: str) -> str:
+    """Return the API key env var value for the model's provider (e.g. 'groq/...')."""
+    provider = model.split("/")[0].lower() if "/" in model else "anthropic"
+    env_var = _PROVIDER_KEY_ENVVARS.get(provider, "ANTHROPIC_API_KEY")
+    return os.getenv(env_var, "")
 
 _CACHE_PATH: Path = Path("output") / "cache" / "web_research.sqlite"
 _USER_AGENT: str = "TheoryY-ResearchAgent/1.0 (web-research)"
@@ -314,14 +327,13 @@ class ScrapeGraphExtractor:
         "and 'stance' (one of 'positive', 'neutral', 'negative' toward the company)."
     )
 
-    def __init__(self, api_key: str = ANTHROPIC_API_KEY, model: str = _EXTRACTION_MODEL) -> None:
-        self._api_key = api_key
+    def __init__(self, model: str = _EXTRACTION_MODEL) -> None:
         self._model = model
 
     @property
     def is_available(self) -> bool:
-        """True only when a real Claude key is set AND scrapegraphai is importable."""
-        if not _is_real_key(self._api_key):
+        """True only when a real key is set for the configured provider AND scrapegraphai is importable."""
+        if not _is_real_key(_api_key_for_model(self._model)):
             return False
         try:
             import scrapegraphai  # noqa: F401
@@ -336,9 +348,9 @@ class ScrapeGraphExtractor:
         prompt = self._FORUM_PROMPT if kind == "forum" else self._NEWS_PROMPT
         config = {
             # NB: keep this dict to keys scrapegraphai consumes — unknown keys (e.g.
-            # model_tokens) are forwarded to the Anthropic client and raise TypeError.
+            # model_tokens) are forwarded to the provider client and raise TypeError.
             # The "default token size 8192" warning is benign for our small inputs.
-            "llm": {"api_key": self._api_key, "model": self._model, "max_tokens": 2000},
+            "llm": {"api_key": _api_key_for_model(self._model), "model": self._model, "max_tokens": 2000},
             "headless": False,
             "verbose": False,
         }

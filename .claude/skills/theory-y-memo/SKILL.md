@@ -76,6 +76,7 @@ Every claim anchored to a payload number/relationship or an explicitly sourced e
   if data is silent, omit or flag the gap explicitly — never guess.
 - **No AI filler** ("crucial role", "it is important to note", "in conclusion"). Open with analysis.
 - **Markdown only**; exact headings.
+- **Footnote markers in tables** must use HTML `<sup>a</sup>` — never `^(a)` markdown notation. The exporter disables pandoc superscripts; `^(a)` renders as literal text.
 - **Coherence across sections** — later sections build on earlier (§6 follows from §§1–5) without verbatim restatement.
 - **Per-section emphasis:**
   - §1 — one crisp thesis sentence + valuation snapshot (rigor rules 1–2). If
