@@ -4,6 +4,52 @@ All notable changes to the TheoryY Middle-Market Research Agent are documented h
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] — 2026-06-03
+
+Adds first-hand web research, full memo localization (zh/es/fr) with CJK
+rendering, and a ~40% cut in subagent token cost.
+
+### Added
+- **First-hand web research** (`src/web_research_service.py`): ScrapeGraphAI-backed
+  retrieval with a persistent SQLite cache (`output/cache/web_research.sqlite`) and
+  API-key management, feeding live qualitative evidence into the memo pipeline.
+- **Memo localization**: the `theory-y-localize` skill and `theory-y-translator`
+  agent translate finished English memos into Mandarin, Spanish, and French, backed
+  by per-language institutional glossaries (`localization/glossary.{zh,es,fr}.md`).
+  Ships localized memos for CVX (es/fr/zh) and NVDA (es/zh).
+- **CJK language support** in PDF export and chart rendering.
+- **`.env.example`** documenting all configuration and API keys for setup.
+
+### Changed
+- **~40% token reduction** by sanitizing subagent context windows, model, and tools
+  (`theory-y-memo` skill and memo prompt).
+- Reworked `setup.sh` / `setup.ps1` for a more robust install and dependency flow.
+- Enhanced PDF export and chart-rendering pipeline.
+
+### Security
+- JWT secret validation for SaaS mode in server settings (`server/config.py`),
+  failing fast on missing/weak secrets.
+
+### Tests
+- 105 passing test functions, including a new `tests/test_web_research.py` suite.
+
+## [1.1.0] — 2026-06-01
+
+### Added
+- **Massive/Polygon MCP integration** (`.mcp.json`, `scripts/run_massive_mcp.sh`)
+  for real-time and historical news sentiment and price metrics.
+- Investment memo and context data for **Chevron (CVX)**.
+
+### Changed
+- Generalized market-research sector coverage beyond B2B Proptech.
+- Improved sentiment analysis and data-quality checks across the data services.
+- Memo formatting: numbered table captions and PDF-export refinements.
+
+## [1.0.1] — 2026-05-29
+
+### Changed
+- Enhanced investment-memo formatting (numbered table captions) and PDF export.
+
 ## [1.0.0] — 2026-05-29
 
 First stable release. Generates institutional-grade, six-section equity research
