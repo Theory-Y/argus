@@ -1625,12 +1625,12 @@ class MultiSourceSentimentAggregator:
             if w not in name_tokens
         ][:5]
 
-        # Aggregate representative quotes: up to 2 per source, max 8 total.
+        # Aggregate representative quotes: up to 2 per source, max 5 total.
         all_quotes: List[Dict[str, str]] = []
         for raw in raws:
             for q in raw.quotes[:2]:
                 all_quotes.append({"source": raw.source, "text": q})
-        all_quotes = all_quotes[:8]
+        all_quotes = all_quotes[:5]
 
         # Surface a data-gap note only when every source came back empty.
         error: Optional[str] = None
@@ -1668,7 +1668,6 @@ class MassiveNewsArticle:
     title:                str
     published_utc:        str
     publisher:            str
-    description:          Optional[str]
     sentiment:            Optional[str]           # "positive" | "neutral" | "negative"
     sentiment_reasoning:  Optional[str]           # analyst-quality prose from Polygon
 
@@ -1764,7 +1763,7 @@ class MassiveNewsFetcher:
     giving the memo writer concrete, citable analyst perspectives.
     """
 
-    _NEWS_LIMIT: int = 10
+    _NEWS_LIMIT: int = 6
 
     def __init__(self, api_key: str = MASSIVE_API_KEY) -> None:
         self._api_key = api_key
@@ -1809,7 +1808,6 @@ class MassiveNewsFetcher:
                 title=item.get("title", ""),
                 published_utc=item.get("published_utc", ""),
                 publisher=(item.get("publisher") or {}).get("name", ""),
-                description=item.get("description"),
                 sentiment=insight.get("sentiment") if insight else None,
                 sentiment_reasoning=insight.get("sentiment_reasoning") if insight else None,
             ))
