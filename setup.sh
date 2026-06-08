@@ -55,7 +55,7 @@ else
 fi
 
 # ── 1. Node.js ────────────────────────────────────────────────────────────────
-say "[1/5] Node.js"
+say "[1/6] Node.js"
 if has node && has npm; then
   ok "node $(node --version)  npm $(npm --version)"
 else
@@ -84,7 +84,7 @@ npm install
 ok "Node.js dependencies installed"
 
 # ── 2. Python ─────────────────────────────────────────────────────────────────
-say "[2/5] Python"
+say "[2/6] Python"
 
 # Ensure uv is available — it bootstraps Python if needed and replaces pip
 UV=$(command -v uv 2>/dev/null || echo "$HOME/.local/bin/uv")
@@ -133,7 +133,7 @@ fi
 ok "Python virtual environment ready (.venv)"
 
 # ── 3. pandoc ─────────────────────────────────────────────────────────────────
-say "[3/5] pandoc"
+say "[3/6] pandoc"
 if has pandoc; then
   ok "pandoc $(pandoc --version | head -1 | awk '{print $2}')"
 else
@@ -170,7 +170,7 @@ else
 fi
 
 # ── 4. Chromium (headless PDF rendering) ──────────────────────────────────────
-say "[4/5] Chromium (headless PDF rendering)"
+say "[4/6] Chromium (headless PDF rendering)"
 BROWSER=""
 
 # 4a. System browsers
@@ -248,8 +248,38 @@ if [ -n "$BROWSER" ] && [[ "$BROWSER" == /* ]]; then
   fi
 fi
 
-# ── 5. Branded .dotx reference template ──────────────────────────────────────
-say "[5/5] Generating branded reference template → output/theme/reference.dotx"
+# ── 5. MCP servers (.mcp.json + massive tool) ─────────────────────────────────
+say "[5/6] MCP servers"
+
+# 5a. massive MCP server — installed as an isolated uv tool (not in the venv).
+#     Pinned to the same git tag the project was built against.
+MASSIVE_SPEC="git+https://github.com/massive-com/mcp_massive@v0.10.0"
+if has mcp_massive; then
+  ok "mcp_massive already installed ($(mcp_massive --version 2>/dev/null || echo present))"
+elif [ -x "$UV" ] || has uv; then
+  info "Installing massive MCP server via uv tool..."
+  if "$UV" tool install "$MASSIVE_SPEC" >/dev/null 2>&1; then
+    ok "mcp_massive installed"
+  else
+    warn "Could not install mcp_massive — the 'massive' MCP server will be unavailable."
+    warn "Install manually later:  uv tool install \"$MASSIVE_SPEC\""
+  fi
+else
+  warn "uv not available — skipping mcp_massive install (the 'massive' server will be unavailable)."
+fi
+
+# 5b. Render .mcp.json from the committed template with this machine's paths.
+#     Regenerated every run so the paths always match the current checkout.
+if [ -f .mcp.json.template ]; then
+  PROJECT_DIR="$(pwd)"
+  sed "s#__PROJECT_DIR__#${PROJECT_DIR}#g" .mcp.json.template > .mcp.json
+  ok ".mcp.json generated for $PROJECT_DIR"
+else
+  warn "No .mcp.json.template found — cannot generate .mcp.json"
+fi
+
+# ── 6. Branded .dotx reference template ──────────────────────────────────────
+say "[6/6] Generating branded reference template → output/theme/reference.dotx"
 mkdir -p output/theme
 if [ ! -f "output/theme/reference.dotx" ]; then
   pandoc --print-default-data-file reference.docx > output/theme/reference.dotx

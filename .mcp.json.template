@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "massive": {
+      "command": "__PROJECT_DIR__/scripts/run_massive_mcp.sh"
+    },
+    "middlemarket-research": {
+      "command": "__PROJECT_DIR__/.venv/bin/python3",
+      "args": ["__PROJECT_DIR__/src/mcp_server.py"],
+      "cwd": "__PROJECT_DIR__"
+    }
+  }
+}
