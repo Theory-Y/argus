@@ -23,7 +23,7 @@ v1.0.0 is **built** end-to-end:
 - **Export** (`scripts/export_pdf.py`) — `.dotx` + headless-Chromium → PDF/DOCX.
 - **Service layer** (`server/`) — FastAPI, license + SaaS auth, Stripe billing,
   background job queue, SQLAlchemy persistence.
-- **Clients** — Python CLI (`client/python`) and React/Vite web UI (`client/web`).
+- **Client** — Python CLI + React/Vite web UI, lives in a separate repository (HTTP-only, zero IP).
 - **Recent additions** — web research via ScrapeGraphAI, zh/es/fr localization,
   ~40% token optimization, hardened JWT secret handling.
 - **Tests** — 64 passing across the chart engine, memo writer, and data services.
@@ -141,8 +141,6 @@ For the hosted offering (`AUTH_MODE=saas`).
 
 ## Phase 5 — Product surface & docs _(growth)_
 
-- [ ] Web UI polish: surface job status, history, and download in `client/web`.
-- [ ] CLI parity check with the web client.
 - [ ] Operator docs: deployment, env vars, and the SaaS vs license decision.
 - [ ] Expand `WEB_RESEARCH_SEEDS` coverage as the ticker universe grows.
 

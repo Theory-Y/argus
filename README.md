@@ -218,16 +218,16 @@ proprietary logic, so it is safe to distribute, while the **engine + memo prompt
 stay behind the server. A single `AUTH_MODE` env var flips the business model.
 
 ```
-client/ (CLI + web, zero IP)  ──HTTP──▶  server/ (FastAPI)  ──▶  core/ + src/ (engine, hidden prompt)
-                                                              └─▶  Anthropic API (writes the memo)
+external client (separate repo)  ──HTTP──▶  server/ (FastAPI)  ──▶  core/ + src/ (engine, hidden prompt)
+                                                                 └─▶  Anthropic API (writes the memo)
 ```
+
+The client (CLI + web, zero IP — it speaks only HTTP) lives in its own repository.
 
 | Layer | Path | Role |
 |-------|------|------|
 | Engine façade, hidden prompt, Anthropic writer, render | `core/` | Proprietary — server-side only in SaaS |
 | API (auth, billing, jobs, storage) | `server/` | Run by you (SaaS) or the buyer (self-host) |
-| CLI + Python SDK | `client/python/` | `pip install theory-y` → `theory-y memo PCOR` |
-| Web dashboard | `client/web/` | React + Vite; Generate / History / Account |
 | Deploy + packaging | `infra/` | Dockerfile, compose, `PACKAGING.md` |
 
 **Two modes, one codebase** (`AUTH_MODE`):
@@ -241,7 +241,6 @@ Run it locally (license mode):
 pip install -r requirements.txt -r server/requirements.txt
 export ANTHROPIC_API_KEY=sk-ant-...        # plus FRED_API_KEY / SEC_USER_AGENT
 uvicorn server.app:app --reload            # http://localhost:8000
-cd client/web && npm install && npm run dev # http://localhost:5173
 ```
 
 Or the whole stack via Docker: `docker compose -f infra/docker-compose.yml up --build`.

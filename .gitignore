@@ -5,7 +5,6 @@ graphify-out/
 node_modules/
 
 # Service build artifacts & local state
-client/web/dist/
 *.db
 theoryy_service.db
 output/service/
