@@ -1,4 +1,4 @@
-# Roadmap — TheoryY Middle-Market Research Agent
+# Roadmap — TheoryY Argus
 
 _Last updated: 2026-06-03_
 
@@ -158,3 +158,7 @@ For the hosted offering (`AUTH_MODE=saas`).
 4. **Phase 3** — quality evals (maturity).
 5. **Phase 4** — service hardening (SaaS launch gate).
 6. **Phase 5** — product surface & docs (growth).
+
+## Change log
+
+- **2026-06-08 — Argus rebrand.** Renamed the project identity from `middlemarket-research` to `argus`: MCP server key (`.mcp.json` + `.mcp.json.template`), `enabledMcpjsonServers` in both settings files, npm package name, setup-script banners, and product titles across README / CHANGELOG / ROADMAP / `.env.example` / `requirements.txt`. Domain language ("middle-market ticker/universe") and the MCP tool names were intentionally left unchanged. The renamed MCP server registers as `mcp__argus__*` after the next session restart; the data path (`fetch_context.py` → `mcp_server.py` over stdio) is name-independent and unaffected.

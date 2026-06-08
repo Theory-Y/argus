@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Setup script for middlemarket-research-agent (macOS / Linux)
+# Setup script for argus (macOS / Linux)
 # Zero prerequisites — only curl (or wget) and bash are required.
 # Run:  bash setup.sh
 
@@ -16,7 +16,7 @@ warn() { printf "  ${YELLOW}WARNING:${RESET} %s\n" "$*"; }
 die()  { printf "  ${RED}ERROR:${RESET} %s\n" "$*"; exit 1; }
 
 echo ""
-say "=== middlemarket-research-agent setup ==="
+say "=== argus setup ==="
 
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')   # linux | darwin
 ARCH=$(uname -m)                               # x86_64 | aarch64 | arm64

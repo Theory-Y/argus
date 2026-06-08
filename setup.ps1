@@ -1,4 +1,4 @@
-# Setup script for middlemarket-research-agent (Windows)
+# Setup script for argus (Windows)
 # Zero prerequisites — only PowerShell 5.1+ is required (ships with Windows 10/11).
 # Run:  powershell -ExecutionPolicy Bypass -File setup.ps1
 
@@ -20,7 +20,7 @@ function Refresh-Path {
 }
 
 Write-Host ""
-Write-Host "=== middlemarket-research-agent setup ===" -ForegroundColor Cyan
+Write-Host "=== argus setup ===" -ForegroundColor Cyan
 
 # ── 0. Environment file (.env) ────────────────────────────────────────────────
 Write-Step "Environment file (.env)"

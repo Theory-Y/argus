@@ -1,6 +1,6 @@
 {
   "enabledMcpjsonServers": [
-    "middlemarket-research"
+    "argus"
   ],
   "hooks": {
     "PreToolUse": [

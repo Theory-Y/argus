@@ -1,4 +1,4 @@
-# TheoryY Middle-Market Research Agent
+# TheoryY Argus
 
 An MCP server and Claude Code skill that generates institutional-grade equity research memos for **any public company in any sector**. It originated as a PropTech & Facilities tool but is now sector-agnostic: it captures each issuer's sector/industry, discovers peers dynamically, and selects a sector-appropriate macro series automatically. Point it at a ticker and get a six-section investment memo grounded in live financial data — no fabricated numbers.
 
