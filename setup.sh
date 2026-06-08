@@ -43,6 +43,17 @@ LOCAL_BIN="$HOME/.local/bin"
 mkdir -p "$LOCAL_BIN"
 [[ ":$PATH:" != *":$LOCAL_BIN:"* ]] && export PATH="$LOCAL_BIN:$PATH"
 
+# ── 0. Environment file (.env) ────────────────────────────────────────────────
+say "Environment file (.env)"
+if [ -f .env ]; then
+  ok ".env already present — leaving it untouched"
+elif [ -f .env.example ]; then
+  cp .env.example .env
+  ok "Created .env from .env.example — add your API keys before running a memo"
+else
+  warn "No .env or .env.example found — create .env manually before running"
+fi
+
 # ── 1. Node.js ────────────────────────────────────────────────────────────────
 say "[1/5] Node.js"
 if has node && has npm; then
@@ -98,19 +109,21 @@ else
   ok "$(python3 --version)"
 fi
 
-# Create or refresh the virtual environment
-if [ -d ".venv" ] && [ -f ".venv/bin/pip" ]; then
-  PIP_PYTHON=$(head -1 .venv/bin/pip | sed 's/^#!//')
-  if [ ! -f "$PIP_PYTHON" ]; then
-    info "Stale .venv detected (baked path '$PIP_PYTHON' missing). Recreating..."
-    rm -rf .venv
-  fi
+# Create or refresh the virtual environment.
+# Detect a stale venv (its baked interpreter was moved or removed) and recreate.
+if [ -d ".venv" ] && ! .venv/bin/python3 -c "" 2>/dev/null; then
+  info "Stale .venv detected (interpreter no longer runnable). Recreating..."
+  rm -rf .venv
 fi
 
 if [ -x "$UV" ] || has uv; then
-  # uv auto-selects the managed Python if system Python is absent
-  "$UV" venv .venv --python 3.12 2>/dev/null || "$UV" venv .venv
-  "$UV" pip install --quiet -r requirements.txt
+  # uv auto-selects a managed Python if the system has none.
+  # uv refuses to overwrite an existing venv, so only create when absent.
+  if [ ! -d ".venv" ]; then
+    "$UV" venv .venv --python 3.12 2>/dev/null || "$UV" venv .venv
+  fi
+  # Target the venv explicitly — uv venvs do not ship their own pip.
+  "$UV" pip install --python .venv/bin/python --quiet -r requirements.txt
 else
   # Fallback: standard venv + pip
   [ ! -d ".venv" ] && python3 -m venv .venv
@@ -191,8 +204,13 @@ if [ -n "$BROWSER" ]; then
   ok "Found browser: $BROWSER"
 else
   info "No browser found — installing Chromium via Playwright (≈150 MB)..."
-  # Install playwright into the venv (dev-only use; not added to requirements.txt)
-  .venv/bin/pip install --quiet playwright
+  # Install playwright into the venv (dev-only use; not added to requirements.txt).
+  # Use uv when available — uv-created venvs do not ship their own pip.
+  if [ -x "$UV" ] || has uv; then
+    "$UV" pip install --python .venv/bin/python --quiet playwright
+  else
+    .venv/bin/pip install --quiet playwright
+  fi
 
   # Try with system dependencies first (needs sudo on Linux, safe on macOS)
   if .venv/bin/playwright install chromium --with-deps 2>/dev/null; then
@@ -224,7 +242,7 @@ if [ -n "$BROWSER" ] && [[ "$BROWSER" == /* ]]; then
   if ! has "$BROWSER_CMD" || [ "$(command -v "$BROWSER_CMD")" != "$BROWSER" ]; then
     touch .env
     # Remove any existing CHROMIUM_BIN line, then append the new one
-    grep -v "^CHROMIUM_BIN=" .env > .env.tmp && mv .env.tmp .env
+    { grep -v "^CHROMIUM_BIN=" .env || true; } > .env.tmp && mv .env.tmp .env
     echo "CHROMIUM_BIN=$BROWSER" >> .env
     info "CHROMIUM_BIN written to .env"
   fi

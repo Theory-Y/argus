@@ -22,6 +22,17 @@ function Refresh-Path {
 Write-Host ""
 Write-Host "=== middlemarket-research-agent setup ===" -ForegroundColor Cyan
 
+# ── 0. Environment file (.env) ────────────────────────────────────────────────
+Write-Step "Environment file (.env)"
+if (Test-Path ".env") {
+    Write-OK ".env already present — leaving it untouched"
+} elseif (Test-Path ".env.example") {
+    Copy-Item ".env.example" ".env"
+    Write-OK "Created .env from .env.example — add your API keys before running a memo"
+} else {
+    Write-Warn "No .env or .env.example found — create .env manually before running"
+}
+
 # ── 1. Node.js ────────────────────────────────────────────────────────────────
 Write-Step "[1/5] Node.js"
 $needNode = -Not (Get-Command node -ErrorAction SilentlyContinue)
