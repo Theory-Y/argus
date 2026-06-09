@@ -19,8 +19,16 @@ class Principal:
 
 
 class AuthProvider(Protocol):
-    def authenticate(self, token: str | None, db: Session) -> Principal:
-        """Resolve a token into a Principal, or raise HTTPException(401)."""
+    def authenticate(
+        self, token: str | None, db: Session, user_id: str | None = None
+    ) -> Principal:
+        """Resolve a token into a Principal, or raise HTTPException(401).
+
+        ``user_id`` is the end-user a trusted gateway (our Cloudflare Worker) is
+        acting on behalf of, forwarded via the ``X-User-Id`` header. It is honored
+        only by providers that can first prove the caller is trusted; license mode
+        accepts it only when a valid ``LICENSE_SECRET`` token was presented.
+        """
         ...
 
     def check_quota(self, principal: Principal, db: Session) -> None:

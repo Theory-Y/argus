@@ -56,14 +56,25 @@ def _verify_token(token: str, secret: str) -> Principal:
 
 
 class LicenseAuthProvider:
-    def authenticate(self, token: str | None, db: Session) -> Principal:
+    def authenticate(
+        self, token: str | None, db: Session, user_id: str | None = None
+    ) -> Principal:
         secret = get_settings().license_secret
         if not secret:
-            # Open self-host: no license configured, trusted network.
+            # Open self-host: no license configured, trusted network. A client-supplied
+            # X-User-Id is NOT trusted here — without a license secret anyone could spoof
+            # it — so jobs stay unowned/single-tenant.
             return Principal(id=None, kind="license", plan="self_hosted", monthly_quota=None)
         if not token:
             raise HTTPException(status_code=401, detail="License token required")
-        return _verify_token(token, secret)
+        principal = _verify_token(token, secret)
+        # Gateway deployment: the licensed caller (our Cloudflare Worker) proved itself
+        # with the HMAC token above, so we trust the end user it names. Stamp it as the
+        # principal id → jobs are owned and scoped per end user. Cloudflare/D1 remains
+        # the authority for identity, quota, and billing; Argus only tags ownership.
+        if user_id:
+            principal.id = user_id
+        return principal
 
     def check_quota(self, principal: Principal, db: Session) -> None:
         return  # unlimited

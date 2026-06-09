@@ -13,7 +13,11 @@ from .base import Principal
 
 
 class SaasAuthProvider:
-    def authenticate(self, token: str | None, db: Session) -> Principal:
+    def authenticate(
+        self, token: str | None, db: Session, user_id: str | None = None
+    ) -> Principal:
+        # SaaS mode owns identity itself (API key / JWT), so the gateway X-User-Id
+        # hint is ignored — the token is the source of truth for who the caller is.
         if not token:
             raise HTTPException(status_code=401, detail="API key required")
 

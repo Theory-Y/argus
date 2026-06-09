@@ -30,9 +30,14 @@ class Settings(BaseSettings):
     storage_backend: Literal["local", "s3"] = "local"
     storage_dir: str = "output/service"
     s3_bucket: str = ""
-    s3_region: str = "us-east-1"
+    s3_region: str = "us-east-1"  # use "auto" for Cloudflare R2
     s3_prefix: str = "memos"
     signed_url_ttl: int = 86400  # seconds
+    # For S3-compatible stores (Cloudflare R2, MinIO): set the endpoint + keys.
+    # R2 endpoint looks like https://<accountid>.r2.cloudflarestorage.com
+    s3_endpoint_url: str = ""
+    s3_access_key_id: str = ""
+    s3_secret_access_key: str = ""
 
     # ── Background queue ─────────────────────────────────────────────────────
     queue_backend: Literal["inprocess", "rq"] = "inprocess"

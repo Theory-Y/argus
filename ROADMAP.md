@@ -161,4 +161,21 @@ For the hosted offering (`AUTH_MODE=saas`).
 
 ## Change log
 
+- **2026-06-08 — Cloudflare gateway integration.** Wired Argus to be fronted by the
+  existing Cloudflare site as the single identity+billing authority. Argus runs in
+  `license` mode as a private backend; the Cloudflare Worker is the sole licensed
+  caller and forwards the end user via `X-User-Id`, trusted only after the
+  `LICENSE_SECRET` token verifies (open self-host still ignores it → no spoofing).
+  Changes: `authenticate()` dependency + `AuthProvider` protocol now thread an
+  optional `user_id`; `LicenseAuthProvider` stamps it as the principal id for
+  per-user job ownership; `SaasAuthProvider` ignores it (token remains the source of
+  truth). Added R2/S3-compatible storage config (`S3_ENDPOINT_URL`,
+  `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`) so generated PDFs land in the existing
+  R2 bucket via presigned URLs. The frontend BFF was tailored to the actual site
+  (`theoryy-homepage`: Next.js/OpenNext + Better Auth + Stripe + Drizzle/D1) — route
+  handlers under `src/app/api/research/memos/**` plus `src/server/research.ts`, reusing
+  the site's `getAuth`/`getActiveSubscription`/`recordUsage` so there's no second
+  auth/billing system; quota is metered at submission as `usage_event` kind
+  `research_memo`. `infra/cloudflare/README.md` documents the backend contract.
+  Argus's own `saas`/Stripe layer is intentionally left dormant (Cloudflare owns billing).
 - **2026-06-08 — Argus rebrand.** Renamed the project identity from `middlemarket-research` to `argus`: MCP server key (`.mcp.json` + `.mcp.json.template`), `enabledMcpjsonServers` in both settings files, npm package name, setup-script banners, and product titles across README / CHANGELOG / ROADMAP / `.env.example` / `requirements.txt`. Domain language ("middle-market ticker/universe") and the MCP tool names were intentionally left unchanged. The renamed MCP server registers as `mcp__argus__*` after the next session restart; the data path (`fetch_context.py` → `mcp_server.py` over stdio) is name-independent and unaffected.

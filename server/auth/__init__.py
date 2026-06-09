@@ -37,11 +37,17 @@ def _extract_token(authorization: str | None, x_api_key: str | None) -> str | No
 def authenticate(
     authorization: str | None = Header(default=None),
     x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+    x_user_id: str | None = Header(default=None, alias="X-User-Id"),
     db: Session = Depends(get_db),
 ) -> Principal:
-    """FastAPI dependency: resolve the caller into a Principal or raise 401."""
+    """FastAPI dependency: resolve the caller into a Principal or raise 401.
+
+    ``X-User-Id`` names the end user a trusted gateway (our Cloudflare Worker) is
+    acting for. It is passed to the provider, which decides whether to trust it —
+    license mode does so only after verifying the gateway's ``LICENSE_SECRET`` token.
+    """
     token = _extract_token(authorization, x_api_key)
-    return get_auth_provider().authenticate(token, db)
+    return get_auth_provider().authenticate(token, db, x_user_id)
 
 
 __all__ = ["AuthProvider", "Principal", "authenticate", "get_auth_provider"]
