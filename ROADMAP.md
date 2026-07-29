@@ -1,6 +1,6 @@
 # Roadmap — TheoryY Argus
 
-_Last updated: 2026-06-03_
+_Last updated: 2026-07-29_
 
 This document captures the project's current state, the prioritized plan forward,
 and the reasoning behind the ordering. It supersedes the loose notes in `TODO.md`
@@ -161,6 +161,19 @@ For the hosted offering (`AUTH_MODE=saas`).
 
 ## Change log
 
+- **2026-07-29 — Non-pivot work backported from main.** `pre-pivot` branch created at
+  the last commit before the claim-store pivot (`5fc105f`); cherry-picked from `main`
+  everything not tied to the pivot architecture: web-research ticker relevance
+  filtering + input caps (`src/web_research_service.py`), financial data aggregation
+  with new signals/historical data (`src/financial_service.py`, chart + context
+  aggregator extensions, glossaries, SKILL.md), memo token optimization + internal
+  hrefs (`core/memo/prompt.py`, SKILL.md), title/page-spacing/public-consensus PDF
+  formatting (`scripts/export_pdf.py`, `src/chart_service.py`), 8-K taxonomy module
+  as single source of truth (`src/taxonomy.py`, `src/alt_data_service.py`), package
+  rename in `package-lock.json`, and removal of committed memo outputs. Excluded as
+  pivot-only: claim store schemas/stores, ingest pipeline + 8-K/LLM extraction,
+  verify routes, object store, embeddings jobs, trust reconciliation, SPA frontend,
+  package-import restructure. Full suite: 161 tests pass.
 - **2026-06-08 — Cloudflare gateway integration.** Wired Argus to be fronted by the
   existing Cloudflare site as the single identity+billing authority. Argus runs in
   `license` mode as a private backend; the Cloudflare Worker is the sole licensed
