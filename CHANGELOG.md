@@ -4,6 +4,29 @@ All notable changes to TheoryY Argus are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — 2026-07-29
+
+Reverted to the pre-pivot architecture and stripped the project back to a
+local-only engine: MCP data layer + memo engine + Claude skill + PDF export.
+
+### Removed
+- **Claim-store pivot**: all post-pivot work (claim store, ingestion pipeline,
+  verify routes, embeddings, trust jobs, SPA) stays on `main`; this branch
+  resumes from the last pre-pivot commit with non-pivot improvements
+  cherry-picked (web-research filtering, financial aggregation, memo format,
+  8-K taxonomy).
+- **SaaS mode**: Stripe billing, accounts, JWT sessions, and their DB tables.
+- **HTTP service + deployment**: `server/` (FastAPI), `infra/` (Docker,
+  packaging, Cloudflare gateway docs), `SERVICE_ARCHITECTURE.md`.
+- **Dangling engine glue**: `core/engine.py`, `core/render.py` (server-only);
+  `core/memo` (prompt + Anthropic writer) remains.
+
+### Changed
+- README rewritten for the local-only layout; per-folder READMEs added
+  (`src/`, `core/`, `scripts/`, `tests/`).
+- `.env.example` trimmed to engine/data-source/export variables.
+- `output/cache/` is no longer tracked in git.
+
 ## [1.2.0] — 2026-06-03
 
 Adds first-hand web research, full memo localization (zh/es/fr) with CJK

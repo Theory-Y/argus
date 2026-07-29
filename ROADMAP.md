@@ -141,6 +141,15 @@ Build on the Phase 1 harness to measure memo quality, not just correctness.
 
 ## Change log
 
+- **2026-07-29 — Codebase cleanup after teardown.** Removed dangling
+  `core/engine.py` + `core/render.py` (server-only glue with zero remaining
+  consumers; `core/memo` prompt+writer stay — prompt is the SKILL.md-synced IP).
+  Untracked `output/cache/web_research.sqlite` (runtime cache, now git-ignored)
+  and deleted the stray `theoryy_argus.egg-info/` build artifact. README
+  refreshed: seven-section wording fixed, env-var table completed
+  (ANTHROPIC/MASSIVE/WEB_RESEARCH), project-structure tree updated, test
+  instructions now pytest-first. Added per-folder READMEs (`src/`, `core/`,
+  `scripts/`, `tests/`). 161 tests pass.
 - **2026-07-29 — Service layer, infra, and deployment removed.** Deleted the
   whole HTTP service and its deployment surface: `server/` (FastAPI app, license
   auth, jobs queue, storage, SQLAlchemy models), `infra/` (Dockerfile, compose,

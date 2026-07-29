@@ -28,7 +28,7 @@ Claude Code  →  /theory-y-memo TICKER
           output/context/context_TICKER.json
                      │
                      ▼
-          Five-section investment memo
+          Seven-section investment memo
           output/memos/TheoryY_Memo_TICKER.md
           output/memos/TheoryY_Memo_TICKER.pdf
 ```
@@ -107,7 +107,10 @@ The setup script installs everything from scratch if needed:
 |----------|----------|---------|
 | `FRED_API_KEY` | Yes | FRED macro data — free at [fred.stlouisfed.org](https://fred.stlouisfed.org/docs/api/api_key.html) |
 | `SEC_USER_AGENT` | Yes | SEC EDGAR access — format: `AppName/1.0 your@email.com` |
+| `ANTHROPIC_API_KEY` | Yes | Memo generation + ScrapeGraphAI web research |
+| `MASSIVE_API_KEY` | No | Dynamic peer discovery via Polygon `related-companies` |
 | `APIFY_API_KEY` | No | Job-market signal (stub until configured) |
+| `WEB_RESEARCH_*` | No | Web research tuning — see `.env.example` |
 
 Add these to a `.env` file at the project root or export them in your shell. The server starts in degraded mode if they are missing (FRED and SEC data will be unavailable).
 
@@ -188,40 +191,33 @@ The memo skill enforces twelve non-negotiable rules (in `.claude/skills/theory-y
 
 ```
 src/
-  mcp_server.py          # FastMCP server — exposes 3 tools
-  financial_service.py   # yfinance layer (fetcher → transformer → exporter → façade)
-  alt_data_service.py    # alternative data engine (FRED, Trends, SEC, Apify, etc.)
-  context_aggregator.py  # composes both services into a single LLM payload
-  fetch_context.py       # CLI script: calls mcp_server via stdio, writes context JSON
+  mcp_server.py            # FastMCP server — exposes 3 tools
+  financial_service.py     # yfinance layer (fetcher → transformer → exporter → façade)
+  alt_data_service.py      # alternative data engine (FRED, Trends, SEC, Apify, etc.)
+  web_research_service.py  # ScrapeGraphAI web research (news bodies + niche forums)
+  taxonomy.py              # SEC 8-K item taxonomy — single source of truth
+  chart_service.py         # dependency-free inline SVG charts ([[chart:NAME]] tokens)
+  context_aggregator.py    # composes all services into a single LLM payload
+  fetch_context.py         # CLI script: calls mcp_server via stdio, writes context JSON
+core/
+  memo/prompt.py           # proprietary memo-writing system prompt (sync w/ SKILL.md)
+  memo/writer.py           # memo generation via the Anthropic API
 scripts/
   build_reference_dotx.py  # generates branded Word .dotx template
   export_pdf.py            # PDF export via md-to-pdf (CSS theme)
   client-mcp.py            # standalone MCP client for testing
-tests/
-  test_all.py              # unit tests for pure-logic components
+localization/
+  glossary.{zh,es,fr}.md   # translation glossaries for memo localization
+tests/                     # unit tests (pure logic — no network calls)
 ```
 
 ## Running tests
 
 ```bash
-.venv/bin/python3 -m unittest tests.test_all -v
+.venv/bin/python3 -m pytest tests/ -q          # or: python3 -m unittest discover tests
 ```
 
-Tests cover pure-logic components only — no network calls, no external API dependencies. (The venv ships `unittest`, not `pytest`.)
-
----
-
-## Engine layout
-
-The **engine + memo prompt** are the proprietary core:
-
-```
-core/ + src/ (engine, hidden prompt)  ──▶  Anthropic API (writes the memo)
-```
-
-| Layer | Path | Role |
-|-------|------|------|
-| Engine façade, hidden prompt, Anthropic writer, render | `core/` | Proprietary |
+Tests cover pure-logic components only — no network calls, no external API dependencies.
 
 ---
 

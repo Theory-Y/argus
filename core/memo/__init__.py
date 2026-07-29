@@ -1,1 +1,1 @@
-"""core.memo — server-side memo generation (hidden prompt + Anthropic API)."""
+"""core.memo — memo generation (hidden prompt + Anthropic API)."""
