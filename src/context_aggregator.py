@@ -142,7 +142,7 @@ SECTOR_MACRO_MAP: Dict[str, Tuple[str, str]] = {
     "Communication Services": ("PCEC96",     "Real Personal Consumption Expenditures (PCEC96, chained $B, SA)"),
 }
 
-_SCHEMA_VERSION:  str = "1.9"
+_SCHEMA_VERSION:  str = "1.10"
 _OUTPUT_DIR:      Path = Path("output") / "context"
 
 # How many comparables to carry when peers are discovered dynamically.
@@ -241,6 +241,58 @@ def _toon_encode(rows: List[Dict]) -> str:
     return toon if len(toon) <= len(compact_json) else compact_json
 
 
+# Keys that are diagnostic or derivable and never inform the memo: `items_raw`
+# duplicates `items_labeled` on 8-K events; `from_cache` is a scrape-cache flag.
+# The producing dataclasses keep these fields — they are dropped only at this
+# LLM boundary, so the ingest pipeline and caches are unaffected.
+_LLM_DROP_KEYS = frozenset({"items_raw", "from_cache"})
+
+# Attribution-only query params; stripping them keeps every URL resolvable.
+_TRACKING_PARAM_NAMES = frozenset({"source", "fbclid", "gclid", "cmpid", "mc_cid", "mc_eid"})
+
+
+def _clean_url(url: str) -> str:
+    """Strip tracking query params (utm_*, source, click IDs) from *url*."""
+    from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
+    parts = urlsplit(url)
+    if not parts.query:
+        return url
+    kept = [
+        (k, v)
+        for k, v in parse_qsl(parts.query, keep_blank_values=True)
+        if k not in _TRACKING_PARAM_NAMES and not k.startswith("utm_")
+    ]
+    return urlunsplit(parts._replace(query=urlencode(kept)))
+
+
+def _prune_for_llm(obj: Any) -> Any:
+    """
+    Final pass before serialisation: drop content that costs tokens but cannot
+    inform the memo. Removes `_LLM_DROP_KEYS`, None / empty-string leaves (an
+    absent key reads the same as null to the model), tracking params from URL
+    fields, and casts integral floats to ints. Meaningful falsy values
+    (False, 0, [], {}) are kept — "no flags" is information, a null is not.
+    """
+    if isinstance(obj, dict):
+        out: Dict = {}
+        for k, v in obj.items():
+            if k in _LLM_DROP_KEYS:
+                continue
+            v = _prune_for_llm(v)
+            if v is None or v == "":
+                continue
+            if isinstance(v, str) and k.endswith("url"):
+                v = _clean_url(v)
+            out[k] = v
+        return out
+    if isinstance(obj, list):
+        return [_prune_for_llm(v) for v in obj]
+    if isinstance(obj, float) and obj.is_integer() and abs(obj) < 1e15:
+        return int(obj)
+    return obj
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Context Aggregator
 # ──────────────────────────────────────────────────────────────────────────────
@@ -285,7 +337,7 @@ class ContextAggregator:
         ticker = target_ticker.upper()
         logger.info("═══ Building context for %s ═══", ticker)
 
-        payload = self._assemble_payload(ticker)
+        payload = _prune_for_llm(self._assemble_payload(ticker))
         minified = json.dumps(payload, separators=(",", ":"), default=str)
 
         output_path = self._output_dir / f"context_{ticker}.json"
