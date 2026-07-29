@@ -45,6 +45,8 @@ import pandas as pd
 from pathlib import Path
 from dotenv import load_dotenv
 
+from src.taxonomy import ITEM_8K_LABELS as _TAXONOMY_8K_LABELS  # noqa: E402
+
 # Load credentials from the project-root .env before reading any env vars below.
 # This is the canonical load point: every key (FRED_API_KEY, SEC_USER_AGENT,
 # APIFY_API_KEY, …) is consumed from this module, so any importer is covered.
@@ -90,26 +92,12 @@ _RISK_SNIPPET_CHARS: int = 800
 # Ticker → primary search keyword map (demand proxy for Google Trends)
 # ──────────────────────────────────────────────────────────────────────────────
 
-# Human-readable labels for SEC 8-K item numbers
-_8K_ITEM_LABELS: Dict[str, str] = {
-    "1.01": "Entry into Material Agreement",
-    "1.02": "Termination of Material Agreement",
-    "1.03": "Bankruptcy/Receivership",
-    "2.01": "Completion of Acquisition/Disposition",
-    "2.02": "Results of Operations",
-    "2.03": "Creation of Direct Financial Obligation",
-    "2.05": "Exit or Disposal Cost Obligations",
-    "2.06": "Material Impairment",
-    "3.01": "Notice of Delisting",
-    "3.02": "Unregistered Sales of Equity Securities",
-    "4.01": "Changes in Certifying Accountant",
-    "5.01": "Changes in Control of Registrant",
-    "5.02": "Directors/Officers Departure/Appointment",
-    "5.03": "Amendments to Articles/Certificate",
-    "7.01": "Regulation FD Disclosure",
-    "8.01": "Other Events",
-    "9.01": "Financial Statements and Exhibits",
-}
+# Human-readable labels for SEC 8-K item numbers.
+# Derived from src.taxonomy.ITEM_8K_TAXONOMY — the single source of truth for
+# item codes, labels, categories, and materiality tiers. This dict is kept as
+# a module-level alias so _label_items() (below) is unchanged byte-for-byte in
+# its output: known codes produce "CODE: Label", unknown codes return bare CODE.
+_8K_ITEM_LABELS: Dict[str, str] = _TAXONOMY_8K_LABELS
 
 TICKER_KEYWORDS: Dict[str, str] = {
     "CSGP": "CoStar commercial real estate",
