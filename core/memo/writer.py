@@ -1,8 +1,8 @@
 """
-core.memo.writer — server-side memo generation via the Anthropic API.
+core.memo.writer — memo generation via the Anthropic API.
 
-This keeps the IP server-side: the finished memo is written here using the
-hidden prompt in prompt.py. The customer only ever receives the rendered output.
+The finished memo is written here using the hidden prompt in prompt.py. The
+customer only ever receives the rendered output.
 
 Token economy (all quality-neutral — same model, prompt, and output):
   • The system prompt is large and static, so it is sent as a cached block

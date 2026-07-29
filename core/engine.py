@@ -1,8 +1,8 @@
 """
 core.engine — internal façade over the deterministic data engine in ../src.
 
-PROPRIETARY. The server calls these functions; the client never does. We reuse
-the existing engine modules verbatim rather than reimplementing them. Those
+PROPRIETARY. We reuse the existing engine modules verbatim rather than
+reimplementing them. Those
 modules use bare imports (e.g. ``from financial_service import ...``), so ``src/``
 must be on ``sys.path`` before importing them.
 """

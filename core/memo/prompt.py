@@ -1,11 +1,10 @@
 """
 core.memo.prompt — the proprietary memo-writing system prompt.
 
-This is the single most valuable piece of IP in the service. It lives server-side
-and is sent to the Anthropic API at request time; the API client never sees it.
-(The human-readable equivalent for source-sale /
+This is the single most valuable piece of IP in the service. It is sent to the
+Anthropic API at request time. (The human-readable equivalent for source-sale /
 Claude Code buyers is .claude/skills/theory-y-memo/SKILL.md — keep the two in
-sync; see infra/PACKAGING.md.)
+sync.)
 
 The string is large and static, so the writer marks it with cache_control so the
 Anthropic prompt cache amortises its cost across every memo request.

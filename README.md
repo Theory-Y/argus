@@ -211,39 +211,17 @@ Tests cover pure-logic components only — no network calls, no external API dep
 
 ---
 
-## Selling this as a service
+## Engine layout
 
-The repo can run as a managed service without exposing the research engine. The
-design keeps one hard boundary: the **client** speaks only HTTP and contains no
-proprietary logic, so it is safe to distribute, while the **engine + memo prompt**
-stay behind the server. A single `AUTH_MODE` env var flips the business model.
+The **engine + memo prompt** are the proprietary core:
 
 ```
-external client (separate repo)  ──HTTP──▶  server/ (FastAPI)  ──▶  core/ + src/ (engine, hidden prompt)
-                                                                 └─▶  Anthropic API (writes the memo)
+core/ + src/ (engine, hidden prompt)  ──▶  Anthropic API (writes the memo)
 ```
-
-The client (CLI + web, zero IP — it speaks only HTTP) lives in its own repository.
 
 | Layer | Path | Role |
 |-------|------|------|
 | Engine façade, hidden prompt, Anthropic writer, render | `core/` | Proprietary |
-| API (auth, jobs, storage) | `server/` | Run by the buyer (self-host) |
-| Deploy + packaging | `infra/` | Dockerfile, compose, `PACKAGING.md` |
-
-**One mode** (`AUTH_MODE=license`) — offline license-key check, no billing.
-For **source-sale / self-host**.
-
-Run it locally:
-
-```bash
-pip install -r requirements.txt -r server/requirements.txt
-export ANTHROPIC_API_KEY=sk-ant-...        # plus FRED_API_KEY / SEC_USER_AGENT
-uvicorn server.app:app --reload            # http://localhost:8000
-```
-
-Or the whole stack via Docker: `docker compose -f infra/docker-compose.yml up --build`.
-See `infra/PACKAGING.md` for exactly what ships in a source sale.
 
 ---
 

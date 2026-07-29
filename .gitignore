@@ -12,8 +12,6 @@ output/theme/reference.dotx
 
 # Service build artifacts & local state
 *.db
-theoryy_service.db
-output/service/
 __pycache__/
 *.pyc
 .venv/
