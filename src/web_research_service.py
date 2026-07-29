@@ -69,6 +69,12 @@ WEB_RESEARCH_MAX_URLS: int = int(os.getenv("WEB_RESEARCH_MAX_URLS", "5"))
 # Haiku is plenty for bulk extraction; the memo writer keeps Opus. scrapegraphai
 # uses provider/model strings, so anthropic models are prefixed "anthropic/".
 _EXTRACTION_MODEL: str = os.getenv("WEB_RESEARCH_MODEL", "anthropic/claude-haiku-4-5")
+# Cap the page text handed to the extractor. A full article body can run 7k+ tokens,
+# which 413s small/free model tiers (e.g. Groq's 6k tokens-per-minute limit). The head
+# of a page carries the headline, stance, and lead facts the prompts ask for, so a
+# conservative char budget keeps requests under tight per-request limits with no real
+# loss of signal. ~4 chars/token → 12000 chars ≈ 3k input tokens.
+WEB_RESEARCH_MAX_INPUT_CHARS: int = int(os.getenv("WEB_RESEARCH_MAX_INPUT_CHARS", "12000"))
 
 # Provider → env-var lookup. Add entries here as new providers are enabled.
 _PROVIDER_KEY_ENVVARS: dict = {
@@ -108,6 +114,58 @@ def _is_real_key(key: str) -> bool:
     API calls on every memo run.
     """
     return bool(key) and "..." not in key and len(key) >= 20
+
+
+# Require scraped news to name the issuer. Multi-stock roundup URLs (e.g. "Stock
+# Market Today") carry one ticker among many, and a page's quote-widget head bleeds
+# unrelated movers; without this, the scorer eats off-target lines and reports false
+# confidence. Set WEB_RESEARCH_REQUIRE_TICKER=false to keep the old keep-everything
+# behavior. Forum seeds are curated per-ticker, so this gates news only.
+WEB_RESEARCH_REQUIRE_TICKER: bool = (
+    os.getenv("WEB_RESEARCH_REQUIRE_TICKER", "true").lower() in _TRUTHY
+)
+
+# Generic corporate tokens dropped when deriving the distinctive name terms below —
+# otherwise "Technology"/"Inc" would match nearly every tech article.
+_CORP_STOPWORDS = frozenset({
+    "inc", "incorporated", "corp", "corporation", "company", "co", "ltd", "limited",
+    "plc", "holdings", "holding", "group", "technology", "technologies", "the", "and",
+    "international", "industries", "systems", "solutions", "partners", "enterprises",
+})
+
+# Tickers that are also common English words (ON, ALL, IT, SO, DD…). Matching the bare
+# ticker for these would hit almost every sentence and silently disable the filter, so
+# we drop it and rely on the company-name tokens. Single-char tickers (F, V, A…) are
+# always too broad and excluded by the length guard in _relevance_terms.
+_AMBIGUOUS_TICKERS = frozenset({
+    "all", "an", "and", "any", "are", "as", "at", "be", "by", "can", "dd", "do", "for",
+    "go", "he", "hi", "if", "in", "is", "it", "no", "now", "of", "on", "or", "out",
+    "run", "see", "she", "so", "the", "to", "up", "us", "we", "win", "yes",
+})
+
+
+def _relevance_terms(ticker: str, company_name: str) -> List[str]:
+    """Distinctive lowercased terms signalling an article is about THIS issuer: the
+    company-name tokens (≥3 chars, minus generic corporate suffixes) plus the ticker —
+    but only when the ticker is ≥2 chars and not a common English word, so a name like
+    ON Semiconductor leans on 'semiconductor', not 'on'. E.g. ('MU', 'Micron Technology,
+    Inc.') → ['micron', 'mu']; ('ON', 'ON Semiconductor Corp') → ['semiconductor']."""
+    terms = set()
+    t = ticker.lower()
+    if len(t) >= 2 and t not in _AMBIGUOUS_TICKERS:
+        terms.add(t)
+    for tok in re.findall(r"[a-z]{3,}", (company_name or "").lower()):
+        if tok not in _CORP_STOPWORDS:
+            terms.add(tok)
+    return sorted(terms)
+
+
+def _mentions(text: str, terms: List[str]) -> bool:
+    """True when *text* names the issuer (word-boundary match on any relevance term)."""
+    if not text:
+        return False
+    low = text.lower()
+    return any(re.search(rf"\b{re.escape(t)}\b", low) for t in terms)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -346,6 +404,11 @@ class ScrapeGraphExtractor:
         from scrapegraphai.graphs import SmartScraperGraph
 
         prompt = self._FORUM_PROMPT if kind == "forum" else self._NEWS_PROMPT
+        # Bound the request so it fits tight per-request token limits (see
+        # WEB_RESEARCH_MAX_INPUT_CHARS). The page head holds the lead facts the
+        # prompts extract; the tail is mostly related-articles and boilerplate.
+        if len(markdown) > WEB_RESEARCH_MAX_INPUT_CHARS:
+            markdown = markdown[:WEB_RESEARCH_MAX_INPUT_CHARS]
         config = {
             # NB: keep this dict to keys scrapegraphai consumes — unknown keys (e.g.
             # model_tokens) are forwarded to the provider client and raise TypeError.
@@ -359,13 +422,32 @@ class ScrapeGraphExtractor:
 
     @staticmethod
     def _normalize(result: object, kind: str) -> List[Dict]:
-        """Coerce scrapegraphai's heterogeneous output into a list of row dicts."""
+        """Coerce scrapegraphai's heterogeneous output into a list of row dicts.
+
+        scrapegraphai wraps the answer in an envelope on some provider/version combos
+        (e.g. Groq returns {"content": {headline, key_points, stance}}). Unwrap a
+        single-key dict whose value is itself the dict/list we want, then shape by kind:
+        forum → a list of post dicts; news → the single extracted object as one row.
+        """
+        while isinstance(result, dict) and len(result) == 1:
+            inner = next(iter(result.values()))
+            if isinstance(inner, (dict, list)):
+                result = inner
+            else:
+                break
+
+        if kind == "forum":
+            if isinstance(result, list):
+                return [r for r in result if isinstance(r, dict)]
+            if isinstance(result, dict):
+                for value in result.values():
+                    if isinstance(value, list):
+                        return [r for r in value if isinstance(r, dict)]
+            return []
+
+        # news: the prompt yields a single {headline, key_points, stance} object.
         if isinstance(result, dict):
-            # Forum prompt returns {"posts": [...]}; news returns a single object.
-            for value in result.values():
-                if isinstance(value, list):
-                    return [r for r in value if isinstance(r, dict)]
-            return [result] if kind == "news" else []
+            return [result]
         if isinstance(result, list):
             return [r for r in result if isinstance(r, dict)]
         return []
@@ -385,6 +467,10 @@ class WebResearchProcessor:
         news_extracts: List[Dict] = []
         texts: List[str] = []
         sources_scraped: List[Dict[str, object]] = []
+        terms = _relevance_terms(ticker, company_name)
+        # No discriminating terms (e.g. a common-word ticker with an all-generic name)
+        # → can't tell on- from off-issuer, so don't filter rather than drop everything.
+        do_filter = WEB_RESEARCH_REQUIRE_TICKER and bool(terms)
 
         for page in pages:
             sources_scraped.append(
@@ -409,13 +495,24 @@ class WebResearchProcessor:
                     points = row.get("key_points") or []
                     if not isinstance(points, list):
                         points = [str(points)]
+                    points = [str(p) for p in points]
+                    if do_filter:
+                        # Roundup pages stack unrelated movers; keep only sentences that
+                        # name this issuer so the score and stored extract stay on-target.
+                        # An off-target headline is dropped (left blank) rather than stored
+                        # — it would mislead the memo writer about what the page is about.
+                        points = [p for p in points if _mentions(p, terms)]
+                        if not _mentions(headline, terms):
+                            headline = ""
+                        if not headline and not points:
+                            continue                              # whole extract is off-issuer
                     if headline:
                         texts.append(headline)
-                    texts.extend(str(p) for p in points)        # full points feed the score
+                    texts.extend(points)                         # full points feed the score
                     news_extracts.append({                       # …only a capped slice is stored
                         "headline": headline[:200],
                         "stance": row.get("stance"),
-                        "key_points": [str(p)[:200] for p in points[:4]],
+                        "key_points": [p[:200] for p in points[:4]],
                     })
 
         score, freq, signal_count = _score_texts(texts)
@@ -505,14 +602,26 @@ class WebResearchService:
         targets: List[Tuple[str, str]] = [
             (url, "forum") for url in self._seeds.get(ticker.upper(), [])
         ]
+        # News URLs, ticker-in-headline first. Articles whose title names the issuer
+        # are far more likely to be about it than multi-stock roundups, so they win the
+        # max_urls budget; the rest backfill so a thin tape never starves to a stub.
+        terms = _relevance_terms(ticker, company_name)
+        on_topic: List[Tuple[str, str]] = []
+        backfill: List[Tuple[str, str]] = []
         try:
             news = self._news.fetch(ticker)
             for article in news.articles:
                 url = getattr(article, "url", None)
-                if url:
-                    targets.append((url, "news"))
+                if not url:
+                    continue
+                title = str(getattr(article, "title", "") or "")
+                if not WEB_RESEARCH_REQUIRE_TICKER or _mentions(title, terms):
+                    on_topic.append((url, "news"))
+                else:
+                    backfill.append((url, "news"))
         except Exception as exc:
             logger.warning("news target resolution failed for %s: %s", ticker, exc)
+        targets += on_topic + backfill
 
         seen: set = set()
         deduped: List[Tuple[str, str]] = []

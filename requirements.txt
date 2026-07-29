@@ -33,6 +33,7 @@ defusedxml>=0.7.1           # Safe XML parsing (guards against XXE / billion-lau
 # token-reduction step; python-toon compacts the uniform output arrays.
 scrapegraphai>=1.30.0       # LLM web scraper, pointed at the existing Claude key
 langchain-anthropic>=0.2.0  # Claude backend scrapegraphai uses for "anthropic/*" models
+langchain-groq>=1.1.0       # Groq backend for "groq/*" models (WEB_RESEARCH_MODEL)
 markdownify>=0.11.0         # HTML → Markdown (strips script/style/nav before the LLM)
 python-toon>=0.1.0          # Token-Oriented Object Notation encoder for output arrays
 
