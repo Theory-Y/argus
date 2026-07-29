@@ -122,6 +122,42 @@ class TestChartBuilders(unittest.TestCase):
         frag = cs.sentiment_sources_svg(_CONTEXT)
         self.assertRegex(frag, rf'fill="{cs.WHITE}"[^>]*>-1\.00<')
 
+    def test_sentiment_collapses_remainder_into_others(self):
+        # >3 sources: the three highest-WEIGHTED show individually; the rest
+        # collapse into one "Others*" bar named in an asterisked caption footnote.
+        # The headline aggregate stays full-population (read straight from cs).
+        ctx = {"alt_signals": {"consumer_sentiment": {
+            "sentiment_score": 0.42, "post_count": 130,
+            "sources": [
+                {"source": "stocktwits",    "available": True, "message_count": 30,
+                 "sentiment_score": 0.7, "weight": 1.0},
+                {"source": "google_news",   "available": True, "message_count": 25,
+                 "sentiment_score": 0.5, "weight": 0.9},
+                {"source": "yahoo_finance", "available": True, "message_count": 20,
+                 "sentiment_score": 0.4, "weight": 0.8},
+                {"source": "bing_news",     "available": True, "message_count": 10,
+                 "sentiment_score": 0.3, "weight": 0.6},
+                {"source": "reddit",        "available": True, "message_count": 15,
+                 "sentiment_score": -0.2, "weight": 0.5},
+            ],
+        }}}
+        frag = cs.sentiment_sources_svg(ctx)
+        _well_formed(frag)
+        # exactly the three primary brands + the Others bar appear as bar labels
+        self.assertIn("Others*", frag)
+        self.assertNotIn(">Reddit<", frag)      # collapsed, no individual bar
+        self.assertNotIn(">Bing News<", frag)
+        # footnote names the collapsed members
+        self.assertIn("*Others: Bing News, Reddit.", frag)
+        # headline aggregate untouched (full-population)
+        self.assertIn("+0.42", frag)
+        self.assertIn("130", frag)
+
+    def test_sentiment_three_or_fewer_sources_has_no_others(self):
+        # The two-source fixture must render both bars and no Others collapse.
+        frag = cs.sentiment_sources_svg(_CONTEXT)
+        self.assertNotIn("Others", frag)
+
 
 class TestGracefulDegradation(unittest.TestCase):
 

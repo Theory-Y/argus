@@ -184,8 +184,8 @@ h2{
   font-size:14pt;
   font-weight:700;
   color:var(--navy);
-  margin-top:32px;
-  margin-bottom:6px;
+  margin-top:38px;
+  margin-bottom:8px;
   padding-bottom:5px;
   border-bottom:1.5px solid var(--navy);
   letter-spacing:-0.005em;
@@ -213,7 +213,7 @@ h4{
 }
 
 /* ── Body copy ───────────────────────────────────────────────────────────── */
-p{margin-bottom:9px;text-align:justify;hyphens:auto}
+p{margin-bottom:9px;text-align:justify;hyphens:auto;orphans:3;widows:3}
 
 strong{font-weight:700;color:var(--ink)}
 em{font-style:italic;color:var(--ink)}
@@ -225,6 +225,7 @@ table{
   font-size:9.5pt;
   margin:14px 0 18px;
   page-break-inside:avoid;
+  break-inside:avoid;
 }
 /* Numbered table caption — same visual language as chart figcaptions:
    Calibri 8.5pt, slate colour, navy bold label, border-top rule, placed below. */
@@ -274,6 +275,7 @@ blockquote{
   margin:14px 0;
   padding:6px 16px;
   background:var(--silver);
+  break-inside:avoid;
 }
 
 /* ── Code / pre ──────────────────────────────────────────────────────────── */
@@ -342,6 +344,7 @@ figure.chart{
   border-top:3px solid var(--gold);
   border-radius:3px;
   page-break-inside:avoid;
+  break-inside:avoid;
 }
 figure.chart .chart-svg{
   display:block;
@@ -369,10 +372,12 @@ figure.chart .chart-empty-box{
 figure.chart .chart-empty-box strong{color:var(--navy)}
 
 /* ── Print overrides ─────────────────────────────────────────────────────── */
+/* Sections flow continuously (no forced page-per-section, which stranded
+   half-empty pages). Headings keep break-after:avoid so a heading never lands
+   alone at the foot of a page, and tables/figures carry break-inside:avoid so
+   they never split — together these keep the flow clean without the whitespace. */
 @media print{
   a{color:inherit;text-decoration:none}
-  h2{page-break-before:always}
-  h2:first-of-type{page-break-before:avoid}
 }
 """
 
@@ -399,7 +404,7 @@ def run(cmd, **kwargs):
     return result
 
 
-# Localized header chrome. The firm name "Theory Y Research" is a brand and stays
+# Localized header chrome. The firm name "Theoryy Research" is a brand and stays
 # verbatim; only the descriptor + the institutional-use banner translate. Falls
 # back to English for any unknown lang.
 # BCP-47 document-language tags. The script subtag on zh ("zh-Hans") is what makes
@@ -419,7 +424,7 @@ _HEADER_CHROME = {
 def inject_header(html: str, ticker: str, date: str, lang: str = "en") -> str:
     research, institutional = _HEADER_CHROME.get(lang, _HEADER_CHROME["en"])
     header_html = f"""<div class="doc-header">
-  <div class="firm">Theory Y Research &nbsp;·&nbsp; {research}</div>
+  <div class="firm">Theoryy Research &nbsp;·&nbsp; {research}</div>
   <div class="meta">
     <strong style="font-size:11pt;color:#0D1F3C">{ticker}</strong><br>
     NASDAQ: {ticker} &nbsp;|&nbsp; {date}<br>
@@ -428,6 +433,43 @@ def inject_header(html: str, ticker: str, date: str, lang: str = "en") -> str:
 </div>
 """
     return html.replace("<body>", f"<body>\n{header_html}", 1)
+
+
+def style_title_block(html: str) -> str:
+    """Activate the hero title styling and declutter the document head.
+
+    Pandoc renders the memo's ``# …`` line as a plain ``<h1>`` and the optional
+    ``*Firm | Generated: …*`` line as a plain ``<p><em>…</em></p>`` — so the
+    ``h1.title`` / ``p.subtitle`` CSS never engages. We add those classes here
+    (the same post-process move as ``inject_header``) rather than touch the memo
+    content spec, so every existing ``.md`` benefits without being rewritten.
+
+    Three passes:
+      1. Promote the first ``<h1>`` to the gold-underlined hero title.
+      2. Class the subtitle paragraph and strip a redundant leading firm name —
+         the masthead already carries "Theoryy Research", so repeating it in the
+         subtitle is noise.
+      3. Drop ``<hr>`` rules that sit directly before a section ``<h2>`` (the
+         memo's ``---`` separators). The navy-ruled headings already separate
+         sections; removing the rules clears the heavy triple-line stack under
+         the title and keeps the flowing layout clean.
+    """
+    # 1. hero title
+    html = re.sub(r"<h1\b", '<h1 class="title"', html, count=1)
+
+    # 2. subtitle paragraph immediately after the title (skipped when absent)
+    def _subtitle(match: "re.Match") -> str:
+        text = match.group(2).strip()
+        text = re.sub(r"^\s*Theory\s*Y\s+Research\s*[|·\-–—]\s*", "", text,
+                      flags=re.IGNORECASE)
+        return f'{match.group(1)}<p class="subtitle">{text}</p>'
+
+    html = re.sub(r"(</h1>\s*)<p><em>(.*?)</em></p>", _subtitle, html,
+                  count=1, flags=re.DOTALL)
+
+    # 3. drop section-divider rules (incl. the one under the title block)
+    html = re.sub(r"<hr\s*/?>\s*(?=<h2)", "", html, flags=re.IGNORECASE)
+    return html
 
 
 def load_context(ticker: str, override: str | None = None) -> dict:
@@ -611,6 +653,7 @@ def main():
     else:
         html = re.sub(r"<html\b", f'<html lang="{doc_lang}"', html, count=1)
     html = inject_header(html, ticker, args.date, args.lang)
+    html = style_title_block(html)
 
     # ── Inject data-driven charts (live price + payload signals) ───────────────
     if args.no_charts:

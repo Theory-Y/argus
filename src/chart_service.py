@@ -118,6 +118,8 @@ LABELS: Dict[str, Dict[str, str]] = {
         "sen_unavail_nodata":   "No per-source sentiment in payload.",
         "sen_title":            "Sentiment by source (−1 to +1)",
         "sen_cap_agg":          "Aggregate {agg} across {total} posts. ",
+        "sen_others":           "Others",
+        "sen_others_note":      " The three highest-weighted sources are shown individually; the rest are grouped as Others. *Others: {names}.",
         "sen_cap":              "<strong>{fig} — Public opinion.</strong> {agg}Per-source mean sentiment; bar opacity scales with source weight, n = message count. Source: multi-source sentiment (MCP payload).",
         "rev_unavail_title":    "Revenue history",
         "rev_unavail_nodata":   "No multi-year revenue history in payload.",
@@ -165,6 +167,8 @@ LABELS: Dict[str, Dict[str, str]] = {
         "sen_unavail_nodata":   "数据中无分来源情绪。",
         "sen_title":            "各来源情绪（−1 至 +1）",
         "sen_cap_agg":          "总体 {agg}，覆盖 {total} 条帖子。",
+        "sen_others":           "其他",
+        "sen_others_note":      " 权重最高的三个来源单独列示，其余归入“其他”。 *其他：{names}。",
         "sen_cap":              "<strong>{fig} — 公众舆论。</strong> {agg}各来源平均情绪；条形不透明度随来源权重变化，n = 消息数量。来源：多来源情绪（MCP 数据）。",
         "rev_unavail_title":    "营收历史",
         "rev_unavail_nodata":   "数据中无多年度营收历史。",
@@ -212,6 +216,8 @@ LABELS: Dict[str, Dict[str, str]] = {
         "sen_unavail_nodata":   "Sin sentimiento por fuente en los datos.",
         "sen_title":            "Sentimiento por fuente (−1 a +1)",
         "sen_cap_agg":          "Agregado {agg} en {total} publicaciones. ",
+        "sen_others":           "Otras",
+        "sen_others_note":      " Las tres fuentes de mayor peso se muestran por separado; el resto se agrupa como Otras. *Otras: {names}.",
         "sen_cap":              "<strong>{fig} — Opinión pública.</strong> {agg}Sentimiento medio por fuente; la opacidad de la barra escala con el peso de la fuente, n = número de mensajes. Fuente: sentimiento multifuente (datos MCP).",
         "rev_unavail_title":    "Historial de ingresos",
         "rev_unavail_nodata":   "Sin historial plurianual de ingresos en los datos.",
@@ -259,6 +265,8 @@ LABELS: Dict[str, Dict[str, str]] = {
         "sen_unavail_nodata":   "Aucun sentiment par source dans les données.",
         "sen_title":            "Sentiment par source (−1 à +1)",
         "sen_cap_agg":          "Agrégat {agg} sur {total} publications. ",
+        "sen_others":           "Autres",
+        "sen_others_note":      " Les trois sources les plus pondérées sont affichées individuellement ; les autres sont regroupées sous Autres. *Autres : {names}.",
         "sen_cap":              "<strong>{fig} — Opinion publique.</strong> {agg}Sentiment moyen par source ; l'opacité des barres varie selon le poids de la source, n = nombre de messages. Source : sentiment multi-source (données MCP).",
         "rev_unavail_title":    "Historique du chiffre d'affaires",
         "rev_unavail_nodata":   "Aucun historique pluriannuel du CA dans les données.",
@@ -762,7 +770,54 @@ def sentiment_sources_svg(context: Dict, lang: str = "en") -> str:
     if not sources:
         return _unavailable(L["sen_unavail_title"], L["sen_unavail_nodata"])
 
-    sources.sort(key=lambda s: _num(s.get("sentiment_score")) or 0.0, reverse=True)
+    # Rank by weight (each source's contribution to the consensus), tiebreaking on
+    # volume, to pick the three "primary" sources. Any remainder collapses into a
+    # single weight-weighted "Others*" bar so the figure never sprawls past four
+    # rows; the Others members are named in an asterisked caption footnote. The
+    # headline aggregate in the caption is read straight from `cs` below and stays
+    # full-population — only this per-bar display is collapsed.
+    sources.sort(
+        key=lambda s: (_num(s.get("weight")) or 0.0, _num(s.get("message_count")) or 0.0),
+        reverse=True,
+    )
+    primary, remainder = sources[:3], sources[3:]
+
+    def _row(s: Dict) -> Dict:
+        return {
+            "name":   _SOURCE_LABELS.get(s.get("source"), str(s.get("source") or "?")),
+            "score":  max(-1.0, min(1.0, _num(s.get("sentiment_score")))),
+            "msgs":   int(_num(s.get("message_count")) or 0),
+            "weight": _num(s.get("weight")) or 1.0,
+            "star":   False,
+        }
+
+    rows = [_row(s) for s in primary]
+    rows.sort(key=lambda r: r["score"], reverse=True)   # diverging, most-positive top
+
+    others_names: List[str] = []
+    if remainder:
+        pairs = [
+            (max(-1.0, min(1.0, _num(s.get("sentiment_score")))), _num(s.get("weight")) or 0.0)
+            for s in remainder
+        ]
+        wsum = sum(w for _, w in pairs)
+        if wsum > 0:
+            o_score = sum(sc * w for sc, w in pairs) / wsum
+            o_weight = wsum / len(pairs)
+        else:
+            o_score = sum(sc for sc, _ in pairs) / len(pairs)
+            o_weight = 1.0
+        rows.append({
+            "name":   L["sen_others"],
+            "score":  o_score,
+            "msgs":   sum(int(_num(s.get("message_count")) or 0) for s in remainder),
+            "weight": o_weight,
+            "star":   True,
+        })
+        others_names = [
+            _SOURCE_LABELS.get(s.get("source"), str(s.get("source") or "?"))
+            for s in remainder
+        ]
 
     W = 700
     label_w, row_h, gap, top = 116, 22, 10, 34
@@ -774,14 +829,14 @@ def sentiment_sources_svg(context: Dict, lang: str = "en") -> str:
         f'<text x="0" y="16" font-size="11" font-weight="700" fill="{NAVY}" '
         f'font-family="{_ff}">{_esc(L["sen_title"])}</text>',
         f'<line x1="{cx:.1f}" y1="{top - 4}" x2="{cx:.1f}" '
-        f'y2="{top + len(sources) * (row_h + gap):.0f}" stroke="{RULE}" stroke-width="1"/>',
+        f'y2="{top + len(rows) * (row_h + gap):.0f}" stroke="{RULE}" stroke-width="1"/>',
     ]
     y = top
-    for s in sources:
-        score = max(-1.0, min(1.0, _num(s.get("sentiment_score"))))
-        name = _SOURCE_LABELS.get(s.get("source"), str(s.get("source") or "?"))
-        msgs = int(_num(s.get("message_count")) or 0)
-        weight = _num(s.get("weight")) or 1.0
+    for r in rows:
+        score = r["score"]
+        name = r["name"] + ("*" if r["star"] else "")
+        msgs = r["msgs"]
+        weight = r["weight"]
         col = GREEN if score > 0.02 else RED if score < -0.02 else SLATE
         bw = half * abs(score)
         bx = cx if score >= 0 else cx - bw
@@ -817,6 +872,8 @@ def sentiment_sources_svg(context: Dict, lang: str = "en") -> str:
         if agg is not None else ""
     )
     cap = L["sen_cap"].format(fig=FIG_PLACEHOLDER, agg=agg_txt)
+    if others_names:
+        cap += L["sen_others_note"].format(names=", ".join(others_names))
     return _figure(svg, cap)
 
 
