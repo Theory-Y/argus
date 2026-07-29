@@ -15,11 +15,18 @@ Output contract:
         "sec_risk_snippet":    SecRiskSnippet (dict),
         "job_market":          ApifyJobsResult (dict),
         "consumer_sentiment":  ConsumerSentimentSignal (dict),
+        "insider_activity":    InsiderActivitySignal (dict) — trailing-12m Form 4
+                               buy/sell aggregate + notable sells (risk signal)
+        "earnings_track":      EarningsTrack (dict) — last 8 reported quarters,
+                               beat/miss pattern (guidance-credibility proxy)
         "web_research":        WebResearchSignal (dict) — first-hand news/forum
                                scrape; its uniform forum_posts / news_extracts
                                arrays are TOON-encoded into *_toon strings to cut
                                output tokens (the rest of the payload stays JSON)
     },
+    "fundamentals_history": FundamentalsHistory (dict) — ≤5 FYs of revenue/EBITDA/
+                            NI with approximate year-end EV/Revenue + trailing P/E
+                            (feeds the revenue_history / valuation_history charts),
     "data_quality": { flagged_comparables, has_flags, directive }  ← coherence audit
   }
 
@@ -135,7 +142,7 @@ SECTOR_MACRO_MAP: Dict[str, Tuple[str, str]] = {
     "Communication Services": ("PCEC96",     "Real Personal Consumption Expenditures (PCEC96, chained $B, SA)"),
 }
 
-_SCHEMA_VERSION:  str = "1.8"
+_SCHEMA_VERSION:  str = "1.9"
 _OUTPUT_DIR:      Path = Path("output") / "context"
 
 # How many comparables to carry when peers are discovered dynamically.
@@ -318,11 +325,12 @@ class ContextAggregator:
         ]
 
         return {
-            "meta":         self._build_meta(ticker, sector),
-            "target":       target_node,
-            "peers":        peer_nodes,
-            "alt_signals":  self._fetch_alt_signals(ticker, sector, company_name),
-            "data_quality": self._build_data_quality(quality_summary),
+            "meta":                 self._build_meta(ticker, sector),
+            "target":               target_node,
+            "peers":                peer_nodes,
+            "alt_signals":          self._fetch_alt_signals(ticker, sector, company_name),
+            "fundamentals_history": self._fetch_fundamentals_history(ticker),
+            "data_quality":         self._build_data_quality(quality_summary),
         }
 
     def _resolve_peers(self, ticker: str) -> List[str]:
@@ -407,6 +415,8 @@ class ContextAggregator:
             "sec_8k_events":        self._fetch_8k_events(ticker),
             "litigation":           self._fetch_litigation(ticker),
             "consumer_sentiment":   self._fetch_consumer_sentiment(ticker),
+            "insider_activity":     self._fetch_insider_activity(ticker),
+            "earnings_track":       self._fetch_earnings_track(ticker),
             "massive_news":         self._fetch_massive_news(ticker),
             "massive_price_metrics": self._fetch_massive_price_metrics(ticker),
             "web_research":         self._fetch_web_research(ticker, company_name),
@@ -472,6 +482,27 @@ class ContextAggregator:
             return _to_dict(self._alt.get_consumer_sentiment(ticker, company_name))
         except Exception as exc:
             logger.error("Consumer sentiment failed for %s: %s", ticker, exc)
+            return _error_node(ticker, exc)
+
+    def _fetch_insider_activity(self, ticker: str) -> Dict:
+        try:
+            return _to_dict(self._fin.get_insider_activity(ticker))
+        except Exception as exc:
+            logger.error("Insider activity fetch failed for %s: %s", ticker, exc)
+            return _error_node(ticker, exc)
+
+    def _fetch_earnings_track(self, ticker: str) -> Dict:
+        try:
+            return _to_dict(self._fin.get_earnings_track(ticker))
+        except Exception as exc:
+            logger.error("Earnings track fetch failed for %s: %s", ticker, exc)
+            return _error_node(ticker, exc)
+
+    def _fetch_fundamentals_history(self, ticker: str) -> Dict:
+        try:
+            return _to_dict(self._fin.get_fundamentals_history(ticker))
+        except Exception as exc:
+            logger.error("Fundamentals history fetch failed for %s: %s", ticker, exc)
             return _error_node(ticker, exc)
 
     def _fetch_massive_news(self, ticker: str) -> Dict:

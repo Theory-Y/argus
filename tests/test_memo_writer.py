@@ -52,11 +52,15 @@ class _FakeClient:
         self.messages = _Messages(blocks, self.captured)
 
 
-def test_prompt_has_six_sections_and_persona():
-    assert len(prompt.SECTIONS) == 6
+def test_prompt_has_seven_sections_and_persona():
+    assert len(prompt.SECTIONS) == 7
     assert "Principal Equity Research Analyst" in prompt.SYSTEM_PROMPT
     for heading, _ in prompt.SECTIONS:
         assert heading in prompt.SYSTEM_PROMPT
+    # The catalyst map and conviction-score disciplines are part of the IP prompt.
+    assert "## 6. Catalyst Map — Bull & Bear Cases" in prompt.SYSTEM_PROMPT
+    assert "conviction score" in prompt.SYSTEM_PROMPT
+    assert "never price targets" in prompt.SYSTEM_PROMPT
 
 
 def test_user_message_embeds_ticker_and_payload():

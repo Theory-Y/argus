@@ -22,8 +22,12 @@ from financial_service import (
     FinancialExporter,
     FinancialService,
     NM,
+    PricePoint,
     SECTOR_TICKERS,
     audit_peer_set,
+    build_earnings_track,
+    build_fundamentals_history,
+    build_insider_activity,
 )
 
 
@@ -196,6 +200,150 @@ class TestAuditPeerSet(unittest.TestCase):
         ]
         summary = audit_peer_set(cohort)
         self.assertNotIn("TSM", summary)
+
+
+class TestInsiderActivityBuilder(unittest.TestCase):
+    _TODAY = __import__("datetime").date(2026, 6, 11)
+
+    @staticmethod
+    def _rec(insider="DOE JANE", position="Chief Executive Officer",
+             text="Sale at price 60.00 per share.", shares=1000,
+             value=60000, date="2026-05-01", url="https://sec.gov/form4"):
+        return {"insider": insider, "position": position, "text": text,
+                "shares": shares, "value": value, "date": date, "url": url}
+
+    def test_empty_records_yield_no_data_error(self):
+        sig = build_insider_activity("TST", [], today=self._TODAY)
+        self.assertEqual(sig.error, "no_data")
+        self.assertEqual(sig.sell_count, 0)
+
+    def test_sells_and_buys_classified_and_aggregated(self):
+        records = [
+            self._rec(value=100000),
+            self._rec(insider="ROE RICHARD", position="CFO", value=50000),
+            self._rec(text="Purchase at price 55.00 per share.", value=30000),
+            self._rec(text="Stock Award(Grant) at price 0.00 per share.", value=0),
+        ]
+        sig = build_insider_activity("TST", records, today=self._TODAY)
+        self.assertEqual(sig.sell_count, 2)
+        self.assertEqual(sig.buy_count, 1)
+        self.assertEqual(sig.total_sell_value_usd, 150000.0)
+        self.assertEqual(sig.total_buy_value_usd, 30000.0)
+        # notable sells sorted by value, largest first
+        self.assertEqual(sig.notable_sells[0].value_usd, 100000.0)
+        self.assertIsNone(sig.error)
+
+    def test_outside_window_and_dateless_rows_excluded(self):
+        records = [
+            self._rec(date="2024-01-01"),          # outside the 12m window
+            self._rec(date=None),                  # dateless
+            self._rec(date="2026-06-01"),          # inside
+        ]
+        sig = build_insider_activity("TST", records, today=self._TODAY)
+        self.assertEqual(sig.sell_count, 1)
+
+    def test_awards_never_counted_as_sells(self):
+        records = [self._rec(text="Stock Award(Grant) at price 0.00 per share.")]
+        sig = build_insider_activity("TST", records, today=self._TODAY)
+        self.assertEqual(sig.sell_count, 0)
+        self.assertEqual(sig.buy_count, 0)
+
+
+class TestEarningsTrackBuilder(unittest.TestCase):
+
+    @staticmethod
+    def _q(period, surprise, reported=1.0, estimate=1.0):
+        return {"period": period, "eps_estimate": estimate,
+                "eps_reported": reported, "surprise_pct": surprise}
+
+    def test_no_reported_rows_is_no_data(self):
+        future = [{"period": "2026-08-01", "eps_estimate": 0.4,
+                   "eps_reported": None, "surprise_pct": None}]
+        track = build_earnings_track("TST", future)
+        self.assertEqual(track.error, "no_data")
+
+    def test_streak_counts_from_most_recent(self):
+        records = [
+            self._q("2026-05-01", -6.0),
+            self._q("2026-02-01", -2.0),
+            self._q("2025-11-01", 30.0),
+            self._q("2025-08-01", -1.0),
+        ]
+        track = build_earnings_track("TST", records)
+        self.assertEqual(track.consecutive_misses, 2)
+        self.assertEqual(track.beat_count, 1)
+        self.assertEqual(track.miss_count, 3)
+        self.assertEqual(track.quarters[0].period, "2026-05-01")  # newest first
+
+    def test_caps_at_max_quarters_and_averages(self):
+        records = [self._q(f"202{4 + i // 4}-{(i % 4) * 3 + 1:02d}-01", 10.0)
+                   for i in range(10)]
+        track = build_earnings_track("TST", records, max_quarters=8)
+        self.assertEqual(len(track.quarters), 8)
+        self.assertEqual(track.avg_surprise_pct, 10.0)
+        self.assertEqual(track.consecutive_misses, 0)
+
+    def test_future_rows_filtered_out(self):
+        records = [
+            {"period": "2026-08-01", "eps_estimate": 0.4,
+             "eps_reported": None, "surprise_pct": None},
+            self._q("2026-05-01", 5.0),
+        ]
+        track = build_earnings_track("TST", records)
+        self.assertEqual(len(track.quarters), 1)
+        self.assertEqual(track.beat_count, 1)
+
+
+class TestFundamentalsHistoryBuilder(unittest.TestCase):
+
+    _STMTS = {
+        "2024-12-31": {"revenue": 1_000_000_000.0, "ebitda": 200_000_000.0,
+                       "net_income": 100_000_000.0, "total_debt": 300_000_000.0,
+                       "cash": 100_000_000.0, "shares": 100_000_000.0},
+        "2025-12-31": {"revenue": 1_200_000_000.0, "ebitda": 260_000_000.0,
+                       "net_income": 150_000_000.0, "total_debt": 300_000_000.0,
+                       "cash": 200_000_000.0, "shares": 100_000_000.0},
+    }
+    _PRICES = [PricePoint(date="2024-12-30", close=20.0),
+               PricePoint(date="2025-12-30", close=30.0)]
+
+    def test_empty_statements_is_no_data(self):
+        hist = build_fundamentals_history("TST", {}, [])
+        self.assertEqual(hist.error, "no_data")
+
+    def test_years_ordered_with_growth_and_ratios(self):
+        hist = build_fundamentals_history("TST", self._STMTS, self._PRICES)
+        self.assertEqual([y.fiscal_year for y in hist.years], ["FY2024", "FY2025"])
+        fy24, fy25 = hist.years
+        self.assertEqual(fy24.revenue_mm, 1000.0)
+        self.assertIsNone(fy24.yoy_revenue_growth_pct)   # no prior year
+        self.assertEqual(fy25.yoy_revenue_growth_pct, 20.0)
+        # FY2025: mktcap = 30 × 100M = 3,000M; EV = 3,000 + 300 − 200 = 3,100M
+        self.assertEqual(fy25.ev_mm_approx, 3100.0)
+        self.assertAlmostEqual(fy25.ev_revenue_approx, 2.58, places=2)
+        self.assertEqual(fy25.pe_trailing_approx, 20.0)  # 3,000 / 150
+        self.assertTrue(hist.approximate)
+
+    def test_missing_price_or_shares_degrades_ratios_to_nm(self):
+        hist = build_fundamentals_history("TST", self._STMTS, [])  # no prices
+        for y in hist.years:
+            self.assertEqual(y.ev_revenue_approx, NM)
+            self.assertEqual(y.pe_trailing_approx, NM)
+            self.assertIsNotNone(y.revenue_mm)           # statements still carried
+
+    def test_negative_net_income_gives_nm_pe(self):
+        stmts = {k: dict(v) for k, v in self._STMTS.items()}
+        for v in stmts.values():
+            v["net_income"] = -50_000_000.0
+        hist = build_fundamentals_history("TST", stmts, self._PRICES)
+        self.assertTrue(all(y.pe_trailing_approx == NM for y in hist.years))
+
+    def test_all_empty_statement_year_dropped(self):
+        stmts = dict(self._STMTS)
+        stmts["2023-12-31"] = {"revenue": None, "ebitda": None, "net_income": None,
+                               "total_debt": None, "cash": None, "shares": None}
+        hist = build_fundamentals_history("TST", stmts, self._PRICES)
+        self.assertEqual([y.fiscal_year for y in hist.years], ["FY2024", "FY2025"])
 
 
 class TestFinancialService(unittest.TestCase):
@@ -742,7 +890,7 @@ class TestContextAggregatorHelpers(unittest.TestCase):
         agg = ContextAggregator(financial_service=mock_fin, alt_data_service=mock_alt)
         meta = agg._build_meta("PCOR")
         self.assertEqual(meta["target_ticker"], "PCOR")
-        self.assertEqual(meta["schema_version"], "1.8")
+        self.assertEqual(meta["schema_version"], "1.9")
         self.assertIn("generated_at_utc", meta)
 
     def test_build_minified_context_is_valid_json(self):

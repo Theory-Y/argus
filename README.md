@@ -1,6 +1,6 @@
 # TheoryY Argus
 
-An MCP server and Claude Code skill that generates institutional-grade equity research memos for **any public company in any sector**. It originated as a PropTech & Facilities tool but is now sector-agnostic: it captures each issuer's sector/industry, discovers peers dynamically, and selects a sector-appropriate macro series automatically. Point it at a ticker and get a six-section investment memo grounded in live financial data — no fabricated numbers.
+An MCP server and Claude Code skill that generates institutional-grade equity research memos for **any public company in any sector**. It originated as a PropTech & Facilities tool but is now sector-agnostic: it captures each issuer's sector/industry, discovers peers dynamically, and selects a sector-appropriate macro series automatically. Point it at a ticker and get a seven-section investment memo grounded in live financial data — no fabricated numbers.
 
 ## How it works
 
@@ -160,7 +160,7 @@ output/
   context/
     context_TICKER.json      # raw data payload (minified JSON)
   memos/
-    TheoryY_Memo_TICKER.md   # five-section investment memo
+    TheoryY_Memo_TICKER.md   # seven-section investment memo
     TheoryY_Memo_TICKER.pdf  # PDF rendered via CSS or pandoc
     TheoryY_Memo_TICKER.docx # Word doc (if Word format chosen)
   TheoryY_Sector_Sheet.csv   # sector comparables table
@@ -170,18 +170,19 @@ output/
 
 ## Memo structure
 
-Each memo has six sections:
+Each memo has seven sections:
 
-1. **One-Line Thesis & Valuation Snapshot** — the thesis plus multiples vs. growth, including an explicit forward-earnings bridge and a cross-sectional peer comp
-2. **Business Overview & Operations** — business model, revenue/segment mix, cost structure, and where operating leverage sits
+1. **One-Line Thesis & Valuation Snapshot** — the thesis plus multiples vs. growth, including an explicit forward-earnings bridge, a cross-sectional peer comp, and the multi-year valuation re-rating path (FY-end EV/Revenue + trailing P/E)
+2. **Business Overview & Operations** — business model, multi-year revenue trajectory (FY-labeled), revenue/segment mix shift across years, cost structure, and where operating leverage sits
 3. **Alternative Data & Macro Signals** — Google Trends velocity, macro backdrop, SEC filings, litigation — gated on a stated transmission mechanism
-4. **Consumer & Public Opinion** — multi-source sentiment (StockTwits, Yahoo, HackerNews, news), weighted and contextualized to the business type
-5. **Key Risks & Structural Barriers** — concrete, ranked risks tied to the thesis
-6. **Investment Recommendation** — direction + conviction with the variables that would change the call
+4. **Consumer & Public Opinion** — multi-source sentiment (StockTwits, Yahoo, HackerNews, news, niche forums), weighted, contextualized to the business type, with each community's focus named
+5. **Key Risks & Structural Barriers** — concrete, ranked risks tied to the thesis; mandatory coverage of named competitive risk, margin compression, insider-sell clusters, and guidance credibility (8-quarter beat/miss track); never a 10-K Item 1A rehash, filings linked inline
+6. **Catalyst Map — Bull & Bear Cases** — exactly 3 bull + 3 bear catalysts, each with probability, magnitude (operating terms), timing window, priced-in judgment, and the public's current reaction; closed with best-case/worst-case composites
+7. **Investment Recommendation** — direction + conviction score (N/10), an entry view at the current price (no price targets), and a monitoring list of what would change the call
 
 ### Analytical rigor requirements
 
-The memo skill enforces six non-negotiable rules (in `.claude/skills/theory-y-memo/SKILL.md`) that exist to prevent recurring failures: (1) bridge every valuation gap with explicit implied-earnings math; (2) always build a peer comp — source externally if `peers` is empty; (3) source segment mix from filings when the payload omits it; (4) run an internal-contradiction check before finalizing; (5) gate each macro/alt-data signal on a stated transmission mechanism (honoring the FRED `relevance` flag); (6) investigate governance/litigation signals or name the next source (proxy, PACER) rather than leaving an unexplained flag. External figures are distinguished from payload-derived ones in a closing Sourcing note.
+The memo skill enforces twelve non-negotiable rules (in `.claude/skills/theory-y-memo/SKILL.md`) that exist to prevent recurring failures: (1) bridge every valuation gap with explicit implied-earnings math; (2) always build a peer comp — source externally if `peers` is empty; (3) source segment mix from filings when the payload omits it; (4) run an internal-contradiction check before finalizing; (5) gate each macro/alt-data signal on a stated transmission mechanism (honoring the FRED `relevance` flag); (6) investigate governance/litigation signals or name the next source (proxy, PACER) rather than leaving an unexplained flag; (7) honor `data_quality` flags — never present a flagged figure as fact; (8) calibrate language strength to signal strength; (9) catalyst discipline — every catalyst sized, timed, and judged for being priced in, never via price targets; (10) key risks state the delta beyond the 10-K, with filings linked inline; (11) interpret insider-sell and earnings-surprise patterns rather than reporting them raw; (12) red-team the final call before writing it. External figures are distinguished from payload-derived ones in a closing Sourcing note.
 
 ## Project structure
 

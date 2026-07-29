@@ -30,7 +30,17 @@ market-standard, not literal.
 | Alternative Data & Macro Signals | Datos Alternativos y Señales Macro | |
 | Consumer & Public Opinion | Opinión del Consumidor y Pública | |
 | Key Risks & Structural Barriers | Riesgos Clave y Barreras Estructurales | |
+| Catalyst Map — Bull & Bear Cases | Mapa de Catalizadores — Escenarios Alcistas y Bajistas | §6 heading; keep the em-dash structure |
 | Investment Recommendation | Recomendación de Inversión | |
+| catalyst | catalizador | |
+| bull case / bear case | escenario alcista / escenario bajista | |
+| priced in | descontado por el mercado | |
+| conviction score | puntuación de convicción | escala N/10 en §7 |
+| margin compression | compresión de márgenes | |
+| insider selling | ventas de directivos (insiders) | actividad Form 4 |
+| guidance cut | recorte de previsiones (guidance) | keep "guidance" in Latin |
+| earnings beat / miss | superar / incumplir estimaciones | |
+| monitoring list | lista de seguimiento | cierre de §7 |
 | thesis | tesis | |
 | valuation | valoración | |
 | valuation bridge | puente de valoración | implied-earnings derivation |

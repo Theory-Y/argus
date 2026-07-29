@@ -1,6 +1,6 @@
 ---
 name: theory-y-memo
-description: Generate a Theory Y institutional equity research memo for a given stock ticker. Use this whenever the user asks for an investment memo, equity research write-up, or "Theory Y memo" for a company or ticker (e.g. "write the memo for PCOR", "draft an investment memo on Procore"). The skill fetches deterministic company data from the local MCP server, then writes a five-section institutional memo as a Markdown file. Trigger it even when the user just names a ticker and asks for "the memo" or "the write-up", since that is the core deliverable this skill produces.
+description: Generate a Theory Y institutional equity research memo for a given stock ticker. Use this whenever the user asks for an investment memo, equity research write-up, or "Theory Y memo" for a company or ticker (e.g. "write the memo for PCOR", "draft an investment memo on Procore"). The skill fetches deterministic company data from the local MCP server, then writes a seven-section institutional memo as a Markdown file. Trigger it even when the user just names a ticker and asks for "the memo" or "the write-up", since that is the core deliverable this skill produces.
 ---
 
 # Theory Y Investment Memo
@@ -30,16 +30,17 @@ write from memory; fabricated financials are worse than no memo.
 ## Phase 2 — Write the memo
 
 Write to `output/memos/TheoryY_Memo_<TICKER>.md`, starting with `# Investment Memo: <TICKER>`,
-then these six sections in order, each opening with its exact `##` heading:
+then these seven sections in order, each opening with its exact `##` heading:
 
 | Section heading | ~Words |
 |---|---|
 | `## 1. One-Line Thesis & Valuation Snapshot` | 250 |
-| `## 2. Business Overview & Operations` | 350 |
+| `## 2. Business Overview & Operations` | 400 |
 | `## 3. Alternative Data & Macro Signals` | 450 |
-| `## 4. Consumer & Public Opinion` | 250 |
-| `## 5. Key Risks & Structural Barriers` | 300 |
-| `## 6. Investment Recommendation` | 200 |
+| `## 4. Consumer & Public Opinion` | 300 |
+| `## 5. Key Risks & Structural Barriers` | 400 |
+| `## 6. Catalyst Map — Bull & Bear Cases` | 350 |
+| `## 7. Investment Recommendation` | 250 |
 
 Word targets are guidance — prioritize substance.
 
@@ -53,13 +54,15 @@ yfinance + payload data (you supply no numbers); unmatched tokens degrade to a s
 |---|---|---|
 | `[[chart:price_history]]` | §1 | after the valuation-snapshot table |
 | `[[chart:valuation_comps]]` | §1 | after the peer comp table |
+| `[[chart:valuation_history]]` | §1 | after the multiple-re-rating discussion (FY-end EV/Revenue + trailing P/E; the engine appends today's forward P/E as the gold row) |
+| `[[chart:revenue_history]]` | §2 | with the multi-year revenue trajectory discussion (FY-labeled) |
 | `[[chart:margins]]` | §2 | near the operating-leverage discussion |
 | `[[chart:search_trends]]` | §3 | start of the Google-Trends discussion |
 | `[[chart:sentiment_sources]]` | §4 | after the per-source sentiment table |
 
 Charts **complement** tables — keep the tables. Caption every table: put
 `[[table:Caption text]]` on the line **immediately above** it (snapshot, peer comps,
-segment/revenue mix, per-source sentiment). Charts and tables share **one running
+segment/revenue mix, per-source sentiment, catalyst map). Charts and tables share **one running
 `Figure N` sequence** assigned by the exporter top-to-bottom — never write figure
 numbers yourself; refer to figures by description, not "Figure 3".
 
@@ -77,12 +80,17 @@ Every claim anchored to a payload number/relationship or an explicitly sourced e
 - **No AI filler** ("crucial role", "it is important to note", "in conclusion"). Open with analysis.
 - **Markdown only**; exact headings.
 - **Footnote markers in tables** must use HTML `<sup>a</sup>` — never `^(a)` markdown notation. The exporter disables pandoc superscripts; `^(a)` renders as literal text.
-- **Coherence across sections** — later sections build on earlier (§6 follows from §§1–5) without verbatim restatement.
+- **Coherence across sections** — later sections build on earlier (§7 follows from §§1–6) without verbatim restatement.
 - **Per-section emphasis:**
   - §1 — one crisp thesis sentence + valuation snapshot (rigor rules 1–2). If
     `alt_signals.massive_price_metrics` has no `error`, anchor with current price, 52-week
     range (`high_52w`/`low_52w`, note near high vs low), `return_1y_pct`, and `return_30d_pct` if present.
-  - §2 — business model & operating mechanics: revenue mix, customers, GTM, cost structure, where leverage sits.
+  - §2 — business model & operating mechanics: revenue mix, customers, GTM, cost structure, where
+    leverage sits. **Multi-year framing is mandatory:** use `fundamentals_history.years` to show the
+    revenue trajectory across the last 3–5 fiscal years with each year labeled (FY2023, FY2024, …),
+    never a single TTM number in isolation. When tabulating segment/revenue mix (rigor rule 3),
+    give the mix **percentages for multiple recent years with the year labeled on every column** so
+    mix shift is visible, not just the latest split.
   - §3 — longest, most differentiated. Alt-data/macro read-through to forward numbers.
     Rigor rules 5–6. `alt_signals.massive_news`: when `article_count` ≥ 3 and
     `blended_sentiment` non-null, frame news momentum; cite `articles[*].sentiment_reasoning`
@@ -105,8 +113,41 @@ Every claim anchored to a payload number/relationship or an explicitly sourced e
     Calibrate by `extraction_mode`: `"lexical"` (no-LLM keyword scoring of page text) is a
     directional read like the other lexicon sources; `"llm"` (structured extraction) may be
     cited more concretely. Never let a low-`confidence` web_research read anchor the call.
-  - §5 — concrete, ranked risks/barriers, each tied to thesis or numbers.
-  - §6 — clear direction + conviction falling out of §§1–5, with variables that would change the call.
+    **Per-community breakdown:** name each community individually (StockTwits, Yahoo,
+    HackerNews, Reddit subs, web_research niche forums) and state **what that community is
+    focused on** (its dominant themes/quotes), not just its score — retail flow, technical
+    chatter, product gripes, and professional skepticism are different signals.
+  - §5 — concrete, ranked risks/barriers, each tied to thesis or numbers. Mandatory coverage
+    (each either assessed or explicitly cleared as not material):
+    (a) **named competitive risk** — name the specific competitor(s) from `peers`/dynamic
+    discovery and the vector of attack (price, bundling, distribution, technology);
+    (b) **margin compression** — which cost line or pricing dynamic could compress EBITDA
+    margin, anchored to the payload margin and peer margins;
+    (c) **insider selling** — read `alt_signals.insider_activity`: weigh clustering, size
+    vs. role, and buy/sell asymmetry (rigor rule 11); a heavy officer-level sell cluster is
+    a confidence signal to surface, a lone routine sale is not;
+    (d) **guidance credibility** — read `alt_signals.earnings_track` (last 8 reported
+    quarters): call out miss streaks/patterns and cross-check `sec_8k_events` for guidance
+    language (rigor rule 11).
+    **De-dup vs the 10-K (rigor rule 10):** Item 1A is background, not your risk list.
+  - §6 — the catalyst map. Exactly **3 bull catalysts and 3 bear catalysts**, each a row in a
+    captioned table with columns: Catalyst | Probability (High/Med/Low) | Magnitude (impact on
+    revenue/margins/multiple — operating terms, never price targets) | Timing (window, e.g.
+    "2–3 quarters") | Priced in? (Yes/No + one-line why, judged against current multiples vs.
+    peers/history) | Public reaction (what §3/§4 sentiment + news data say the market is doing
+    with it). Follow with two short paragraphs — **best case** and **worst case** — the
+    composite scenario if the bull (resp. bear) catalysts land, stated in operating
+    consequences. Every catalyst traces to a payload signal or is labeled externally sourced
+    (rigor rule 9).
+  - §7 — clear direction + conviction falling out of §§1–6, with the variables that would
+    change the call. Must end with three deliverables:
+    (a) **conviction score (N/10)**, anchored — 8–10 high-confidence and data-corroborated;
+    5–7 directional but signal-limited; ≤4 speculative; thin §3/§4 data caps the score (say so);
+    (b) **entry view at the current price** — is the stock attractive *here*, reasoned from
+    the 52-week-range position, the valuation-history re-rating path, and what the current
+    multiple already prices in; a judgment, never a price target;
+    (c) **monitoring list** — the 3–5 concrete things to watch next (filings, prints, §6
+    catalyst windows) and which of them would flip the call.
 
 ### Analytical rigor (non-negotiable — each maps to a past failure)
 
@@ -139,13 +180,44 @@ Every claim anchored to a payload number/relationship or an explicitly sourced e
 8. **Calibrate confidence to the data.** Weigh `consumer_sentiment` by `signal_count` not
    `message_count`; an extreme score (±1.0) on low signal count is noise. A source with
    `confidence:"low"` or `signal_count`<3 may be a soft signal but must **never** anchor a
-   thesis, §5 risk pillar, or §6 call. If overall `confidence` "low", §4 is directional only.
+   thesis, §5 risk pillar, or §7 call. If overall `confidence` "low", §4 is directional only.
    For `massive_news` with `article_count`<3, treat `blended_sentiment` as directional;
    cite `sentiment_reasoning` as press perspective, not verified conclusion. Match language
    strength to evidence strength.
+9. **Catalyst discipline (§6).** Every catalyst needs all five attributes (probability,
+   magnitude, timing, priced-in, public reaction) — a catalyst you can't time or size is a
+   theme, not a catalyst; drop it. "Priced in?" must be argued from the current multiple vs.
+   peers/valuation history, not asserted. Magnitude is stated in operating terms (revenue,
+   margin, multiple direction); **never emit price targets** anywhere in the memo.
+10. **Key risks are not the 10-K.** `sec_risk_snippet` (Item 1A) is background reference
+    only — never reproduce its boilerplate as a "key risk". A §5 risk must be specific,
+    current, and tied to the numbers; if it overlaps an Item 1A factor, state what is *new*
+    beyond the filing (recent 8-K, insider cluster, miss streak, competitor move). Link the
+    underlying filings inline as markdown links (`filing_url`, 8-K URLs, notable-sell Form 4
+    URLs) so every public-document claim is one click from its source.
+11. **Interpret insider + earnings patterns, don't just report them.** Form 4 data cannot
+    distinguish 10b5-1 scheduled sales from discretionary ones — so reason from clustering
+    (several officers in a window), size vs. role, buy/sell asymmetry, and proximity to
+    events; never call a lone sale a loss of confidence. For `earnings_track`: ≥2 consecutive
+    misses or a negative average surprise over 8 quarters is a guidance-credibility risk that
+    belongs in §5; a long beat streak with decelerating surprise size is its own signal
+    (estimates catching up). Quote the streak/counts, then interpret.
+12. **Red-team your own call before finalizing (council-lite).** Before writing §7's last
+    paragraph: (a) state the strongest objection to your own recommendation — the best
+    argument the other side would make from THIS payload — and either rebut it with data or
+    concede it into the conviction score; (b) re-verify the three highest-stakes numbers in
+    the memo against the payload (the ones your call would die on if wrong); (c) confirm §1's
+    thesis, §5's top risk, and §6's top catalysts are mutually consistent (rule 4). The full
+    multi-perspective AI council is a Phase 4 orchestrator feature; this rule is its
+    single-agent distillation.
 
 When external sourcing is used, add a short **Sourcing note** at the end distinguishing
-payload-derived from externally fetched figures.
+payload-derived from externally fetched figures. External sourcing rules: cite aggregated
+press (`massive_news`) by publisher + date — major-outlet perspectives (WSJ, NYT, MarketWatch,
+Reuters…) enter the memo through that attributed channel, never by scraping paywalled sites.
+Company-website/IR figures not in the 10-K may be cited as externally sourced data reference
+with a link; investor pitch decks and other non-public material are out of bounds until the
+licensed-source pipeline exists (MNPI gate).
 
 ## Output
 

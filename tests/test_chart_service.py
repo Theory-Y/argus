@@ -41,6 +41,20 @@ _CONTEXT = {
         {"ticker": "PRA", "forward_pe": 25.0, "ev_revenue": 7.0},
         {"ticker": "PRB", "forward_pe": 30.0, "ev_revenue": 9.0},
     ],
+    "fundamentals_history": {
+        "ticker": "TST", "approximate": True, "error": None,
+        "years": [
+            {"fiscal_year": "FY2023", "fy_end": "2023-12-31", "revenue_mm": 700.0,
+             "yoy_revenue_growth_pct": None, "ev_revenue_approx": 4.0,
+             "pe_trailing_approx": 30.0},
+            {"fiscal_year": "FY2024", "fy_end": "2024-12-31", "revenue_mm": 850.0,
+             "yoy_revenue_growth_pct": 21.4, "ev_revenue_approx": 4.5,
+             "pe_trailing_approx": 25.0},
+            {"fiscal_year": "FY2025", "fy_end": "2025-12-31", "revenue_mm": 1000.0,
+             "yoy_revenue_growth_pct": 17.6, "ev_revenue_approx": 5.0,
+             "pe_trailing_approx": "N/M"},
+        ],
+    },
     "alt_signals": {
         "google_trends": {"latest_interest": 40, "peak_interest": 100,
                           "trough_interest": 20, "velocity_pct": -1.5},
@@ -70,11 +84,32 @@ class TestChartBuilders(unittest.TestCase):
 
     def test_all_payload_charts_well_formed(self):
         for fn in (cs.valuation_comps_svg, cs.margins_svg,
-                   cs.search_trends_svg, cs.sentiment_sources_svg):
+                   cs.search_trends_svg, cs.sentiment_sources_svg,
+                   cs.revenue_history_svg, cs.valuation_history_svg):
             frag = fn(_CONTEXT)
             self.assertIn("<figure", frag, fn.__name__)
             _well_formed(frag)
             self.assertNotIn("chart--empty", frag, fn.__name__)
+
+    def test_revenue_history_labels_every_fiscal_year(self):
+        frag = cs.revenue_history_svg(_CONTEXT)
+        for fy in ("FY2023", "FY2024", "FY2025"):
+            self.assertIn(fy, frag)
+        # year-end dates are labeled under the bars (the meeting-note ask)
+        self.assertIn("2025-12-31", frag)
+
+    def test_valuation_history_appends_current_forward_pe_row(self):
+        frag = cs.valuation_history_svg(_CONTEXT)
+        self.assertIn("Now (fwd)", frag)        # gold "today" row from target.forward_pe
+        self.assertIn("18.0×", frag)
+        # the N/M trailing P/E year is silently dropped, not rendered as 0
+        self.assertNotIn("N/M", frag)
+
+    def test_valuation_history_without_forward_pe_still_renders(self):
+        ctx = {**_CONTEXT, "target": {"ticker": "TST"}}
+        frag = cs.valuation_history_svg(ctx)
+        _well_formed(frag)
+        self.assertNotIn("Now (fwd)", frag)
 
     def test_valuation_includes_target_and_peers(self):
         frag = cs.valuation_comps_svg(_CONTEXT)
@@ -96,9 +131,26 @@ class TestGracefulDegradation(unittest.TestCase):
 
     def test_missing_signals_degrade(self):
         for fn in (cs.valuation_comps_svg, cs.margins_svg,
-                   cs.search_trends_svg, cs.sentiment_sources_svg):
+                   cs.search_trends_svg, cs.sentiment_sources_svg,
+                   cs.revenue_history_svg, cs.valuation_history_svg):
             frag = fn({})           # empty context
             self.assertIn("chart--empty", frag, fn.__name__)
+
+    def test_history_error_node_degrades(self):
+        ctx = {"target": {"ticker": "X"},
+               "fundamentals_history": {"ticker": "X", "error": "boom"}}
+        self.assertIn("chart--empty", cs.revenue_history_svg(ctx))
+        self.assertIn("chart--empty", cs.valuation_history_svg(ctx))
+
+    def test_single_year_history_degrades(self):
+        # one usable year is a point, not a trajectory — degrade, don't chart it
+        ctx = {"target": {"ticker": "X"},
+               "fundamentals_history": {"years": [
+                   {"fiscal_year": "FY2025", "fy_end": "2025-12-31",
+                    "revenue_mm": 10.0, "ev_revenue_approx": 1.0,
+                    "pe_trailing_approx": 2.0}]}}
+        self.assertIn("chart--empty", cs.revenue_history_svg(ctx))
+        self.assertIn("chart--empty", cs.valuation_history_svg(ctx))
 
     def test_error_nodes_degrade(self):
         ctx = {"target": {"ticker": "X", "error": "boom"},

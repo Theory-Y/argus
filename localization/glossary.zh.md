@@ -30,7 +30,17 @@ market-standard, not literal.
 | Alternative Data & Macro Signals | 另类数据与宏观信号 | |
 | Consumer & Public Opinion | 消费者与公众舆论 | |
 | Key Risks & Structural Barriers | 关键风险与结构性壁垒 | |
+| Catalyst Map — Bull & Bear Cases | 催化剂图谱——多空情景 | §6 heading; keep the em-dash structure |
 | Investment Recommendation | 投资建议 | |
+| catalyst | 催化剂 | |
+| bull case / bear case | 多头情景 / 空头情景 | |
+| priced in | 已被市场定价 | consensus already reflects it |
+| conviction score | 确信度评分 | N/10 scale in §7 |
+| margin compression | 利润率压缩 | |
+| insider selling | 内部人减持 | Form 4 activity |
+| guidance cut | 下调业绩指引 | |
+| earnings beat / miss | 业绩超预期 / 不及预期 | |
+| monitoring list | 监测清单 | §7 closing deliverable |
 | thesis | 投资论点 | |
 | valuation | 估值 | |
 | valuation bridge | 估值桥接分析 | the implied-earnings derivation |

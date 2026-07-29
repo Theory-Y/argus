@@ -19,6 +19,7 @@ import logging
 import statistics
 import time
 from dataclasses import asdict, dataclass, field
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -84,6 +85,108 @@ class PricePoint:
     close: float                            # Adjusted closing price, USD
 
 
+@dataclass
+class InsiderTransaction:
+    """One normalized insider transaction (SEC Form 4 via yfinance)."""
+
+    insider: str                            # Filer name
+    position: str                           # e.g. "Chief Executive Officer", "Director"
+    kind: str                               # 'sell' | 'buy' | 'other' (awards, conversions, gifts)
+    shares: Optional[float]                 # Shares in the transaction
+    value_usd: Optional[float]              # Transaction value in plain USD (0/None when unpriced)
+    date: Optional[str]                     # ISO date, "YYYY-MM-DD"
+    text: str                               # yfinance's transaction description
+    url: str                                # Link to the underlying filing when provided
+
+
+@dataclass
+class InsiderActivitySignal:
+    """
+    Aggregated insider buy/sell read over a trailing window.
+
+    LIMITATION (by design, surfaced to the memo writer): free Form 4 data does not
+    expose 10b5-1 scheduled-plan footnotes, so 'scheduled vs unscheduled' cannot be
+    distinguished mechanically. The signal carries clustering/size facts; the
+    interpretation rule lives in the memo spec (clustered, large, officer-level
+    sells near events are the signal — a lone planned sale is not).
+    """
+
+    ticker: str
+    window_months: int = 12
+    sell_count: int = 0
+    buy_count: int = 0
+    total_sell_value_usd: Optional[float] = None
+    total_buy_value_usd: Optional[float] = None
+    notable_sells: List[InsiderTransaction] = field(default_factory=list)  # top by value
+    note: str = ""
+    error: Optional[str] = None
+
+
+@dataclass
+class EarningsSurprise:
+    """One reported quarter: consensus EPS vs reported."""
+
+    period: str                             # ISO date of the earnings event
+    eps_estimate: Optional[float]
+    eps_reported: Optional[float]
+    surprise_pct: Optional[float]           # (reported - estimate) / |estimate| * 100
+
+
+@dataclass
+class EarningsTrack:
+    """
+    Beat/miss pattern over the last `max_quarters` REPORTED earnings (newest first).
+    Serves as the deterministic proxy for guidance credibility: persistent or
+    recent consecutive misses are the machine-readable trace a guidance cut leaves.
+    """
+
+    ticker: str
+    quarters: List[EarningsSurprise] = field(default_factory=list)  # newest first, ≤8
+    beat_count: int = 0
+    miss_count: int = 0
+    inline_count: int = 0
+    consecutive_misses: int = 0             # counting back from the most recent report
+    avg_surprise_pct: Optional[float] = None
+    note: str = ""
+    error: Optional[str] = None
+
+
+@dataclass
+class AnnualFinancials:
+    """One fiscal year of history (statement figures in $MM; ratios approximate)."""
+
+    fiscal_year: str                        # e.g. "FY2025"
+    fy_end: str                             # ISO date of the fiscal-year end
+    revenue_mm: Optional[float]
+    ebitda_mm: Optional[float]
+    net_income_mm: Optional[float]
+    yoy_revenue_growth_pct: Optional[float]
+    ev_mm_approx: Optional[float]           # year-end close × shares + debt − cash
+    ev_revenue_approx: Union[float, str, None]
+    pe_trailing_approx: Union[float, str, None]  # year-end mktcap / FY net income
+
+
+@dataclass
+class FundamentalsHistory:
+    """
+    Multi-year (≤5 FY) fundamentals trajectory, oldest → newest.
+
+    `approximate` is always True for the valuation ratios: EV is reconstructed from
+    the FY-end close, balance-sheet share count, total debt and cash, and the P/E is
+    TRAILING (historical *forward* P/E needs a consensus-estimates archive, which no
+    free source provides — substitute documented in the memo spec & roadmap).
+    """
+
+    ticker: str
+    years: List[AnnualFinancials] = field(default_factory=list)
+    approximate: bool = True
+    method_note: str = (
+        "EV/Revenue and P/E are reconstructed per FY-end (close x shares + debt - cash); "
+        "P/E is trailing, not forward."
+    )
+    error: Optional[str] = None
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Layer 1 — Infrastructure: raw data fetcher
 # ──────────────────────────────────────────────────────────────────────────────
@@ -146,6 +249,100 @@ class FinancialDataFetcher:
         logger.error("yfinance price history unavailable for %s after %d attempts",
                      ticker, retries)
         return []
+
+    def fetch_insider_transactions(self, ticker: str) -> List[Dict]:
+        """
+        Return normalized insider-transaction records (plain dicts, newest first).
+        Keys: insider, position, text, shares, value, date (ISO), url.
+        Returns [] on any error — callers never receive an exception.
+        """
+        try:
+            df = yf.Ticker(ticker).insider_transactions
+            if df is None or df.empty:
+                return []
+            records: List[Dict] = []
+            for _, row in df.iterrows():
+                start = row.get("Start Date")
+                records.append({
+                    "insider":  str(row.get("Insider") or "").strip(),
+                    "position": str(row.get("Position") or "").strip(),
+                    "text":     str(row.get("Text") or "").strip(),
+                    "shares":   row.get("Shares"),
+                    "value":    row.get("Value"),
+                    "date":     start.strftime("%Y-%m-%d") if pd.notna(start) else None,
+                    "url":      str(row.get("URL") or "").strip(),
+                })
+            return records
+        except Exception as exc:                                # pragma: no cover
+            logger.error("yfinance insider transactions failed for %s: %s", ticker, exc)
+            return []
+
+    def fetch_earnings_history(self, ticker: str, limit: int = 16) -> List[Dict]:
+        """
+        Return past+scheduled earnings rows as plain dicts (newest first).
+        Keys: period (ISO date), eps_estimate, eps_reported, surprise_pct.
+        Future rows carry eps_reported=None; the transformer filters to reported.
+        Returns [] on any error.
+        """
+        try:
+            df = yf.Ticker(ticker).get_earnings_dates(limit=limit)
+            if df is None or df.empty:
+                return []
+            records: List[Dict] = []
+            for idx, row in df.iterrows():
+                def _f(v):
+                    return float(v) if pd.notna(v) else None
+                records.append({
+                    "period":       idx.strftime("%Y-%m-%d"),
+                    "eps_estimate": _f(row.get("EPS Estimate")),
+                    "eps_reported": _f(row.get("Reported EPS")),
+                    "surprise_pct": _f(row.get("Surprise(%)")),
+                })
+            records.sort(key=lambda r: r["period"], reverse=True)
+            return records
+        except Exception as exc:                                # pragma: no cover
+            logger.error("yfinance earnings history failed for %s: %s", ticker, exc)
+            return []
+
+    def fetch_annual_statements(self, ticker: str) -> Dict[str, Dict]:
+        """
+        Return per-fiscal-year statement figures keyed by FY-end ISO date:
+        {fy_end: {revenue, ebitda, net_income, total_debt, cash, shares}} — raw USD.
+        Missing line items are None. Returns {} on any error.
+        """
+        try:
+            t = yf.Ticker(ticker)
+            inc = t.income_stmt
+            bs  = t.balance_sheet
+        except Exception as exc:                                # pragma: no cover
+            logger.error("yfinance annual statements failed for %s: %s", ticker, exc)
+            return {}
+
+        def _cell(df, row_names, col):
+            if df is None or df.empty or col not in df.columns:
+                return None
+            for name in row_names:
+                if name in df.index:
+                    v = df.at[name, col]
+                    if pd.notna(v):
+                        return float(v)
+            return None
+
+        out: Dict[str, Dict] = {}
+        if inc is None or inc.empty:
+            return out
+        for col in inc.columns:
+            fy_end = col.strftime("%Y-%m-%d")
+            out[fy_end] = {
+                "revenue":    _cell(inc, ["Total Revenue"], col),
+                "ebitda":     _cell(inc, ["EBITDA", "Normalized EBITDA"], col),
+                "net_income": _cell(inc, ["Net Income"], col),
+                "total_debt": _cell(bs, ["Total Debt"], col),
+                "cash":       _cell(bs, ["Cash And Cash Equivalents",
+                                         "Cash Cash Equivalents And Short Term Investments"], col),
+                "shares":     _cell(bs, ["Ordinary Shares Number", "Share Issued"], col),
+            }
+        return out
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -366,6 +563,210 @@ def audit_peer_set(companies: List["CompanyFinancials"]) -> Dict[str, List[str]]
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Pure builders — insider activity, earnings track, fundamentals history
+# (no I/O; unit-testable on plain records)
+# ──────────────────────────────────────────────────────────────────────────────
+
+_NOTABLE_SELLS_MAX: int = 5
+_HISTORY_MAX_YEARS: int = 5
+
+
+def _classify_insider_kind(text: str) -> str:
+    """Map yfinance's free-text transaction description → 'sell' | 'buy' | 'other'."""
+    t = (text or "").lower()
+    if "sale" in t or "sold" in t:
+        return "sell"
+    if "purchase" in t or "buy" in t or "bought" in t:
+        return "buy"
+    return "other"   # awards/grants, conversions, gifts, option exercises
+
+
+def build_insider_activity(
+    ticker: str,
+    records: List[Dict],
+    window_months: int = 12,
+    today: Optional[date] = None,
+) -> InsiderActivitySignal:
+    """Aggregate normalized insider records into the memo-facing signal."""
+    if not records:
+        return InsiderActivitySignal(
+            ticker=ticker, window_months=window_months,
+            note="No insider transactions reported by the data source.",
+            error="no_data",
+        )
+    cutoff = ((today or date.today()) - timedelta(days=round(window_months * 30.44)))
+    cutoff_iso = cutoff.isoformat()
+
+    sells: List[InsiderTransaction] = []
+    buys = 0
+    sell_value = 0.0
+    buy_value = 0.0
+    for r in records:
+        d = r.get("date")
+        if not d or d < cutoff_iso:
+            continue
+        kind = _classify_insider_kind(r.get("text", ""))
+        if kind == "other":
+            continue
+        value = r.get("value")
+        try:
+            value = float(value) if value is not None else None
+        except (TypeError, ValueError):
+            value = None
+        if kind == "buy":
+            buys += 1
+            buy_value += value or 0.0
+            continue
+        shares = r.get("shares")
+        try:
+            shares = float(shares) if shares is not None else None
+        except (TypeError, ValueError):
+            shares = None
+        sells.append(InsiderTransaction(
+            insider=r.get("insider", ""), position=r.get("position", ""),
+            kind="sell", shares=shares, value_usd=value, date=d,
+            text=r.get("text", ""), url=r.get("url", ""),
+        ))
+        sell_value += value or 0.0
+
+    notable = sorted(sells, key=lambda s: s.value_usd or 0.0, reverse=True)[:_NOTABLE_SELLS_MAX]
+    return InsiderActivitySignal(
+        ticker=ticker,
+        window_months=window_months,
+        sell_count=len(sells),
+        buy_count=buys,
+        total_sell_value_usd=round(sell_value, 2) if sells else None,
+        total_buy_value_usd=round(buy_value, 2) if buys else None,
+        notable_sells=notable,
+        note=(
+            "Form 4 data does not expose 10b5-1 scheduled-plan footnotes; weigh "
+            "clustering, size vs. role, and proximity to events rather than treating "
+            "any single sale as a conviction signal."
+        ),
+    )
+
+
+def build_earnings_track(
+    ticker: str, records: List[Dict], max_quarters: int = 8
+) -> EarningsTrack:
+    """Distill reported earnings rows into the beat/miss guidance-credibility proxy."""
+    reported = [r for r in records if r.get("eps_reported") is not None]
+    reported.sort(key=lambda r: r["period"], reverse=True)
+    reported = reported[:max_quarters]
+    if not reported:
+        return EarningsTrack(
+            ticker=ticker,
+            note="No reported earnings history available from the data source.",
+            error="no_data",
+        )
+
+    quarters = [
+        EarningsSurprise(
+            period=r["period"],
+            eps_estimate=r.get("eps_estimate"),
+            eps_reported=r.get("eps_reported"),
+            surprise_pct=r.get("surprise_pct"),
+        )
+        for r in reported
+    ]
+    beats = sum(1 for q in quarters if (q.surprise_pct or 0) > 0)
+    misses = sum(1 for q in quarters if q.surprise_pct is not None and q.surprise_pct < 0)
+    inline = len(quarters) - beats - misses
+    streak = 0
+    for q in quarters:                       # newest first
+        if q.surprise_pct is not None and q.surprise_pct < 0:
+            streak += 1
+        else:
+            break
+    surprises = [q.surprise_pct for q in quarters if q.surprise_pct is not None]
+    return EarningsTrack(
+        ticker=ticker,
+        quarters=quarters,
+        beat_count=beats,
+        miss_count=misses,
+        inline_count=inline,
+        consecutive_misses=streak,
+        avg_surprise_pct=round(statistics.mean(surprises), 2) if surprises else None,
+        note=(
+            "EPS estimate-vs-reported pattern is the deterministic proxy for guidance "
+            "credibility; cross-check 8-K 2.02 events for explicit guidance language."
+        ),
+    )
+
+
+def build_fundamentals_history(
+    ticker: str,
+    statements: Dict[str, Dict],
+    price_history: List["PricePoint"],
+) -> FundamentalsHistory:
+    """
+    Assemble the ≤5-FY trajectory (oldest → newest) with approximate year-end
+    valuation ratios. Statement inputs are raw USD; output figures are $MM.
+    """
+    if not statements:
+        return FundamentalsHistory(ticker=ticker, error="no_data")
+
+    closes = sorted(
+        ((p.date if not isinstance(p, dict) else p.get("date"),
+          p.close if not isinstance(p, dict) else p.get("close"))
+         for p in (price_history or [])),
+        key=lambda x: x[0] or "",
+    )
+
+    def _close_on_or_before(fy_end: str) -> Optional[float]:
+        best = None
+        for d, c in closes:
+            if d and c is not None and d <= fy_end:
+                best = c
+            elif d and d > fy_end:
+                break
+        return best
+
+    def _mm(v: Optional[float]) -> Optional[float]:
+        return round(v / _MILLION, 2) if v is not None else None
+
+    years: List[AnnualFinancials] = []
+    prev_revenue: Optional[float] = None
+    for fy_end in sorted(statements.keys())[-_HISTORY_MAX_YEARS:]:
+        s = statements[fy_end]
+        revenue, ebitda  = s.get("revenue"), s.get("ebitda")
+        net_income       = s.get("net_income")
+        shares, debt, cash = s.get("shares"), s.get("total_debt"), s.get("cash")
+        if revenue is None and ebitda is None and net_income is None:
+            continue   # an all-empty statement year carries no signal
+
+        growth = None
+        if revenue is not None and prev_revenue:
+            growth = round((revenue - prev_revenue) / abs(prev_revenue) * 100, 2)
+        if revenue is not None:
+            prev_revenue = revenue
+
+        close = _close_on_or_before(fy_end)
+        ev = ev_revenue = pe = None
+        if close is not None and shares:
+            mktcap = close * shares
+            ev = mktcap + (debt or 0.0) - (cash or 0.0)
+            if revenue and revenue > 0:
+                ev_revenue = round(ev / revenue, 2)
+            if net_income and net_income > 0:
+                pe = round(mktcap / net_income, 2)
+
+        years.append(AnnualFinancials(
+            fiscal_year=f"FY{fy_end[:4]}",
+            fy_end=fy_end,
+            revenue_mm=_mm(revenue),
+            ebitda_mm=_mm(ebitda),
+            net_income_mm=_mm(net_income),
+            yoy_revenue_growth_pct=growth,
+            ev_mm_approx=_mm(ev),
+            ev_revenue_approx=ev_revenue if ev_revenue is not None else NM,
+            pe_trailing_approx=pe if pe is not None else NM,
+        ))
+
+    return FundamentalsHistory(ticker=ticker, years=years)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Layer 3 — Application: output formatter / exporter
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -437,6 +838,26 @@ class FinancialService:
     def get_price_history(self, ticker: str, period: str = "1y") -> List[PricePoint]:
         """Fetch the daily adjusted-close series for *ticker* over *period*."""
         return self._fetcher.fetch_price_history(ticker, period=period)
+
+    def get_insider_activity(
+        self, ticker: str, window_months: int = 12
+    ) -> InsiderActivitySignal:
+        """Fetch and aggregate the trailing insider buy/sell signal."""
+        records = self._fetcher.fetch_insider_transactions(ticker)
+        return build_insider_activity(ticker, records, window_months=window_months)
+
+    def get_earnings_track(self, ticker: str, max_quarters: int = 8) -> EarningsTrack:
+        """Fetch the last *max_quarters* reported earnings and the beat/miss pattern."""
+        records = self._fetcher.fetch_earnings_history(ticker, limit=max_quarters + 8)
+        return build_earnings_track(ticker, records, max_quarters=max_quarters)
+
+    def get_fundamentals_history(self, ticker: str) -> FundamentalsHistory:
+        """Fetch ≤5 fiscal years of fundamentals with approximate year-end ratios."""
+        statements = self._fetcher.fetch_annual_statements(ticker)
+        prices = (
+            self._fetcher.fetch_price_history(ticker, period="5y") if statements else []
+        )
+        return build_fundamentals_history(ticker, statements, prices)
 
     def get_sector_financials(
         self, tickers: List[str] = SECTOR_TICKERS

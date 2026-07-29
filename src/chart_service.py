@@ -12,6 +12,8 @@ Data provenance (so every visual is accurate and auditable):
   • margins           → context payload `target`
   • search_trends     → context payload `alt_signals.google_trends`
   • sentiment_sources → context payload `alt_signals.consumer_sentiment.sources`
+  • revenue_history   → context payload `fundamentals_history.years`
+  • valuation_history → context payload `fundamentals_history.years` + `target.forward_pe`
 
 Every public builder returns a complete ``<figure class="chart">…</figure>`` HTML
 fragment (SVG + figcaption with source/as-of). Builders **never raise**: on a
@@ -117,6 +119,17 @@ LABELS: Dict[str, Dict[str, str]] = {
         "sen_title":            "Sentiment by source (−1 to +1)",
         "sen_cap_agg":          "Aggregate {agg} across {total} posts. ",
         "sen_cap":              "<strong>{fig} — Public opinion.</strong> {agg}Per-source mean sentiment; bar opacity scales with source weight, n = message count. Source: multi-source sentiment (MCP payload).",
+        "rev_unavail_title":    "Revenue history",
+        "rev_unavail_nodata":   "No multi-year revenue history in payload.",
+        "rev_title":            "Annual revenue by fiscal year ({ticker})",
+        "rev_growth":           "{v}% YoY",
+        "rev_cap":              "<strong>{fig} — Revenue trajectory.</strong> Annual revenue by fiscal year (FY-end labeled); growth labels are year-over-year. Source: issuer annual statements via Yahoo Finance (MCP payload).",
+        "valh_unavail_title":   "Valuation history",
+        "valh_unavail_nodata":  "No multi-year valuation history in payload.",
+        "valh_panel_evrev":     "EV / Revenue (×, FY-end, approx.)",
+        "valh_panel_pe":        "P/E (×, trailing, FY-end, approx.)",
+        "valh_now_fpe":         "Now (fwd)",
+        "valh_cap":             "<strong>{fig} — Valuation re-rating path.</strong> Approximate FY-end EV/Revenue and trailing P/E, reconstructed from year-end price, share count, debt and cash; the gold row is today's forward P/E. Historical forward P/E requires a consensus-estimates archive and is not shown. Source: Yahoo Finance statements (MCP payload).",
     },
     "zh": {
         "price_unavail_title":  "{ticker} — 价格 ({period})",
@@ -153,6 +166,17 @@ LABELS: Dict[str, Dict[str, str]] = {
         "sen_title":            "各来源情绪（−1 至 +1）",
         "sen_cap_agg":          "总体 {agg}，覆盖 {total} 条帖子。",
         "sen_cap":              "<strong>{fig} — 公众舆论。</strong> {agg}各来源平均情绪；条形不透明度随来源权重变化，n = 消息数量。来源：多来源情绪（MCP 数据）。",
+        "rev_unavail_title":    "营收历史",
+        "rev_unavail_nodata":   "数据中无多年度营收历史。",
+        "rev_title":            "各财年年度营收 ({ticker})",
+        "rev_growth":           "同比 {v}%",
+        "rev_cap":              "<strong>{fig} — 营收轨迹。</strong> 各财年年度营收（标注财年截止日）；增长标签为同比增速。来源：发行人年度报表，经 Yahoo Finance（MCP 数据）。",
+        "valh_unavail_title":   "估值历史",
+        "valh_unavail_nodata":  "数据中无多年度估值历史。",
+        "valh_panel_evrev":     "EV / 营收（×，财年末，近似）",
+        "valh_panel_pe":        "市盈率（×，静态，财年末，近似）",
+        "valh_now_fpe":         "当前（前瞻）",
+        "valh_cap":             "<strong>{fig} — 估值重估路径。</strong> 近似财年末 EV/营收与静态市盈率，由年末股价、股本、债务与现金重构；金色行为当前前瞻市盈率。历史前瞻市盈率需要一致预期档案数据，故未展示。来源：Yahoo Finance 报表（MCP 数据）。",
     },
     "es": {
         "price_unavail_title":  "{ticker} — Precio ({period})",
@@ -189,6 +213,17 @@ LABELS: Dict[str, Dict[str, str]] = {
         "sen_title":            "Sentimiento por fuente (−1 a +1)",
         "sen_cap_agg":          "Agregado {agg} en {total} publicaciones. ",
         "sen_cap":              "<strong>{fig} — Opinión pública.</strong> {agg}Sentimiento medio por fuente; la opacidad de la barra escala con el peso de la fuente, n = número de mensajes. Fuente: sentimiento multifuente (datos MCP).",
+        "rev_unavail_title":    "Historial de ingresos",
+        "rev_unavail_nodata":   "Sin historial plurianual de ingresos en los datos.",
+        "rev_title":            "Ingresos anuales por ejercicio fiscal ({ticker})",
+        "rev_growth":           "{v}% interanual",
+        "rev_cap":              "<strong>{fig} — Trayectoria de ingresos.</strong> Ingresos anuales por ejercicio fiscal (cierre de ejercicio etiquetado); las etiquetas de crecimiento son interanuales. Fuente: estados anuales del emisor vía Yahoo Finance (datos MCP).",
+        "valh_unavail_title":   "Historial de valoración",
+        "valh_unavail_nodata":  "Sin historial plurianual de valoración en los datos.",
+        "valh_panel_evrev":     "EV / Ingresos (×, cierre de ejercicio, aprox.)",
+        "valh_panel_pe":        "PER (×, histórico, cierre de ejercicio, aprox.)",
+        "valh_now_fpe":         "Actual (prospectivo)",
+        "valh_cap":             "<strong>{fig} — Trayectoria de revalorización.</strong> EV/Ingresos y PER histórico aproximados a cierre de ejercicio, reconstruidos a partir del precio de fin de año, acciones, deuda y caja; la fila dorada es el PER prospectivo actual. El PER prospectivo histórico requiere un archivo de estimaciones de consenso y no se muestra. Fuente: estados de Yahoo Finance (datos MCP).",
     },
     "fr": {
         "price_unavail_title":  "{ticker} — Cours ({period})",
@@ -225,6 +260,17 @@ LABELS: Dict[str, Dict[str, str]] = {
         "sen_title":            "Sentiment par source (−1 à +1)",
         "sen_cap_agg":          "Agrégat {agg} sur {total} publications. ",
         "sen_cap":              "<strong>{fig} — Opinion publique.</strong> {agg}Sentiment moyen par source ; l'opacité des barres varie selon le poids de la source, n = nombre de messages. Source : sentiment multi-source (données MCP).",
+        "rev_unavail_title":    "Historique du chiffre d'affaires",
+        "rev_unavail_nodata":   "Aucun historique pluriannuel du CA dans les données.",
+        "rev_title":            "Chiffre d'affaires annuel par exercice ({ticker})",
+        "rev_growth":           "{v}% en glissement annuel",
+        "rev_cap":              "<strong>{fig} — Trajectoire du chiffre d'affaires.</strong> CA annuel par exercice (clôture d'exercice étiquetée) ; les étiquettes de croissance sont en glissement annuel. Source : états annuels de l'émetteur via Yahoo Finance (données MCP).",
+        "valh_unavail_title":   "Historique de valorisation",
+        "valh_unavail_nodata":  "Aucun historique pluriannuel de valorisation dans les données.",
+        "valh_panel_evrev":     "EV / CA (×, clôture d'exercice, approx.)",
+        "valh_panel_pe":        "PER (×, historique, clôture d'exercice, approx.)",
+        "valh_now_fpe":         "Actuel (prospectif)",
+        "valh_cap":             "<strong>{fig} — Trajectoire de revalorisation.</strong> EV/CA et PER historique approximatifs en clôture d'exercice, reconstruits à partir du cours de fin d'année, du nombre d'actions, de la dette et de la trésorerie ; la ligne dorée est le PER prospectif actuel. Le PER prospectif historique exige une archive d'estimations de consensus et n'est pas présenté. Source : états Yahoo Finance (données MCP).",
     },
 }
 
@@ -775,6 +821,145 @@ def sentiment_sources_svg(context: Dict, lang: str = "en") -> str:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# 6. Revenue history — multi-year trajectory, fiscal years labeled
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _history_years(context: Dict) -> List[Dict]:
+    """Extract the usable fundamentals_history.years rows from a context payload."""
+    hist = context.get("fundamentals_history") or {}
+    if not isinstance(hist, dict) or hist.get("error"):
+        return []
+    years = hist.get("years") or []
+    return [y for y in years if isinstance(y, dict)]
+
+
+def revenue_history_svg(context: Dict, lang: str = "en") -> str:
+    """Vertical bars: annual revenue per fiscal year, FY labels + YoY growth."""
+    L = LABELS.get(lang, LABELS["en"])
+    _fs, _ff = _chart_fonts(lang)
+    years = [y for y in _history_years(context) if _num(y.get("revenue_mm")) is not None]
+    if len(years) < 2:
+        return _unavailable(L["rev_unavail_title"], L["rev_unavail_nodata"])
+
+    t = context.get("target") or {}
+    tkr = (t.get("ticker") or years[-1].get("fiscal_year") or "?")
+    W, mt, mb, ml, mr = 700, 64, 34, 24, 24
+    plot_h = 150
+    H = mt + plot_h + mb
+    n = len(years)
+    slot = (W - ml - mr) / n
+    bar_w = slot * 0.55
+    vmax = _nice_ceiling(max(_num(y["revenue_mm"]) for y in years))
+
+    parts = [
+        f'<text x="{ml}" y="18" font-size="11" font-weight="700" fill="{NAVY}" '
+        f'font-family="{_ff}">{_esc(L["rev_title"].format(ticker=str(tkr).upper()))}</text>',
+        f'<line x1="{ml}" y1="{mt + plot_h}" x2="{W - mr}" y2="{mt + plot_h}" '
+        f'stroke="{RULE}" stroke-width="1"/>',
+    ]
+    for i, y in enumerate(years):
+        rev = _num(y["revenue_mm"])
+        bh = plot_h * rev / vmax if vmax else 0
+        bx = ml + i * slot + (slot - bar_w) / 2
+        by = mt + plot_h - bh
+        cx = bx + bar_w / 2
+        is_last = i == n - 1
+        parts.append(
+            f'<rect x="{bx:.1f}" y="{by:.1f}" width="{bar_w:.1f}" height="{bh:.1f}" '
+            f'rx="2" fill="{GOLD if is_last else NAVY_LT}" opacity="{1.0 if is_last else 0.9}"/>'
+            f'<text x="{cx:.1f}" y="{by - 20:.1f}" text-anchor="middle" font-size="10" '
+            f'font-weight="700" fill="{INK}" font-family="{_fs}">{_fmt_money_compact(rev)}</text>'
+        )
+        growth = _num(y.get("yoy_revenue_growth_pct"))
+        if growth is not None:
+            parts.append(
+                f'<text x="{cx:.1f}" y="{by - 8:.1f}" text-anchor="middle" font-size="8.5" '
+                f'fill="{GREEN if growth >= 0 else RED}" font-family="{_fs}">'
+                f'{_esc(L["rev_growth"].format(v=f"{growth:+.1f}"))}</text>'
+            )
+        fy = _esc(str(y.get("fiscal_year") or ""))
+        fy_end = _esc(str(y.get("fy_end") or ""))
+        parts.append(
+            f'<text x="{cx:.1f}" y="{mt + plot_h + 14:.0f}" text-anchor="middle" '
+            f'font-size="9.5" font-weight="700" fill="{NAVY}" font-family="{_fs}">{fy}</text>'
+            f'<text x="{cx:.1f}" y="{mt + plot_h + 26:.0f}" text-anchor="middle" '
+            f'font-size="7.5" fill="{SLATE}" font-family="{_fs}">{fy_end}</text>'
+        )
+
+    svg = (
+        f'<svg viewBox="0 0 {W} {H}" class="chart-svg" role="img" '
+        f'aria-label="annual revenue history" xmlns="http://www.w3.org/2000/svg">'
+        f'{"".join(parts)}</svg>'
+    )
+    return _figure(svg, L["rev_cap"].format(fig=FIG_PLACEHOLDER))
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 7. Valuation history — approximate FY-end EV/Revenue and trailing P/E
+# ──────────────────────────────────────────────────────────────────────────────
+
+def valuation_history_svg(context: Dict, lang: str = "en") -> str:
+    """Two stacked bar panels over fiscal years: EV/Revenue and trailing P/E.
+
+    The current forward P/E (from the live target node) is appended to the P/E
+    panel as a gold "now" row so the re-rating path ends at today's market view.
+    """
+    L = LABELS.get(lang, LABELS["en"])
+    _fs, _ff = _chart_fonts(lang)
+    years = _history_years(context)
+    target = context.get("target") or {}
+
+    ev_rows = [(str(y.get("fiscal_year") or "?"), _num(y.get("ev_revenue_approx")), False)
+               for y in years]
+    ev_rows = [(label, v, g) for label, v, g in ev_rows if v is not None]
+    pe_rows = [(str(y.get("fiscal_year") or "?"), _num(y.get("pe_trailing_approx")), False)
+               for y in years]
+    pe_rows = [(label, v, g) for label, v, g in pe_rows if v is not None]
+    fwd_pe = _num(target.get("forward_pe")) if isinstance(target, dict) else None
+    if pe_rows and fwd_pe is not None:
+        pe_rows.append((L["valh_now_fpe"], fwd_pe, True))
+
+    panels = [(L["valh_panel_evrev"], ev_rows), (L["valh_panel_pe"], pe_rows)]
+    panels = [(title, rows) for title, rows in panels if len(rows) >= 2]
+    if not panels:
+        return _unavailable(L["valh_unavail_title"], L["valh_unavail_nodata"])
+
+    PW = 700
+    row_h, gap, label_w, head_h = 22, 10, 110, 26
+    blocks, y_cursor = [], 8
+    for title, rows in panels:
+        vmax = _nice_ceiling(max(v for _, v, _ in rows))
+        plot_w = PW - label_w - 56
+        blocks.append(
+            f'<text x="0" y="{y_cursor:.0f}" font-size="11" font-weight="700" '
+            f'fill="{NAVY}" font-family="{_ff}">{_esc(title)}</text>'
+        )
+        y_cursor += head_h - 6
+        for label, v, is_now in rows:
+            bw = plot_w * v / vmax
+            col = GOLD if is_now else NAVY_LT
+            blocks.append(
+                f'<text x="{label_w - 8}" y="{y_cursor + 14:.0f}" text-anchor="end" '
+                f'font-size="9.5" font-weight="{700 if is_now else 400}" '
+                f'fill="{NAVY if is_now else SLATE}" font-family="{_fs}">{_esc(label)}</text>'
+                f'<rect x="{label_w}" y="{y_cursor + 3:.0f}" width="{bw:.1f}" height="{row_h - 6}" '
+                f'rx="2" fill="{col}" opacity="{1.0 if is_now else 0.85}"/>'
+                f'<text x="{label_w + bw + 6:.1f}" y="{y_cursor + 14:.0f}" '
+                f'font-size="9.5" font-weight="{700 if is_now else 400}" '
+                f'fill="{INK}" font-family="{_fs}">{v:,.1f}×</text>'
+            )
+            y_cursor += row_h
+        y_cursor += gap + 6
+
+    svg = (
+        f'<svg viewBox="0 0 {PW} {y_cursor + 4:.0f}" class="chart-svg" role="img" '
+        f'aria-label="valuation history" xmlns="http://www.w3.org/2000/svg">'
+        f'{"".join(blocks)}</svg>'
+    )
+    return _figure(svg, L["valh_cap"].format(fig=FIG_PLACEHOLDER))
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Token registry — maps [[chart:NAME]] → builder
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -796,6 +981,10 @@ def build_chart(name: str, ticker: str, context: Dict, lang: str = "en") -> str:
             return search_trends_svg(context, lang=lang)
         if name == "sentiment_sources":
             return sentiment_sources_svg(context, lang=lang)
+        if name == "revenue_history":
+            return revenue_history_svg(context, lang=lang)
+        if name == "valuation_history":
+            return valuation_history_svg(context, lang=lang)
         logger.warning("Unknown chart token: %r", name)
         return ""
     except Exception as exc:                                  # pragma: no cover
@@ -809,4 +998,6 @@ CHART_TOKENS = (
     "margins",
     "search_trends",
     "sentiment_sources",
+    "revenue_history",
+    "valuation_history",
 )

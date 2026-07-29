@@ -17,11 +17,12 @@ from __future__ import annotations
 # headings, in order, after a `# Investment Memo: <TICKER>` title line.
 SECTIONS: list[tuple[str, int]] = [
     ("## 1. One-Line Thesis & Valuation Snapshot", 250),
-    ("## 2. Business Overview & Operations", 350),
+    ("## 2. Business Overview & Operations", 400),
     ("## 3. Alternative Data & Macro Signals", 450),
-    ("## 4. Consumer & Public Opinion", 250),
-    ("## 5. Key Risks & Structural Barriers", 300),
-    ("## 6. Investment Recommendation", 200),
+    ("## 4. Consumer & Public Opinion", 300),
+    ("## 5. Key Risks & Structural Barriers", 400),
+    ("## 6. Catalyst Map — Bull & Bear Cases", 350),
+    ("## 7. Investment Recommendation", 250),
 ]
 
 _SECTION_TABLE = "\n".join(
@@ -44,13 +45,16 @@ or relationship from the supplied data payload.
 
 You will be given a single minified JSON payload (`context_<TICKER>.json`) that \
 contains a target company's fundamentals (including its sector/industry), up to \
-three peer comparables, and a set of \
+three peer comparables, a multi-year `fundamentals_history` node (annual revenue/\
+EBITDA/net income per fiscal year with approximate year-end EV/Revenue and \
+trailing P/E), and a set of \
 alternative-data signals (Google Trends velocity, a sector-appropriate FRED \
 macro series tagged with a relevance flag, SEC 10-K Item 1A risk snippet, SEC \
 8-K events, press releases, litigation \
-monitor, consumer sentiment, Polygon/Massive structured news, and 52-week price \
+monitor, consumer sentiment, trailing-12-month insider activity, an 8-quarter \
+earnings beat/miss track, Polygon/Massive structured news, and 52-week price \
 performance metrics). Treat this payload as your single source of truth and write \
-a five-section institutional equity research memo from it.
+a seven-section institutional equity research memo from it.
 
 ## Output format
 
@@ -115,7 +119,12 @@ high (market confidence) or low (potential undervaluation or thesis break), and 
 `return_1y_pct` to frame total price return vs. the multiples argument. If \
 `return_30d_pct` is available it shows near-term momentum.
 - §2 — the business model and operating mechanics: revenue mix, customer base, \
-go-to-market, cost structure, and where operating leverage sits.
+go-to-market, cost structure, and where operating leverage sits. Multi-year \
+framing is mandatory: use `fundamentals_history.years` to present the revenue \
+trajectory across the last 3–5 fiscal years with each year labeled (FY2023, \
+FY2024, …), never a single TTM figure in isolation; when presenting segment or \
+revenue mix, give the percentages for multiple recent years with the year \
+labeled on every column so mix shift is visible.
 - §3 — alternative-data and macro read-through: what the non-financial signals \
 imply for the forward numbers. This is the longest, most analytically \
 differentiated section. The payload now includes two Polygon/Massive signals: \
@@ -147,11 +156,49 @@ where it sharpens the read, and when `available` is false or `error` is set, sim
 skip it rather than inventing forum chatter. Calibrate by `extraction_mode`: \
 `"lexical"` (no-LLM keyword scoring of page text) is directional like the other \
 lexicon sources, while `"llm"` (structured extraction) may be cited more concretely; \
-a low-`confidence` web_research read must never anchor a thesis, risk, or the call.
+a low-`confidence` web_research read must never anchor a thesis, risk, or the call. \
+Name each community individually (StockTwits, Yahoo, HackerNews, Reddit subs, niche \
+forums) and state what that community is focused on — its dominant themes — not just \
+its score; retail flow, technical chatter, product gripes, and professional \
+skepticism are different signals.
 - §5 — concrete, ranked risks and structural barriers, each tied to its impact \
-on the thesis or the numbers.
-- §6 — a clear recommendation (direction + conviction) that falls out of §§1–5, \
-with the key variables that would change the call.
+on the thesis or the numbers. Mandatory coverage (assess each or explicitly \
+clear it as not material): (a) named competitive risk — the specific \
+competitor(s) from the peer set and their vector of attack; (b) margin \
+compression — which cost line or pricing dynamic could compress EBITDA margin, \
+anchored to the payload margin and peer margins; (c) insider selling — read \
+`alt_signals.insider_activity`, weighing clustering, size vs. role, and buy/sell \
+asymmetry (Form 4 data cannot flag 10b5-1 scheduled plans, so never call a lone \
+sale a loss of confidence — a clustered officer-level sell wave is the signal); \
+(d) guidance credibility — read `alt_signals.earnings_track`: two or more \
+consecutive misses or a negative average surprise over the last 8 quarters is a \
+risk to surface; cross-check `sec_8k_events` for guidance language. The 10-K \
+Item 1A snippet is background reference only — never reproduce its boilerplate \
+as a key risk; if a risk overlaps Item 1A, state what is NEW beyond the filing, \
+and link the underlying filings inline as markdown links (`filing_url`, 8-K \
+URLs, notable-sell Form 4 URLs).
+- §6 — the catalyst map: exactly 3 bull catalysts and 3 bear catalysts in a \
+table with columns Catalyst | Probability (High/Med/Low) | Magnitude (impact on \
+revenue/margins/multiple, in operating terms — never price targets) | Timing \
+(window) | Priced in? (Yes/No + one-line why, argued from the current multiple \
+vs. peers/valuation history) | Public reaction (what the §3/§4 sentiment and \
+news data say the market is doing with it). A catalyst you cannot time or size \
+is a theme, not a catalyst — drop it. Follow the table with two short \
+paragraphs, best case and worst case: the composite scenario if the bull \
+(resp. bear) catalysts land, stated in operating consequences. Every catalyst \
+must trace to a payload signal or be explicitly labeled as externally sourced.
+- §7 — a clear recommendation (direction + conviction) that falls out of \
+§§1–6, with the key variables that would change the call. Before the final \
+paragraph, red-team your own call: state the strongest objection the other side \
+would raise from this same payload and either rebut it with data or concede it \
+into the conviction score. End with three deliverables: (a) a conviction score \
+(N/10) — 8–10 high-confidence and data-corroborated, 5–7 directional but \
+signal-limited, 4 or below speculative; thin §3/§4 data caps the score and you \
+must say so; (b) an entry view at the current price — is the stock attractive \
+here, reasoned from the 52-week-range position, the valuation-history re-rating \
+path, and what the current multiple already prices in; a judgment, never a \
+price target; (c) a monitoring list — the 3–5 concrete things to watch next \
+(filings, prints, catalyst windows from §6) and which of them would flip the call.
 """
 
 
