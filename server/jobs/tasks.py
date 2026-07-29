@@ -14,9 +14,8 @@ from pathlib import Path
 from core import engine, render
 from core.memo import writer
 
-from ..billing.plans import current_billing_period
 from ..config import get_settings
-from ..db.models import Job, JobStatus, UsageRecord
+from ..db.models import Job, JobStatus
 from ..db.session import SessionLocal
 from ..storage import get_storage
 
@@ -73,18 +72,6 @@ def generate_memo(job_id: str) -> None:
         job.artifacts = keys
         job.completed_at = datetime.now(timezone.utc)
         _set(db, job, status=JobStatus.complete, progress=100)
-
-        # Meter only successful memos, and only in SaaS mode.
-        if settings.auth_mode == "saas" and job.user_id:
-            db.add(
-                UsageRecord(
-                    user_id=job.user_id,
-                    job_id=job_id,
-                    action="memo",
-                    billing_period=current_billing_period(),
-                )
-            )
-            db.commit()
 
     except Exception as exc:
         logger.exception("generate_memo failed for job %s", job_id)

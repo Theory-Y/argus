@@ -1,7 +1,7 @@
 """server.jobs.queue — enqueue background work.
 
 Defaults to an in-process thread pool (zero infra, good for self-host and dev).
-Set QUEUE_BACKEND=rq + REDIS_URL to fan out across worker processes for SaaS scale.
+Set QUEUE_BACKEND=rq + REDIS_URL to fan out across worker processes at scale.
 """
 
 from __future__ import annotations

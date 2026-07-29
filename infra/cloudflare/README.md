@@ -90,13 +90,12 @@ site's own helpers — `getAuth().api.getSession`, `getActiveSubscription`,
 
 ## 4. UI
 
-Point the SaaS UI at the site's own origin — `POST /api/research/memos`, poll
+Point the research UI at the site's own origin — `POST /api/research/memos`, poll
 `GET /api/research/memos/{id}`, then `GET /api/research/memos/{id}/download?format=pdf`
 (a 302 to a short-lived R2 URL). Nothing in the browser ever sees Argus.
 
-## What you deliberately do NOT use
+## What Argus deliberately does NOT do
 
-Argus's `saas` mode (`server/auth/saas.py`, `server/billing/`, `server/routes/account.py`,
-`server/routes/billing.py`) re-implements Stripe + accounts + JWT — all of which
-Cloudflare already owns via Better Auth + Stripe. Leave `AUTH_MODE=license`; those
-routers self-disable (404) and no second billing system runs.
+Argus runs no accounts, billing, or quota of its own — Cloudflare owns all of
+that via Better Auth + Stripe. Argus stays in `AUTH_MODE=license` and only tags
+job ownership from the gateway's `X-User-Id`.

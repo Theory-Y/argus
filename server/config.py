@@ -1,21 +1,18 @@
-"""server.config — env-driven settings. The AUTH_MODE switch is the business-model hinge."""
+"""server.config — env-driven settings."""
 
 from __future__ import annotations
 
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-_KNOWN_PLACEHOLDER = "change-me-in-production"
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    # ── Business-model switch ────────────────────────────────────────────────
-    auth_mode: Literal["license", "saas"] = "license"
+    # ── Auth mode ────────────────────────────────────────────────────────────
+    auth_mode: Literal["license"] = "license"
 
     # ── Persistence ──────────────────────────────────────────────────────────
     database_url: str = "sqlite:///./theoryy_service.db"
@@ -47,27 +44,6 @@ class Settings(BaseSettings):
     # If empty, the self-hosted server runs open (trusted network). If set, the
     # client must present a license token signed with this secret.
     license_secret: str = ""
-
-    # ── SaaS mode ────────────────────────────────────────────────────────────
-    jwt_secret: str = ""
-    jwt_ttl_seconds: int = 86400
-
-    @model_validator(mode="after")
-    def _require_jwt_secret_in_saas(self) -> "Settings":
-        if self.auth_mode == "saas" and (
-            not self.jwt_secret or self.jwt_secret == _KNOWN_PLACEHOLDER
-        ):
-            raise ValueError(
-                "JWT_SECRET must be set to a strong random value when AUTH_MODE=saas. "
-                "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
-            )
-        return self
-
-    stripe_secret_key: str = ""
-    stripe_webhook_secret: str = ""
-    # Map plan name → Stripe price id (set in SaaS deployments).
-    stripe_price_pro: str = ""
-    stripe_price_team: str = ""
 
     # ── CORS (web client origin) ─────────────────────────────────────────────
     cors_origins: str = "http://localhost:5173"

@@ -19,7 +19,7 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False
 
 
 def init_db() -> None:
-    """Create tables if absent. Fine for SQLite/dev; SaaS uses Alembic migrations."""
+    """Create tables if absent. Fine for SQLite/dev."""
     Base.metadata.create_all(engine)
 
 

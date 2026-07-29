@@ -1,9 +1,8 @@
 """
 core.memo.writer — server-side memo generation via the Anthropic API.
 
-This is what makes the SaaS model possible without leaking IP: the finished memo
-is written here, on our infrastructure, using the hidden prompt in prompt.py. The
-customer only ever receives the rendered output.
+This keeps the IP server-side: the finished memo is written here using the
+hidden prompt in prompt.py. The customer only ever receives the rendered output.
 
 Token economy (all quality-neutral — same model, prompt, and output):
   • The system prompt is large and static, so it is sent as a cached block

@@ -1,9 +1,9 @@
 """
 core.memo.prompt — the proprietary memo-writing system prompt.
 
-This is the single most valuable piece of IP in the service. In the SaaS model
-it lives ONLY on our servers and is sent to the Anthropic API at request time;
-the customer never sees it. (The human-readable equivalent for source-sale /
+This is the single most valuable piece of IP in the service. It lives server-side
+and is sent to the Anthropic API at request time; the API client never sees it.
+(The human-readable equivalent for source-sale /
 Claude Code buyers is .claude/skills/theory-y-memo/SKILL.md — keep the two in
 sync; see infra/PACKAGING.md.)
 

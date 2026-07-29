@@ -227,16 +227,14 @@ The client (CLI + web, zero IP — it speaks only HTTP) lives in its own reposit
 
 | Layer | Path | Role |
 |-------|------|------|
-| Engine façade, hidden prompt, Anthropic writer, render | `core/` | Proprietary — server-side only in SaaS |
-| API (auth, billing, jobs, storage) | `server/` | Run by you (SaaS) or the buyer (self-host) |
+| Engine façade, hidden prompt, Anthropic writer, render | `core/` | Proprietary |
+| API (auth, jobs, storage) | `server/` | Run by the buyer (self-host) |
 | Deploy + packaging | `infra/` | Dockerfile, compose, `PACKAGING.md` |
 
-**Two modes, one codebase** (`AUTH_MODE`):
-- `license` — offline license-key check, no billing. For **source-sale / self-host**.
-- `saas` — DB-backed API keys + Stripe quota; the memo is written server-side via the
-  Anthropic API, so the prompt never leaves your servers.
+**One mode** (`AUTH_MODE=license`) — offline license-key check, no billing.
+For **source-sale / self-host**.
 
-Run it locally (license mode):
+Run it locally:
 
 ```bash
 pip install -r requirements.txt -r server/requirements.txt
@@ -245,7 +243,7 @@ uvicorn server.app:app --reload            # http://localhost:8000
 ```
 
 Or the whole stack via Docker: `docker compose -f infra/docker-compose.yml up --build`.
-See `infra/PACKAGING.md` for exactly what ships in a source sale vs a SaaS deploy.
+See `infra/PACKAGING.md` for exactly what ships in a source sale.
 
 ---
 

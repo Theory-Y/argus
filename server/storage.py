@@ -1,8 +1,8 @@
 """server.storage — where generated memos live and how clients fetch them.
 
 LocalStorage (self-host): files on disk, served by the download route.
-S3Storage (SaaS): files in S3, handed to clients as short-lived presigned URLs so
-the private backend is never exposed.
+S3Storage (S3/R2): files in an S3-compatible bucket, handed to clients as
+short-lived presigned URLs so the private backend is never exposed.
 """
 
 from __future__ import annotations

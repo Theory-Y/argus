@@ -1,4 +1,4 @@
-"""server.auth.base — the AuthProvider contract shared by both modes."""
+"""server.auth.base — the AuthProvider contract."""
 
 from __future__ import annotations
 
@@ -13,8 +13,8 @@ class Principal:
     """The authenticated caller. ``id`` is None for open/self-host license mode."""
 
     id: str | None
-    kind: str  # "license" | "saas"
-    plan: str  # "self_hosted" | "free" | "pro" | "team" | "enterprise"
+    kind: str  # "license"
+    plan: str  # "self_hosted" | "licensed"
     monthly_quota: int | None  # None = unlimited
 
 
@@ -36,5 +36,5 @@ class AuthProvider(Protocol):
         ...
 
     def record_usage(self, principal: Principal, job_id: str, db: Session) -> None:
-        """Record a billable action (no-op in license mode)."""
+        """Record a completed action (no-op in license mode)."""
         ...

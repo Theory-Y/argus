@@ -6,21 +6,11 @@ Convert the research agent from a Claude Code skill into a **managed service** w
 - Private backend (your infrastructure)
 - Public client (distributed to customers)
 - API layer (hidden implementation)
-- Auth/billing system
+- Auth system (offline license keys)
 
 ---
 
 ## 1. Service Tiers & Deployment Model
-
-### Option A: SaaS (Recommended for scale)
-```
-Client → HTTPS → Cloud API Gateway → Private Research Engine
-                  (auth, rate limit)
-```
-- Single hosted backend (AWS/GCP/Azure)
-- Users access via REST API + web client
-- You handle all infrastructure
-- Per-user API keys + metering
 
 ### Option B: Hybrid (On-premise option)
 ```
@@ -108,7 +98,6 @@ Pages:
   /dashboard              - memo history, API key mgmt
   /generate              - ticker search, format picker, generate button
   /results/{job_id}      - memo display (markdown render) + download links
-  /account               - billing, subscription, usage
   /api-docs              - OpenAPI/Swagger for API access
 
 Features:
@@ -285,19 +274,6 @@ User Dashboard:
   - Rotate key (old key still works for 24h transition period)
   - Set rate limits per key
   - Set key scope (e.g., "memo generation only")
-```
-
-### Billing Integration
-```
-Stripe integration:
-  - Free tier: 5 memos/month
-  - Pro tier ($29/mo): 100 memos/month
-  - Enterprise: custom
-  
-On quota exceeded:
-  - Free user: "Upgrade to continue" prompt
-  - Pro user: Email notice → suggest higher tier
-  - Disable old API key if payment fails
 ```
 
 ---
@@ -506,7 +482,6 @@ theoryy-service/
 ### Phase 2: Polish & Scale (4-6 weeks)
 - [ ] CLI client (Python Click)
 - [ ] Rate limiting & quota enforcement
-- [ ] Stripe billing integration
 - [ ] User dashboard (history, API key mgmt, usage)
 - [ ] Improved error handling & user feedback
 - [ ] Email notifications (memo ready, quota warnings)
@@ -547,8 +522,8 @@ theoryy-service/
 
 ## Key Decisions to Make
 
-1. **SaaS vs Hybrid vs Embedded?** (Affects deployment complexity & support)
-2. **Which monetization model?** (Usage-based, subscription, or freemium)
+1. **Hybrid vs Embedded?** (Affects deployment complexity & support)
+2. **Which monetization model?** (Source sale or license fee)
 3. **Self-host or use AWS/GCP/Azure?** (Cost vs convenience)
 4. **CLI + Web, or just web initially?** (Scope & timeline)
 5. **How long to keep free memos?** (Storage costs & user experience)

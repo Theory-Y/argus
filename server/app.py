@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
 from .db.session import init_db
-from .routes import account, billing, memos, sector, tickers
+from .routes import memos, sector, tickers
 
 
 def create_app() -> FastAPI:
@@ -26,7 +26,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Create tables up front. Fine for SQLite/self-host; SaaS uses Alembic on top.
+    # Create tables up front. Fine for SQLite/self-host.
     init_db()
 
     @app.get("/health", tags=["meta"])
@@ -36,9 +36,6 @@ def create_app() -> FastAPI:
     app.include_router(tickers.router)
     app.include_router(sector.router)
     app.include_router(memos.router)
-    # account + billing routers self-disable (404) in license mode.
-    app.include_router(account.router)
-    app.include_router(billing.router)
 
     return app
 

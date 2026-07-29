@@ -38,7 +38,7 @@ def _load_owned_job(job_id: str, principal: Principal, db: Session) -> Job:
     job = db.get(Job, job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
-    # In SaaS mode, never expose another user's job. License mode (id None) is open.
+    # With a gateway-forwarded user id, never expose another user's job. Open mode (id None) sees all.
     if principal.id is not None and job.user_id != principal.id:
         raise HTTPException(status_code=404, detail="Job not found")
     return job
@@ -68,7 +68,7 @@ def list_memos(
     limit: int = Query(default=50, le=200),
 ) -> list[MemoJob]:
     q = select(Job).order_by(Job.created_at.desc()).limit(limit)
-    # SaaS: only the caller's jobs. License (id None): all jobs on this instance.
+    # With a user id: only the caller's jobs. Open mode (id None): all jobs on this instance.
     if principal.id is not None:
         q = q.where(Job.user_id == principal.id)
     return [_job_to_schema(j) for j in db.scalars(q).all()]
