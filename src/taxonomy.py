@@ -1,10 +1,8 @@
 """src.taxonomy — Material-signal event taxonomy for theoryy-argus.
 
 Content salvaged from the (now-deleted) material-signal-keyword-playbook.md.
-The playbook's web/Reddit keyword-scraping methodology, source-convergence
-scoring, and source-routing logic were intentionally dropped per
-PIVOT_ARCHITECTURE.md — this project sources data via curated API adapters
-and a verified claim store, not open web scraping.
+The playbook's keyword-scraping, source-convergence scoring, and source-routing
+logic were dropped.
 
 What is preserved here:
   - The event-category taxonomy derived from the playbook's "Full taxonomy by
@@ -15,14 +13,12 @@ What is preserved here:
     moves the stock."
   - An authoritative 8-K item-code → label/category/tier mapping that
     supersedes and extends the old _8K_ITEM_LABELS dict in alt_data_service.py.
-  - A MATERIAL_EVENT_PREDICATES vocabulary for the future LLM claim extractor.
+  - A MATERIAL_EVENT_PREDICATES vocabulary (no runtime consumer yet).
 
 IMPORTANT — what "tier" means here:
   `tier` encodes EVENT MATERIALITY ONLY — how significant is this event type
   to an investment thesis. It NEVER encodes source trust, source weighting,
-  two-source convergence, or source-type credibility. Those belong in the
-  source_trust table (PIVOT_ARCHITECTURE.md §2.2, §7.2) and are updated by
-  the verification flywheel — not this module.
+  two-source convergence, or source-type credibility.
 
 Tier definitions (event materiality):
   S — Highest-alpha, typically 8-K-triggering; the ~25 terms the playbook
@@ -230,14 +226,8 @@ ITEM_8K_LABELS: dict[str, str] = {
 
 # ---------------------------------------------------------------------------
 # Material-event predicate vocabulary
-# For use by the LLM claim extractor (src/ingest/extract_llm.py).
-#
-# Predicates are snake_case, consistent with _PREDICATE_MAP in
-# extract_deterministic.py. Each entry maps to {category, tier}.
-#
-# These are the event-type predicates an LLM extractor prompt should
-# recognise and classify claims into. NOT live-plumbed yet — see TODO in
-# extract_llm.py.
+# Event-type predicates for classifying claims. Snake_case; each maps to
+# {category, tier}. No runtime consumer yet.
 #
 # Coverage: all 13 playbook event categories (downside + upside).
 # Upside / positive catalysts are included per the playbook's principle:
