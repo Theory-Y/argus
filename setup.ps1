@@ -33,55 +33,8 @@ if (Test-Path ".env") {
     Write-Warn "No .env or .env.example found — create .env manually before running"
 }
 
-# ── 1. Node.js ────────────────────────────────────────────────────────────────
-Write-Step "[1/5] Node.js"
-$needNode = -Not (Get-Command node -ErrorAction SilentlyContinue)
-if (-Not $needNode) {
-    Write-OK "node $(node --version)  npm $(npm --version)"
-} else {
-    Write-Info "node/npm not found — installing Node.js LTS..."
-    $installed = $false
-
-    if (Get-Command winget -ErrorAction SilentlyContinue) {
-        winget install --id OpenJS.NodeJS.LTS -e --silent `
-            --accept-source-agreements --accept-package-agreements
-        $installed = $true
-    } elseif (Get-Command choco -ErrorAction SilentlyContinue) {
-        choco install nodejs-lts -y
-        $installed = $true
-    } elseif (Get-Command scoop -ErrorAction SilentlyContinue) {
-        scoop install nodejs-lts
-        $installed = $true
-    }
-
-    if (-Not $installed) {
-        Write-Info "No package manager found — downloading Node.js LTS installer..."
-        try {
-            $meta    = Invoke-RestMethod "https://nodejs.org/dist/index.json"
-            $ltsVer  = ($meta | Where-Object { $_.lts -ne $false } | Select-Object -First 1).version
-        } catch {
-            $ltsVer = "v22.14.0"   # pinned fallback (LTS at time of writing)
-        }
-        $arch  = if ([Environment]::Is64BitOperatingSystem) { "x64" } else { "x86" }
-        $msi   = "$env:TEMP\node_lts_installer.msi"
-        Invoke-WebRequest "https://nodejs.org/dist/$ltsVer/node-$ltsVer-$arch.msi" -OutFile $msi
-        Start-Process msiexec.exe -ArgumentList "/i", $msi, "/quiet", "/norestart" -Wait
-        Remove-Item $msi
-    }
-
-    Refresh-Path
-    if (-Not (Get-Command node -ErrorAction SilentlyContinue)) {
-        Write-Err "Node.js install failed. Install from https://nodejs.org/ and re-run."
-    }
-    Write-OK "node $(node --version) installed"
-}
-
-Write-Info "Running npm install..."
-npm install
-Write-OK "Node.js dependencies installed"
-
-# ── 2. Python ─────────────────────────────────────────────────────────────────
-Write-Step "[2/5] Python"
+# ── 1. Python ─────────────────────────────────────────────────────────────────
+Write-Step "[1/4] Python"
 
 # Detect Python 3.10+
 $pythonOK = $false
@@ -136,7 +89,7 @@ if ($pythonOK) {
     Write-OK "$($& $pythonCmd --version)"
 }
 
-# ── 3. Python virtual environment ─────────────────────────────────────────────
+# ── 2. Python virtual environment ─────────────────────────────────────────────
 Write-Info "Setting up Python virtual environment..."
 if (-Not (Test-Path ".venv")) {
     & $pythonCmd -m venv .venv
@@ -145,8 +98,8 @@ if (-Not (Test-Path ".venv")) {
 .venv\Scripts\pip install --quiet -r requirements.txt
 Write-OK "Python virtual environment ready (.venv)"
 
-# ── 4. pandoc ─────────────────────────────────────────────────────────────────
-Write-Step "[3/5] pandoc"
+# ── 3. pandoc ─────────────────────────────────────────────────────────────────
+Write-Step "[2/4] pandoc"
 if (Get-Command pandoc -ErrorAction SilentlyContinue) {
     $v = (pandoc --version | Select-Object -First 1).Split(" ")[1]
     Write-OK "pandoc $v"
@@ -186,8 +139,8 @@ if (Get-Command pandoc -ErrorAction SilentlyContinue) {
     Write-OK "pandoc $v installed"
 }
 
-# ── 5. Chromium (headless PDF rendering) ──────────────────────────────────────
-Write-Step "[4/5] Chromium (headless PDF rendering)"
+# ── 4. Chromium (headless PDF rendering) ──────────────────────────────────────
+Write-Step "[3/4] Chromium (headless PDF rendering)"
 $browser = $null
 
 # 5a. Commands on PATH
@@ -256,8 +209,8 @@ if ($browser -and $browser -match "^[A-Za-z]:\\") {
     }
 }
 
-# ── 6. Branded .dotx reference template ──────────────────────────────────────
-Write-Step "[5/5] Generating branded reference template -> output\theme\reference.dotx"
+# ── 5. Branded .dotx reference template ──────────────────────────────────────
+Write-Step "[4/4] Generating branded reference template -> output\theme\reference.dotx"
 New-Item -ItemType Directory -Force -Path "output\theme" | Out-Null
 if (-Not (Test-Path "output\theme\reference.dotx")) {
     cmd /c "pandoc --print-default-data-file reference.docx > `"output\theme\reference.dotx`""

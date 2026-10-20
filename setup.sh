@@ -38,7 +38,7 @@ fetch_out() {
   else die "curl or wget is required — install one and re-run setup.sh"; fi
 }
 
-# Ensure ~/.local/bin is on PATH for this session (used for fnm, uv, pandoc)
+# Ensure ~/.local/bin is on PATH for this session (used for uv, pandoc)
 LOCAL_BIN="$HOME/.local/bin"
 mkdir -p "$LOCAL_BIN"
 [[ ":$PATH:" != *":$LOCAL_BIN:"* ]] && export PATH="$LOCAL_BIN:$PATH"
@@ -54,37 +54,8 @@ else
   warn "No .env or .env.example found — create .env manually before running"
 fi
 
-# ── 1. Node.js ────────────────────────────────────────────────────────────────
-say "[1/6] Node.js"
-if has node && has npm; then
-  ok "node $(node --version)  npm $(npm --version)"
-else
-  info "node/npm not found — installing via fnm (Fast Node Manager)..."
-
-  # Install fnm binary to LOCAL_BIN if not already there
-  if ! has fnm && [ ! -x "$LOCAL_BIN/fnm" ]; then
-    fetch_out "https://fnm.vercel.app/install" \
-      | bash -s -- --install-dir "$LOCAL_BIN" --skip-shell
-  fi
-
-  FNM=$(command -v fnm 2>/dev/null || echo "$LOCAL_BIN/fnm")
-  eval "$("$FNM" env --shell bash)"   # add fnm-managed node to PATH
-  "$FNM" install --lts
-  eval "$("$FNM" env --shell bash)"   # re-eval so node/npm resolve
-
-  if has node; then
-    ok "node $(node --version) installed via fnm"
-  else
-    die "Node.js install failed. Install from https://nodejs.org/ and re-run."
-  fi
-fi
-
-info "Running npm install..."
-npm install
-ok "Node.js dependencies installed"
-
-# ── 2. Python ─────────────────────────────────────────────────────────────────
-say "[2/6] Python"
+# ── 1. Python ─────────────────────────────────────────────────────────────────
+say "[1/5] Python"
 
 # Ensure uv is available — it bootstraps Python if needed and replaces pip
 UV=$(command -v uv 2>/dev/null || echo "$HOME/.local/bin/uv")
@@ -132,8 +103,8 @@ else
 fi
 ok "Python virtual environment ready (.venv)"
 
-# ── 3. pandoc ─────────────────────────────────────────────────────────────────
-say "[3/6] pandoc"
+# ── 2. pandoc ─────────────────────────────────────────────────────────────────
+say "[2/5] pandoc"
 if has pandoc; then
   ok "pandoc $(pandoc --version | head -1 | awk '{print $2}')"
 else
@@ -169,8 +140,8 @@ else
   ok "pandoc $(pandoc --version | head -1 | awk '{print $2}') installed → $LOCAL_BIN/pandoc"
 fi
 
-# ── 4. Chromium (headless PDF rendering) ──────────────────────────────────────
-say "[4/6] Chromium (headless PDF rendering)"
+# ── 3. Chromium (headless PDF rendering) ──────────────────────────────────────
+say "[3/5] Chromium (headless PDF rendering)"
 BROWSER=""
 
 # 4a. System browsers
@@ -248,8 +219,8 @@ if [ -n "$BROWSER" ] && [[ "$BROWSER" == /* ]]; then
   fi
 fi
 
-# ── 5. MCP servers (.mcp.json + massive tool) ─────────────────────────────────
-say "[5/6] MCP servers"
+# ── 4. MCP servers (.mcp.json + massive tool) ─────────────────────────────────
+say "[4/5] MCP servers"
 
 # 5a. massive MCP server — installed as an isolated uv tool (not in the venv).
 #     Pinned to the same git tag the project was built against.
@@ -278,8 +249,8 @@ else
   warn "No .mcp.json.template found — cannot generate .mcp.json"
 fi
 
-# ── 6. Branded .dotx reference template ──────────────────────────────────────
-say "[6/6] Generating branded reference template → output/theme/reference.dotx"
+# ── 5. Branded .dotx reference template ──────────────────────────────────────
+say "[5/5] Generating branded reference template → output/theme/reference.dotx"
 mkdir -p output/theme
 if [ ! -f "output/theme/reference.dotx" ]; then
   pandoc --print-default-data-file reference.docx > output/theme/reference.dotx
@@ -294,5 +265,5 @@ echo "Quick-start:"
 echo "  Run a memo:         /theory-y-memo TICKER"
 echo "  Re-brand template:  .venv/bin/python3 scripts/build_reference_dotx.py"
 echo ""
-echo "Note: if this session installed Node.js or uv, open a new terminal so"
+echo "Note: if this session installed uv, open a new terminal so"
 echo "      PATH changes from ~/.bashrc / ~/.zshrc take effect permanently."
