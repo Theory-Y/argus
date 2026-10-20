@@ -1,10 +1,8 @@
 # Roadmap — TheoryY Argus
 
-_Last updated: 2026-07-29_
+_Last updated: 2026-10-20_
 
-This document captures the project's current state, the prioritized plan forward,
-and the reasoning behind the ordering. It supersedes the loose notes in `TODO.md`
-(which is folded into Phase 0 below).
+Current state, prioritized plan, and the reasoning behind the ordering.
 
 ---
 
@@ -27,15 +25,14 @@ v1.0.0 is **built** end-to-end:
   `.mcp.json.template` (machine-specific paths, git-ignored) and `setup.sh` installs
   the `mcp_massive` uv tool, so a clean clone gets working MCP servers. Remote/URLs
   migrated to `theoryy-argus`.
-- **Tests** — 64 passing across the chart engine, memo writer, and data services.
+- **Tests** — 161 passing across the chart engine, memo writer, and data services.
 
 ### The honest gap
 
 The **core product has never been run once end-to-end against live LLM
-extraction.** Tests pass against fixtures, and `output/context/*.json` is
-pre-baked. Per `TODO.md`, the live run is blocked on a placeholder
-`ANTHROPIC_API_KEY`. Everything shipped after v1.0.0 (billing, localization, web
-seeds) sits on top of an unvalidated core.
+extraction.** Tests pass against fixtures only. The live run is blocked on a
+placeholder `ANTHROPIC_API_KEY`. Everything shipped after v1.0.0 (localization,
+web research) sits on top of an unvalidated core.
 
 There is also **no verification of the product's headline promise** —
 "institutional-grade, no fabricated numbers." Nothing in the pipeline checks that
@@ -53,11 +50,9 @@ that kills trust in this product category.
 
 ## Phase 0 — Unblock the live run _(prerequisite, days)_
 
-Close the gap `TODO.md` already flags. Nothing downstream is trustworthy until
-this is done.
+Nothing downstream is trustworthy until one live run succeeds.
 
 - [ ] Set a real `ANTHROPIC_API_KEY` in `.env` (currently `sk-ant-...` placeholder).
-- [ ] Install the live stack: `scrapegraphai`, `markdownify`, `python-toon`.
 - [ ] Run the full pipeline end-to-end for a real middle-market ticker
       (e.g. `PCOR`, `CSGP`, `APPF`) — context fetch → memo → charts → PDF.
 - [ ] Verify twice-run cache hits ("LLM skipped") once a real key is set.
@@ -66,7 +61,7 @@ this is done.
       ScrapeGraphAI feature is dead weight until seeded.
 
 **Exit criterion:** at least three real memos generated from live data on the
-actual middle-market universe — not the AAPL/NVDA fixtures lying in `output/context/`.
+actual middle-market universe, not test fixtures.
 
 ---
 
@@ -94,12 +89,12 @@ and converts the core value proposition into something verifiable.
 
 ## Phase 2 — Dynamic ticker coverage _(reach)_
 
-`SECTOR_TICKERS` is a hardcoded list of 14 names (`src/financial_service.py:39`).
-The product's reach is capped at those names until coverage is data-driven.
+Any ticker works: peers come from a curated `COMPETITOR_MAP` override, else
+Polygon's `related-companies` endpoint (needs `MASSIVE_API_KEY`). `SECTOR_TICKERS`
+is only the default sector-sheet cohort.
 
-- [ ] Replace the static list with a resolver that accepts an arbitrary ticker
-      and fetches its sector/peer set on demand.
-- [ ] Define peer-group selection for tickers outside the curated universe.
+- [x] Accept an arbitrary ticker and resolve its peer set on demand.
+- [x] Peer-group selection for tickers outside the curated universe.
 - [ ] Validate that alt-data sources (SEC, Trends, SCAC) degrade gracefully for
       thinly-covered names.
 - [ ] Update `list_supported_tickers` semantics — "supported" becomes a
@@ -141,6 +136,17 @@ Build on the Phase 1 harness to measure memo quality, not just correctness.
 
 ## Change log
 
+- **2026-10-20 — Stale-surface cleanup.** Dropped the unused Node toolchain
+  (`package.json`, `package-lock.json`, `md-to-pdf`, setup's Node/fnm/npm step);
+  PDF export is pandoc → HTML → Playwright/Chromium. README: removed the
+  "Supported tickers" section, fixed the export description. Removed
+  `PIVOT_ARCHITECTURE.md` / claim-store references from `src/taxonomy.py`, the
+  stale `sinapsis-workflow` agent memory, and the finished 2026-06-11 action
+  plan. ROADMAP: dropped `TODO.md` references, marked dynamic peer discovery
+  done. Default models: memo writer `claude-opus-5-5`, `client-mcp.py`
+  `claude-sonnet-5-5`; web research stays on `claude-haiku-4-5`. Pinned
+  `mcp[cli]<2`: 2.x removed `FastMCP`, which broke `src/mcp_server.py` on a
+  fresh install. 161 tests pass.
 - **2026-07-29 — Codebase cleanup after teardown.** Removed dangling
   `core/engine.py` + `core/render.py` (server-only glue with zero remaining
   consumers; `core/memo` prompt+writer stay — prompt is the SKILL.md-synced IP).

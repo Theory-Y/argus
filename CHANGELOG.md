@@ -20,8 +20,13 @@ local-only engine: MCP data layer + memo engine + Claude skill + PDF export.
   packaging, Cloudflare gateway docs), `SERVICE_ARCHITECTURE.md`.
 - **Dangling engine glue**: `core/engine.py`, `core/render.py` (server-only);
   `core/memo` (prompt + Anthropic writer) remains.
+- **Node toolchain**: `package.json`, `package-lock.json` (`md-to-pdf`, unused)
+  and the setup scripts' Node/npm step.
 
 ### Changed
+- Default models: memo writer `claude-opus-5-5`, `scripts/client-mcp.py`
+  `claude-sonnet-5-5`.
+- `mcp[cli]` pinned `<2` (2.x removed `FastMCP`).
 - README rewritten for the local-only layout; per-folder READMEs added
   (`src/`, `core/`, `scripts/`, `tests/`).
 - `.env.example` trimmed to engine/data-source/export variables.
