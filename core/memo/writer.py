@@ -30,7 +30,7 @@ from .prompt import SYSTEM_PROMPT, user_message
 logger = logging.getLogger(__name__)
 
 # Default to the most capable model; override per-deployment via ANTHROPIC_MODEL.
-_DEFAULT_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-opus-4-7")
+_DEFAULT_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-opus-5-5")
 _DEFAULT_EFFORT = os.environ.get("ANTHROPIC_EFFORT", "medium")
 _DEFAULT_MAX_TOKENS = int(os.environ.get("ANTHROPIC_MAX_TOKENS", "6000"))
 # Prompt-cache TTL for the static system prompt: "1h" (default) or "5m". See the

@@ -7,7 +7,7 @@ import anthropic
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-MODEL_NAME = "claude-sonnet-4-6"
+MODEL_NAME = "claude-sonnet-5-5"
 _MAX_TOKENS = 4096
 
 

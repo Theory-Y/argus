@@ -71,7 +71,7 @@ def test_user_message_embeds_ticker_and_payload():
 
 def test_write_memo_returns_text_and_caches_system_prompt():
     client = _FakeClient([_Block("thinking", ""), _Block("text", "# Investment Memo: PCOR\n...")])
-    out = writer.write_memo("PCOR", '{"meta":{}}', client=client, model="claude-opus-4-7")
+    out = writer.write_memo("PCOR", '{"meta":{}}', client=client, model="claude-opus-5-5")
 
     assert out.startswith("# Investment Memo: PCOR")
 
@@ -82,7 +82,7 @@ def test_write_memo_returns_text_and_caches_system_prompt():
     assert system[0]["cache_control"] == {"type": "ephemeral", "ttl": "1h"}
     assert system[0]["text"] == prompt.SYSTEM_PROMPT
     # The model id is honored.
-    assert client.captured["model"] == "claude-opus-4-7"
+    assert client.captured["model"] == "claude-opus-5-5"
 
 
 def test_cache_ttl_is_configurable():
