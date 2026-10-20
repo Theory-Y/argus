@@ -291,3 +291,13 @@ Advantages over the current public JSON approach:
 - No rate-limit issues at scale
 
 Required additions: `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET` env vars.
+
+---
+
+## Credits
+
+- **Lunear01** — *Creator & Lead Developer.* Designed and built TheoryY Argus end to end.
+- **aier9500** — *Financial Advisor & Systems Architect.* Guided the financial analysis, shaped
+  the structure of the investment memo, and helped architect the system during development.
+- **Walsdo** — *Financial Advisor & Memo Strategist.* Guided the financial analysis and shaped the
+  structure of the investment memo.
