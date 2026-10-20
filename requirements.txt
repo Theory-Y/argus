@@ -8,7 +8,7 @@
 anthropic>=0.40.0           # Anthropic SDK (Claude API)
 
 # ── MCP server ───────────────────────────────────────────────────────────────
-mcp[cli]>=1.0.0             # Model Context Protocol SDK (FastMCP)
+mcp[cli]>=1.0.0,<2          # Model Context Protocol SDK (FastMCP; 2.x renamed it)
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 python-dotenv>=1.0.0        # Loads API keys from the project-root .env file
