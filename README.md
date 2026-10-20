@@ -35,52 +35,6 @@ Claude Code  →  /theory-y-memo TICKER
 
 Claude writes the memo from the fetched JSON — it never fills in financials from training memory.
 
-## Supported tickers
-
-**Any valid ticker, in any sector, is supported.** Peers are resolved in two tiers:
-
-1. **Dynamic discovery (default)** — for any ticker, peers come from Polygon's
-   `related-companies` endpoint (requires `MASSIVE_API_KEY`). This covers every
-   sector with no hand-maintained config, and the macro series is auto-selected from
-   the issuer's yfinance sector (e.g. Energy → WTI crude, Financials → Fed Funds Rate,
-   Real Estate → construction spend, Tech/Industrials → industrial production).
-2. **Curated overrides** — a hand-tuned peer set in `COMPETITOR_MAP`
-   (`src/context_aggregator.py`) takes precedence over dynamic discovery for these names:
-
-**PropTech & Facilities** (original universe)
-
-| Ticker | Company | Peer Group |
-|--------|---------|------------|
-| CSGP | CoStar Group | CBRE, PCOR, Z |
-| CBRE | CBRE Group | CSGP, HON, ABM |
-| CARR | Carrier Global | TT, JCI, LII |
-| TT | Trane Technologies | CARR, JCI, LII |
-| JCI | Johnson Controls | CARR, TT, HON |
-| LII | Lennox International | CARR, TT, JCI |
-| ABM | ABM Industries | CTAS, HON, JCI |
-| CTAS | Cintas | ABM, HON, ADT |
-| ADT | ADT Inc. | ALLE, CTAS, HON |
-| ALLE | Allegion | ADT, HON, JCI |
-| HON | Honeywell | JCI, CARR, TT |
-| PCOR | Procore Technologies | CSGP, APPF, Z |
-| APPF | AppFolio | PCOR, CSGP, Z |
-| Z | Zillow Group | CSGP, APPF, PCOR |
-
-**Semiconductors & AI infrastructure / mega-cap tech**
-
-| Ticker | Company | Peer Group |
-|--------|---------|------------|
-| NVDA | NVIDIA | AMD, AVGO, TSM |
-| AMD | Advanced Micro Devices | NVDA, AVGO, INTC |
-| AVGO | Broadcom | NVDA, AMD, QCOM |
-| TSM | Taiwan Semiconductor | NVDA, AVGO, INTC |
-| INTC | Intel | AMD, NVDA, TSM |
-| MU | Micron | NVDA, AMD, TSM |
-| QCOM | Qualcomm | AVGO, NVDA, AMD |
-| META | Meta Platforms | GOOGL, MSFT, AMZN |
-
-A ticker outside this list is **not** a coverage gap — its peers are discovered dynamically via Polygon. The `peers` array only comes back empty when dynamic discovery is unavailable (no `MASSIVE_API_KEY`) *and* there is no curated override; in that case the memo skill sources comparables externally. See the peer-comparison rule in `.claude/skills/theory-y-memo/SKILL.md`.
-
 ## Setup
 
 **Prerequisites:** none — the setup script bootstraps everything automatically.
@@ -95,11 +49,10 @@ powershell -ExecutionPolicy Bypass -File setup.ps1
 ```
 
 The setup script installs everything from scratch if needed:
-1. **Node.js** — via [fnm](https://github.com/Schniz/fnm) (no sudo)
-2. **Python 3.12** — via [uv](https://github.com/astral-sh/uv) (no sudo)
-3. **pandoc** — standalone binary from GitHub releases (no sudo)
-4. **Chromium** — via Playwright if no system browser is found; path written to `.env`
-5. **Branded `.dotx` Word template** — generated once from pandoc defaults
+1. **Python 3.12** — via [uv](https://github.com/astral-sh/uv) (no sudo)
+2. **pandoc** — standalone binary from GitHub releases (no sudo)
+3. **Chromium** — via Playwright if no system browser is found; path written to `.env`
+4. **Branded `.dotx` Word template** — generated once from pandoc defaults
 
 ## Environment variables
 
@@ -164,7 +117,7 @@ output/
     context_TICKER.json      # raw data payload (minified JSON)
   memos/
     TheoryY_Memo_TICKER.md   # seven-section investment memo
-    TheoryY_Memo_TICKER.pdf  # PDF rendered via CSS or pandoc
+    TheoryY_Memo_TICKER.pdf  # PDF rendered by headless Chromium
     TheoryY_Memo_TICKER.docx # Word doc (if Word format chosen)
   TheoryY_Sector_Sheet.csv   # sector comparables table
   theme/
@@ -204,7 +157,7 @@ core/
   memo/writer.py           # memo generation via the Anthropic API
 scripts/
   build_reference_dotx.py  # generates branded Word .dotx template
-  export_pdf.py            # PDF export via md-to-pdf (CSS theme)
+  export_pdf.py            # DOCX + PDF export: pandoc → HTML → headless Chromium
   client-mcp.py            # standalone MCP client for testing
 localization/
   glossary.{zh,es,fr}.md   # translation glossaries for memo localization
